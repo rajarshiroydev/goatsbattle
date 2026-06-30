@@ -1,0 +1,65 @@
+---
+import type { BattleSummary } from '../lib/queries';
+import { flagEmoji, compactNumber } from '../lib/format';
+
+interface Props {
+  battle: BattleSummary;
+  /** Small label shown top-right, e.g. "🔥 Hot" or "52% – 48%". */
+  badge?: string;
+}
+
+const { battle, badge } = Astro.props;
+const { a, b, slug, pctA, pctB, total, leader } = battle;
+const hasVotes = total > 0;
+---
+
+<a
+  href={`/battle/${slug}`}
+  class="group block bg-canvas-soft border border-hairline hover:border-lime rounded-md overflow-hidden transition-all duration-200"
+  style="box-shadow: var(--shadow-card)"
+>
+  <!-- Card header -->
+  <div class="px-5 py-3 border-b border-hairline flex items-center justify-between">
+    <span class="font-mono text-[10px] uppercase tracking-widest text-body">⚽ Football</span>
+    {badge && (
+      <span class="font-mono text-[10px] uppercase tracking-wider text-lime">{badge}</span>
+    )}
+  </div>
+
+  <!-- Players — the "/" split -->
+  <div class="relative flex items-stretch min-h-[140px]">
+    <div class="flex-1 flex flex-col justify-center px-5 py-6 gap-1">
+      <span class="font-headline font-black uppercase text-3xl lg:text-4xl leading-none tracking-tight text-ink">{a.shortName}</span>
+      <span class="font-sans text-xs text-body">{a.nationality} {flagEmoji(a.countryCode)}</span>
+    </div>
+
+    <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
+      <span class="font-headline font-black text-7xl leading-none text-lime select-none" style="text-shadow: 0 0 30px rgba(200,255,0,0.4)">/</span>
+    </div>
+
+    <div class="flex-1 flex flex-col justify-center items-end px-5 py-6 gap-1 text-right">
+      <span class="font-headline font-black uppercase text-3xl lg:text-4xl leading-none tracking-tight text-ink">{b.shortName}</span>
+      <span class="font-sans text-xs text-body">{flagEmoji(b.countryCode)} {b.nationality}</span>
+    </div>
+  </div>
+
+  <!-- Card footer: live result bar, or a vote nudge while unvoted -->
+  {hasVotes ? (
+    <div class="px-5 py-3 border-t border-hairline">
+      <div class="flex items-center justify-between font-mono text-[11px] mb-2">
+        <span class={leader === 'a' ? 'text-lime' : 'text-body'}>{pctA}%</span>
+        <span class="text-mute uppercase tracking-widest text-[10px]">{compactNumber(total)} votes</span>
+        <span class={leader === 'b' ? 'text-lime' : 'text-body'}>{pctB}%</span>
+      </div>
+      <div class="flex h-1.5 gap-0.5 rounded-full overflow-hidden">
+        <div style={`width:${pctA}%`} class={leader === 'a' ? 'bg-lime' : 'bg-hairline-strong'}></div>
+        <div style={`width:${pctB}%`} class={leader === 'b' ? 'bg-lime' : 'bg-hairline-strong'}></div>
+      </div>
+    </div>
+  ) : (
+    <div class="px-5 py-3 border-t border-hairline flex items-center justify-between">
+      <span class="font-sans text-xs text-mute">Be the first to vote</span>
+      <span class="font-sans text-sm font-medium text-lime group-hover:translate-x-0.5 transition-transform">Vote →</span>
+    </div>
+  )}
+</a>

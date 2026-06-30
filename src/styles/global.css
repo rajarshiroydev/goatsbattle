@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Canvas (dark stadium palette) ── */
+  --color-canvas:       #0d0d0f;   /* page background */
+  --color-canvas-soft:  #161618;   /* card surface */
+  --color-canvas-soft-2:#1e1e22;   /* elevated / hover */
+
+  /* ── Text ── */
+  --color-ink:  #f0f0f2;           /* primary text (off-white) */
+  --color-body: #8b8b95;           /* secondary text */
+  --color-mute: #52525a;           /* tertiary / very muted */
+
+  /* ── Borders ── */
+  --color-hairline:        #252528; /* default border */
+  --color-hairline-strong: #3a3a3e; /* hover / active border */
+
+  /* ── Accents ── */
+  --color-lime:      #c8ff00;       /* primary action — electric lime */
+  --color-lime-dark: #a3cc00;       /* pressed lime */
+  --color-red:       #ff2d55;       /* danger / losing side */
+  --color-blue:      #3b82f6;       /* informational */
+
+  /* ── Fonts ── */
+  --font-headline: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+  --font-sans:     "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-mono:     ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* ── Border radius (angular-first for sports) ── */
+  --radius-none: 0px;
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-card:      0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-card-md:   0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-lime-glow: 0 0 0 1px #c8ff00, 0 0 24px rgba(200,255,0,0.25);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background-color: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: #c8ff00;
+    color: #0d0d0f;
+  }
+
+  * { box-sizing: border-box; }
+}

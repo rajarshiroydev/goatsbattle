@@ -1,0 +1,101 @@
+---
+import type { Entity } from '../lib/types';
+import { getRadarAxes } from '../lib/compareViz';
+
+interface Props {
+  entityA: Entity;
+  entityB: Entity;
+}
+
+const { entityA, entityB } = Astro.props;
+const axes = getRadarAxes(entityA, entityB);
+
+// Geometry
+const SIZE = 320;
+const C = SIZE / 2;
+const R = 108;
+const n = axes?.length ?? 0;
+
+// Angle for axis i (start at top, clockwise).
+const angle = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+const point = (i: number, value: number) => ({
+  x: C + R * value * Math.cos(angle(i)),
+  y: C + R * value * Math.sin(angle(i)),
+});
+
+const toPath = (pick: (i: number) => number) =>
+  Array.from({ length: n }, (_, i) => {
+    const p = point(i, pick(i));
+    return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+  }).join(' ');
+
+const pathA = axes ? toPath((i) => axes[i].normA) : '';
+const pathB = axes ? toPath((i) => axes[i].normB) : '';
+const rings = [0.25, 0.5, 0.75, 1];
+const ringPath = (r: number) =>
+  Array.from({ length: n }, (_, i) => {
+    const p = point(i, r);
+    return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+  }).join(' ');
+
+const COLOR_A = '#c8ff00';
+const COLOR_B = '#3b82f6';
+---
+
+{axes && (
+  <section class="border-b border-hairline">
+    <div class="max-w-7xl mx-auto px-5 py-10">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <span class="w-0.5 h-5 bg-lime inline-block"></span>
+          <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Shape of Greatness</h2>
+        </div>
+        <div class="flex items-center gap-4 font-mono text-[10px] uppercase tracking-wider">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm inline-block" style={`background:${COLOR_A}`}></span><span class="text-ink">{entityA.shortName}</span></span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm inline-block" style={`background:${COLOR_B}`}></span><span class="text-ink">{entityB.shortName}</span></span>
+        </div>
+      </div>
+
+      <div class="flex justify-center">
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} class="w-full max-w-[420px]" role="img"
+          aria-label={`Radar comparison of ${entityA.shortName} and ${entityB.shortName}`}>
+          <!-- Grid rings -->
+          {rings.map((r) => (
+            <polygon points={ringPath(r)} fill="none" stroke="#252528" stroke-width="1" />
+          ))}
+          <!-- Spokes + axis labels -->
+          {axes.map((axis, i) => {
+            const tip = point(i, 1);
+            const label = point(i, 1.22);
+            const anchor = Math.abs(label.x - C) < 12 ? 'middle' : label.x > C ? 'start' : 'end';
+            return (
+              <>
+                <line x1={C} y1={C} x2={tip.x} y2={tip.y} stroke="#252528" stroke-width="1" />
+                <text x={label.x} y={label.y} text-anchor={anchor} dominant-baseline="middle"
+                  fill="#8b8b95" font-size="10" font-family="ui-monospace, monospace"
+                  style="text-transform:uppercase; letter-spacing:0.05em">{axis.label}</text>
+              </>
+            );
+          })}
+          <!-- Player B underneath, A on top -->
+          <polygon points={pathB} fill={COLOR_B} fill-opacity="0.18" stroke={COLOR_B} stroke-width="2" />
+          <polygon points={pathA} fill={COLOR_A} fill-opacity="0.18" stroke={COLOR_A} stroke-width="2" />
+          {axes.map((axis, i) => {
+            const pa = point(i, axis.normA);
+            const pb = point(i, axis.normB);
+            return (
+              <>
+                <circle cx={pb.x} cy={pb.y} r="3" fill={COLOR_B} />
+                <circle cx={pa.x} cy={pa.y} r="3" fill={COLOR_A} />
+              </>
+            );
+          })}
+        </svg>
+      </div>
+
+      <p class="text-center font-mono text-[10px] uppercase tracking-widest text-mute mt-4">
+        Each axis scaled to the leader · raw totals in the breakdown above
+      </p>
+    </div>
+  </section>
+)}

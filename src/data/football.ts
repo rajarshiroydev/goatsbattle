@@ -1,0 +1,624 @@
+import type { Entity } from '../lib/types';
+import { getAllBattlePairs, getBattleId } from '../lib/battle';
+
+export const footballEntities: Entity[] = [
+  {
+    id: 'messi',
+    slug: 'messi',
+    name: 'Lionel Messi',
+    shortName: 'Messi',
+    category: 'football',
+    nationality: 'Argentine',
+    countryCode: 'AR',
+    born: '1987-06-24',
+    position: 'Forward',
+    bio: 'Widely considered the greatest footballer of all time, Messi won a record eight Ballon d\'Or awards and delivered Argentina its third World Cup in 2022. His extraordinary vision, dribbling, and goal-scoring at every level of the game set a standard no one has matched.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 794 },
+          { label: 'Club Assists', value: 353 },
+          { label: 'Club Appearances', value: 957 },
+          { label: 'Career Trophies', value: 48 },
+          { label: 'Champions League Goals', value: 129 },
+          { label: 'Goals Per Game', value: '0.79' },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 123 },
+          { label: 'International Assists', value: 61 },
+          { label: 'International Caps', value: 202 },
+          { label: 'World Cup Goals', value: 19 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Ballon d\'Or', value: 8 },
+          { label: 'FIFA Best Player', value: 3 },
+          { label: 'Champions League Titles', value: 4 },
+          { label: 'World Cup', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'Ballon d\'Or', count: 8, years: [2009, 2010, 2011, 2012, 2019, 2021, 2023] },
+      { title: 'FIFA World Cup', count: 1, years: [2022] },
+      { title: 'Copa América', count: 1, years: [2021] },
+      { title: 'UEFA Champions League', count: 4, years: [2006, 2009, 2011, 2015] },
+      { title: 'La Liga', count: 10, years: [2005, 2006, 2009, 2010, 2011, 2013, 2015, 2016, 2018, 2019] },
+      { title: 'Ligue 1', count: 1, years: [2023] },
+      { title: 'MLS Cup', count: 1, years: [2023] },
+    ],
+    careerHighlights: [
+      '8 Ballon d\'Or awards — more than any player in history',
+      '123 international goals, 202 caps for Argentina',
+      '19 World Cup goals — the most in men\'s World Cup history',
+      'Led Argentina to the 2022 FIFA World Cup — a 36-year wait ended',
+      '129 Champions League goals, 4 UCL titles, 48 career trophies',
+    ],
+    initialElo: 1500,
+    active: true,
+  },
+  {
+    id: 'ronaldo',
+    slug: 'ronaldo',
+    name: 'Cristiano Ronaldo',
+    shortName: 'Ronaldo',
+    category: 'football',
+    nationality: 'Portuguese',
+    countryCode: 'PT',
+    born: '1985-02-05',
+    position: 'Forward',
+    bio: 'The most prolific scorer in football history, Ronaldo holds the all-time international goal record (130+) and is the only player to win the Champions League with three different clubs. His relentless athletic dedication and scoring consistency across three decades is unmatched.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 830 },
+          { label: 'Club Assists', value: 224 },
+          { label: 'Club Appearances', value: 1097 },
+          { label: 'Career Trophies', value: 37 },
+          { label: 'Champions League Goals', value: 140 },
+          { label: 'Goals Per Game', value: '0.73' },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 145 },
+          { label: 'International Assists', value: 37 },
+          { label: 'International Caps', value: 231 },
+          { label: 'World Cup Goals', value: 10 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Ballon d\'Or', value: 5 },
+          { label: 'FIFA Best Player', value: 4 },
+          { label: 'Champions League Titles', value: 5 },
+          { label: 'Euro Championships', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'Ballon d\'Or', count: 5, years: [2008, 2013, 2014, 2016, 2017] },
+      { title: 'UEFA Champions League', count: 5, years: [2008, 2014, 2016, 2017, 2018] },
+      { title: 'UEFA Euro', count: 1, years: [2016] },
+      { title: 'Premier League', count: 3, years: [2007, 2008, 2009] },
+      { title: 'La Liga', count: 2, years: [2012, 2017] },
+      { title: 'Serie A', count: 2, years: [2019, 2020] },
+      { title: 'UEFA Nations League', count: 1, years: [2019] },
+    ],
+    careerHighlights: [
+      '145 international goals — all-time record for any outfield player',
+      '140 Champions League goals — the all-time record',
+      '5 Champions League titles with 3 different clubs',
+      '37 career trophies, 1,097 club appearances',
+      '231 international caps — record for a European nation',
+    ],
+    initialElo: 1500,
+    active: true,
+  },
+  {
+    id: 'pele',
+    slug: 'pele',
+    name: 'Pelé',
+    shortName: 'Pelé',
+    category: 'football',
+    nationality: 'Brazilian',
+    countryCode: 'BR',
+    born: '1940-10-23',
+    position: 'Forward',
+    bio: 'The original football king, Pelé won three FIFA World Cups with Brazil — the only player in history to do so. He scored over 1,000 career goals and remains the most celebrated footballer of the 20th century. His flair and improvisation defined the beautiful game.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Official Club Goals', value: 643 },
+          { label: 'All Goals (incl. friendlies)', value: 1281 },
+          { label: 'Santos Goals', value: 619 },
+          { label: 'Santos Appearances', value: 638 },
+          { label: 'State Championship Goals', value: 473 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 77 },
+          { label: 'International Caps', value: 92 },
+          { label: 'World Cup Goals', value: 12 },
+          { label: 'World Cup Titles', value: 3 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'FIFA World Cup', value: 3 },
+          { label: 'Brazilian Championship', value: 6 },
+          { label: 'Copa Libertadores', value: 2 },
+          { label: 'Intercontinental Cup', value: 2 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'FIFA World Cup', count: 3, years: [1958, 1962, 1970] },
+      { title: 'Copa Libertadores', count: 2, years: [1962, 1963] },
+      { title: 'Intercontinental Cup', count: 2, years: [1962, 1963] },
+      { title: 'Brazilian Championship', count: 6 },
+    ],
+    careerHighlights: [
+      'Only player to win 3 FIFA World Cup trophies',
+      'Scored in the final of the 1958 World Cup aged just 17',
+      '1,281 total career goals by official count',
+      'Led Santos to back-to-back Copa Libertadores and Intercontinental Cups',
+      'Named FIFA Co-Player of the Century alongside Maradona',
+    ],
+    initialElo: 1500,
+    active: false,
+  },
+  {
+    id: 'maradona',
+    slug: 'maradona',
+    name: 'Diego Maradona',
+    shortName: 'Maradona',
+    category: 'football',
+    nationality: 'Argentine',
+    countryCode: 'AR',
+    born: '1960-10-30',
+    position: 'Attacking Midfielder',
+    bio: 'Maradona\'s 1986 World Cup performance — single-handedly dragging Argentina to the title — is the greatest individual tournament display in football history. His "Hand of God" and "Goal of the Century" in the same match against England encapsulate his genius and mischief in equal measure.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 312 },
+          { label: 'Club Assists', value: 247 },
+          { label: 'Club Appearances', value: 593 },
+          { label: 'Napoli Goals', value: 115 },
+          { label: 'Napoli Appearances', value: 259 },
+          { label: 'Barcelona Goals', value: 38 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 34 },
+          { label: 'International Caps', value: 91 },
+          { label: 'World Cup Goals', value: 8 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'FIFA World Cup', value: 1 },
+          { label: 'Serie A Titles', value: 2 },
+          { label: 'Copa del Rey', value: 1 },
+          { label: 'UEFA Cup', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'FIFA World Cup', count: 1, years: [1986] },
+      { title: 'Serie A (Napoli)', count: 2, years: [1987, 1990] },
+      { title: 'UEFA Cup (Napoli)', count: 1, years: [1989] },
+      { title: 'Copa del Rey (Barcelona)', count: 1, years: [1983] },
+      { title: 'FIFA World Cup Golden Ball', count: 2, years: [1986] },
+    ],
+    careerHighlights: [
+      '"Goal of the Century" vs England, 1986 World Cup',
+      'Single-handedly won Argentina the 1986 World Cup',
+      'Transformed Napoli from also-rans to Serie A champions',
+      'FIFA World Cup Player of the Tournament 1986',
+      'Named FIFA Co-Player of the Century alongside Pelé',
+    ],
+    initialElo: 1500,
+    active: false,
+  },
+  {
+    id: 'zidane',
+    slug: 'zidane',
+    name: 'Zinedine Zidane',
+    shortName: 'Zidane',
+    category: 'football',
+    nationality: 'French',
+    countryCode: 'FR',
+    born: '1972-06-23',
+    position: 'Attacking Midfielder',
+    bio: 'Zidane combined elegance, vision, and extraordinary technical skill to become one of the most complete midfielders in history. His 2002 Champions League volley for Real Madrid remains the greatest goal ever scored in a final. He won the World Cup, Euro, and three Champions League titles as a manager.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 125 },
+          { label: 'Club Assists', value: 159 },
+          { label: 'Club Appearances', value: 506 },
+          { label: 'Real Madrid Goals', value: 49 },
+          { label: 'Real Madrid Appearances', value: 155 },
+          { label: 'Juventus Goals', value: 24 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 31 },
+          { label: 'International Caps', value: 108 },
+          { label: 'World Cup Goals', value: 5 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Ballon d\'Or', value: 1 },
+          { label: 'FIFA Best Player', value: 3 },
+          { label: 'FIFA World Cup', value: 1 },
+          { label: 'UEFA Euro', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'FIFA World Cup', count: 1, years: [1998] },
+      { title: 'UEFA Euro', count: 1, years: [2000] },
+      { title: 'Ballon d\'Or', count: 1, years: [1998] },
+      { title: 'UEFA Champions League', count: 1, years: [2002] },
+      { title: 'Serie A', count: 2, years: [1997, 1998] },
+      { title: 'La Liga', count: 1, years: [2003] },
+    ],
+    careerHighlights: [
+      'FIFA Best Player of the Year 3 times (1998, 2000, 2003)',
+      'Scored a stunning volley in the 2002 UCL Final — widely called the greatest final goal ever',
+      'Led France to World Cup and Euro double (1998–2000)',
+      'Only player to win Ballon d\'Or while playing for two different clubs',
+      'Later managed Real Madrid to three consecutive Champions League titles (2016–18)',
+    ],
+    initialElo: 1500,
+    active: false,
+  },
+  {
+    id: 'ronaldinho',
+    slug: 'ronaldinho',
+    name: 'Ronaldinho',
+    shortName: 'Ronaldinho',
+    category: 'football',
+    nationality: 'Brazilian',
+    countryCode: 'BR',
+    born: '1980-03-21',
+    position: 'Attacking Midfielder',
+    bio: 'The most entertaining player of his era, Ronaldinho played football with a joy and creativity that captivated billions. His peak at Barcelona from 2003–2006 produced some of the most breathtaking football ever seen. He made the Nou Camp faithful give a standing ovation to a Real Madrid player — then received a standing ovation himself.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 297 },
+          { label: 'Club Assists', value: 216 },
+          { label: 'Club Appearances', value: 617 },
+          { label: 'Barcelona Goals', value: 94 },
+          { label: 'Barcelona Appearances', value: 207 },
+          { label: 'Champions League Goals', value: 20 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 33 },
+          { label: 'International Caps', value: 97 },
+          { label: 'World Cup Goals', value: 4 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Ballon d\'Or', value: 1 },
+          { label: 'FIFA Best Player', value: 2 },
+          { label: 'FIFA World Cup', value: 1 },
+          { label: 'Champions League Titles', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'FIFA World Cup', count: 1, years: [2002] },
+      { title: 'Ballon d\'Or', count: 1, years: [2005] },
+      { title: 'UEFA Champions League', count: 1, years: [2006] },
+      { title: 'La Liga', count: 2, years: [2005, 2006] },
+      { title: 'Copa América', count: 1, years: [1999] },
+    ],
+    careerHighlights: [
+      '2005 Ballon d\'Or winner at the height of his powers',
+      'Made opposition fans give him a standing ovation at the Bernabéu in 2005',
+      'Led Brazil to 2002 World Cup with scintillating form',
+      'Won the Champions League with Barcelona in 2006',
+      'Widely regarded as the most skilful player of the 2000s decade',
+    ],
+    initialElo: 1500,
+    active: false,
+  },
+  {
+    id: 'mbappe',
+    slug: 'mbappe',
+    name: 'Kylian Mbappé',
+    shortName: 'Mbappé',
+    category: 'football',
+    nationality: 'French',
+    countryCode: 'FR',
+    born: '2004-12-20',
+    position: 'Forward',
+    bio: 'The fastest player in the world and already one of the most prolific scorers in history before age 26, Mbappé won the World Cup at 19 and became PSG\'s all-time top scorer. Now at Real Madrid, he is the favourite to dominate the next decade of football and break every goalscoring record.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 320 },
+          { label: 'Club Assists', value: 143 },
+          { label: 'Club Appearances', value: 497 },
+          { label: 'Ligue 1 Goals', value: 207 },
+          { label: 'PSG Goals', value: 256 },
+          { label: 'Champions League Goals', value: 49 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 50 },
+          { label: 'International Caps', value: 89 },
+          { label: 'World Cup Goals', value: 12 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'FIFA World Cup', value: 1 },
+          { label: 'Ligue 1 Top Scorer', value: 6 },
+          { label: 'Ligue 1 Titles', value: 6 },
+          { label: 'World Cup Golden Boot', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'FIFA World Cup', count: 1, years: [2018] },
+      { title: 'Ligue 1', count: 6, years: [2018, 2019, 2020, 2022, 2023, 2024] },
+      { title: 'World Cup Golden Boot', count: 1, years: [2022] },
+      { title: 'World Cup Golden Boot (2018)', count: 1, years: [2018] },
+    ],
+    careerHighlights: [
+      'World Cup winner at just 19 years old (2018)',
+      'Hat-trick in the 2022 World Cup Final — scored 3 in a 4-2 loss to Argentina',
+      'Only second player after Pelé to score in a World Cup final as a teenager',
+      'All-time top scorer for Paris Saint-Germain (256 goals)',
+      'Fastest player in football — recorded at 38 km/h (23.6 mph)',
+    ],
+    initialElo: 1500,
+    active: true,
+  },
+  {
+    id: 'neymar',
+    slug: 'neymar',
+    name: 'Neymar Jr.',
+    shortName: 'Neymar',
+    category: 'football',
+    nationality: 'Brazilian',
+    countryCode: 'BR',
+    born: '1992-02-05',
+    position: 'Forward',
+    bio: 'Brazil\'s most-capped player and all-time top scorer, Neymar is a dribbling artist who has been the most exciting player in the world at his best. His partnership with Messi and Suárez at Barcelona produced one of history\'s great attacking trios, winning the treble in 2015.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 438 },
+          { label: 'Club Assists', value: 233 },
+          { label: 'Club Appearances', value: 698 },
+          { label: 'PSG Goals', value: 118 },
+          { label: 'Barcelona Goals', value: 105 },
+          { label: 'Santos Goals', value: 138 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 79 },
+          { label: 'International Caps', value: 128 },
+          { label: 'World Cup Goals', value: 8 },
+          { label: 'Olympics Gold', value: 1 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Champions League Titles', value: 1 },
+          { label: 'La Liga Titles', value: 1 },
+          { label: 'Copa del Rey', value: 4 },
+          { label: 'Olympic Gold Medal', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'UEFA Champions League', count: 1, years: [2015] },
+      { title: 'La Liga', count: 1, years: [2015] },
+      { title: 'Copa del Rey', count: 4, years: [2012, 2015, 2016, 2017] },
+      { title: 'Olympic Gold Medal', count: 1, years: [2016] },
+    ],
+    careerHighlights: [
+      'Brazil\'s all-time top scorer and most-capped player',
+      'Part of the iconic MSN trio (Messi-Suárez-Neymar) — 122 combined goals in 2014-15',
+      'Olympic gold at Rio 2016 — his penalty won it in the shootout',
+      '€222m world-record transfer to PSG in 2017',
+      'World Cup top performer in 2014 before injury ended his tournament',
+    ],
+    initialElo: 1500,
+    active: true,
+  },
+  {
+    id: 'cruyff',
+    slug: 'cruyff',
+    name: 'Johan Cruyff',
+    shortName: 'Cruyff',
+    category: 'football',
+    nationality: 'Dutch',
+    countryCode: 'NL',
+    born: '1947-04-25',
+    position: 'Forward',
+    bio: 'Johan Cruyff didn\'t just play football — he changed it forever. The architect of Total Football, Cruyff revolutionized how the game is played and thought about. His "Cruyff Turn" became the most iconic move in football history. As a manager, he created the Dream Team Barcelona that shaped the modern game.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 395 },
+          { label: 'Club Appearances', value: 672 },
+          { label: 'Ajax Goals', value: 290 },
+          { label: 'Ajax Appearances', value: 398 },
+          { label: 'Barcelona Goals', value: 60 },
+          { label: 'Barcelona Appearances', value: 143 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 33 },
+          { label: 'International Caps', value: 48 },
+          { label: 'World Cup Goals', value: 5 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Ballon d\'Or', value: 3 },
+          { label: 'European Cup (Champions League)', value: 3 },
+          { label: 'European Championship', value: 0 },
+          { label: 'La Liga Titles', value: 1 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'Ballon d\'Or', count: 3, years: [1971, 1973, 1974] },
+      { title: 'European Cup', count: 3, years: [1971, 1972, 1973] },
+      { title: 'Eredivisie (Ajax)', count: 6 },
+      { title: 'La Liga (Barcelona)', count: 1, years: [1974] },
+    ],
+    careerHighlights: [
+      '3 consecutive European Cup wins with Ajax (1971-73)',
+      '3 Ballon d\'Or awards — including one with 3 consecutive finalists',
+      'Invented Total Football — his revolutionary philosophy shaped modern football',
+      'Led Netherlands to the 1974 World Cup Final',
+      'As Barcelona manager, built the Dream Team that won 4 consecutive La Liga titles',
+    ],
+    initialElo: 1500,
+    active: false,
+  },
+  {
+    id: 'beckenbauer',
+    slug: 'beckenbauer',
+    name: 'Franz Beckenbauer',
+    shortName: 'Beckenbauer',
+    category: 'football',
+    nationality: 'German',
+    countryCode: 'DE',
+    born: '1945-09-11',
+    position: 'Sweeper / Midfielder',
+    bio: 'The "Kaiser" is the only man to win the World Cup as both captain and manager. He invented the attacking libero role, transforming the sweeper position from defensive stopper into an elegant, ball-playing organizer. His leadership of Bayern Munich and West Germany defined an era of German dominance.',
+    statSections: [
+      {
+        heading: 'Club Career',
+        stats: [
+          { label: 'Club Goals', value: 111 },
+          { label: 'Club Appearances', value: 635 },
+          { label: 'Bayern Munich Goals', value: 75 },
+          { label: 'Bayern Munich Apps', value: 427 },
+          { label: 'Bundesliga Titles', value: 4 },
+          { label: 'European Cup Titles', value: 3 },
+        ],
+      },
+      {
+        heading: 'International',
+        stats: [
+          { label: 'International Goals', value: 14 },
+          { label: 'International Caps', value: 103 },
+          { label: 'World Cup Goals', value: 5 },
+        ],
+      },
+      {
+        heading: 'Awards',
+        stats: [
+          { label: 'Ballon d\'Or', value: 2 },
+          { label: 'FIFA World Cup (Player)', value: 1 },
+          { label: 'FIFA World Cup (Manager)', value: 1 },
+          { label: 'European Cup Titles', value: 3 },
+        ],
+      },
+    ],
+    achievements: [
+      { title: 'Ballon d\'Or', count: 2, years: [1972, 1976] },
+      { title: 'FIFA World Cup (Captain)', count: 1, years: [1974] },
+      { title: 'FIFA World Cup (Manager)', count: 1, years: [1990] },
+      { title: 'UEFA European Championship', count: 1, years: [1972] },
+      { title: 'European Cup / Champions League', count: 3, years: [1974, 1975, 1976] },
+      { title: 'Bundesliga', count: 4 },
+    ],
+    careerHighlights: [
+      'Only person in history to win the World Cup as captain AND manager',
+      'Invented the attacking libero/sweeper role — changed how defenders play',
+      '3 European Cup wins with Bayern Munich (1974-76)',
+      '2 Ballon d\'Or awards spanning 4 years',
+      'Led West Germany to Euro 1972 and World Cup 1974 double',
+    ],
+    initialElo: 1500,
+    active: false,
+  },
+];
+
+export function getEntityBySlug(slug: string): Entity | undefined {
+  return footballEntities.find(e => e.slug === slug);
+}
+
+export function getEntitySlugs(): string[] {
+  return footballEntities.map(e => e.slug);
+}
+
+/** Every canonical battle pairing, computed once at module load. */
+export const footballBattlePairs = getAllBattlePairs(getEntitySlugs());
+
+export interface EntityBattle {
+  battleSlug: string;
+  opponent: Entity;
+}
+
+/**
+ * All battles involving `slug`, resolved to the opponent entity.
+ * Pass `exclude` to drop a specific opponent and `limit` to cap the count.
+ */
+export function getBattlesForEntity(
+  slug: string,
+  opts: { exclude?: string; limit?: number } = {},
+): EntityBattle[] {
+  const { exclude, limit } = opts;
+  const battles = footballBattlePairs
+    .filter(([a, b]) => (a === slug || b === slug) && a !== exclude && b !== exclude)
+    .map(([a, b]) => ({
+      battleSlug: getBattleId(a, b),
+      opponent: getEntityBySlug(a === slug ? b : a)!,
+    }));
+  return limit ? battles.slice(0, limit) : battles;
+}

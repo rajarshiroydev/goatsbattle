@@ -1,11 +1,250 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import BattleCard from '../components/BattleCard.astro';
+import { getHomeBattleData } from '../lib/queries';
+import { compactNumber } from '../lib/format';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// Live scoreboard — read the latest tallies on every request.
+export const prerender = false;
+
+const { trending, mostVoted, closest, totalVotes } = await getHomeBattleData(6);
+
+const sections = [
+  {
+    id: 'trending',
+    label: 'Trending Now',
+    href: '/category/football',
+    badge: (i: number) => (i === 0 ? '🔥 Hot' : undefined),
+    battles: trending,
+  },
+  {
+    id: 'most-voted',
+    label: 'Most Voted',
+    href: '/category/football',
+    badge: (_: number, total: number) => (total > 0 ? `${compactNumber(total)} votes` : undefined),
+    battles: mostVoted,
+  },
+  {
+    id: 'closest',
+    label: 'Closest Battles',
+    href: '/category/football',
+    badge: (_: number, total: number, margin?: number) =>
+      total > 0 ? `${margin}% gap` : undefined,
+    battles: closest,
+  },
+];
 ---
 
 <Layout>
-	<Welcome />
+
+  <!-- ══════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════ -->
+  <section class="relative min-h-[88vh] flex flex-col items-center justify-center text-center px-5 overflow-hidden">
+
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
+      style="background:
+        radial-gradient(ellipse 90% 55% at 50% 110%, rgba(200,255,0,0.09) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 40% at 2% 50%, rgba(255,45,85,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 40% at 98% 50%, rgba(59,130,246,0.06) 0%, transparent 55%)">
+    </div>
+
+    <div class="relative z-10 max-w-5xl w-full mx-auto">
+
+      <!-- Live pill -->
+      <div class="inline-flex items-center gap-2 mb-8">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-lime"></span>
+        </span>
+        <span class="font-mono text-[11px] uppercase tracking-widest text-body">Football · Live Now</span>
+      </div>
+
+      <h1
+        class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
+        style="font-size: clamp(5rem, 15vw, 11rem)"
+      >
+        WHO'S<br>THE <span class="text-lime">GOAT?</span>
+      </h1>
+
+      <p class="mt-6 font-sans text-body text-lg leading-relaxed max-w-sm mx-auto">
+        Vote. Compare stats. See who the world backs.
+      </p>
+
+      <div class="mt-10 flex flex-wrap gap-3 justify-center">
+        <a href="/play"
+          class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors">
+          Champion Mode
+        </a>
+        <a href="/battle/messi-vs-ronaldo"
+          class="font-sans font-medium text-sm text-ink border border-hairline-strong px-8 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors">
+          Messi vs Ronaldo →
+        </a>
+      </div>
+
+    </div>
+
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-40">
+      <span class="font-mono text-[10px] uppercase tracking-widest text-mute">Scroll</span>
+      <div class="w-px h-8 bg-gradient-to-b from-mute to-transparent"></div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       LIVE BATTLE SECTIONS — trending / most-voted / closest
+  ══════════════════════════════════════════ -->
+  {sections.map((section) => (
+    <section class="border-t border-hairline" id={section.id}>
+      <div class="max-w-7xl mx-auto px-5 py-14 md:py-16">
+
+        <div class="flex items-center justify-between mb-8">
+          <div class="flex items-center gap-3">
+            <span class="w-0.5 h-6 bg-lime inline-block"></span>
+            <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">{section.label}</span>
+          </div>
+          <a href={section.href}
+            class="font-sans text-sm text-body hover:text-lime transition-colors">
+            See all →
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {section.battles.map((battle, i) => (
+            <BattleCard battle={battle} badge={section.badge(i, battle.total, battle.margin)} />
+          ))}
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <!-- ══════════════════════════════════════════
+       ARENAS (CATEGORY GRID)
+  ══════════════════════════════════════════ -->
+  <section class="border-t border-hairline bg-canvas-soft">
+    <div class="max-w-7xl mx-auto px-5 py-16 md:py-20">
+
+      <div class="flex items-center gap-3 mb-8">
+        <span class="w-0.5 h-6 bg-lime inline-block"></span>
+        <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Arenas</span>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+        <a href="/category/football"
+          class="group relative flex flex-col justify-between bg-canvas border border-hairline hover:border-lime rounded-md p-5 h-36 overflow-hidden transition-all duration-200"
+          style="box-shadow: var(--shadow-card)">
+          <div>
+            <span class="font-headline font-black uppercase text-3xl leading-none tracking-tight text-ink group-hover:text-lime transition-colors">Football</span>
+          </div>
+          <div class="flex items-end justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-lime flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-lime inline-block"></span>Live
+            </span>
+            <span class="text-3xl">⚽</span>
+          </div>
+          <div class="absolute inset-0 bg-lime opacity-0 group-hover:opacity-[0.03] transition-opacity rounded-md pointer-events-none"></div>
+        </a>
+
+        <div class="flex flex-col justify-between bg-canvas border border-hairline rounded-md p-5 h-36 opacity-40">
+          <span class="font-headline font-black uppercase text-3xl leading-none tracking-tight text-ink">Cricket</span>
+          <div class="flex items-end justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-mute">Soon</span>
+            <span class="text-3xl">🏏</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col justify-between bg-canvas border border-hairline rounded-md p-5 h-36 opacity-40">
+          <span class="font-headline font-black uppercase text-3xl leading-none tracking-tight text-ink">Tennis</span>
+          <div class="flex items-end justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-mute">Soon</span>
+            <span class="text-3xl">🎾</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col justify-between bg-canvas border border-hairline rounded-md p-5 h-36 opacity-40">
+          <span class="font-headline font-black uppercase text-3xl leading-none tracking-tight text-ink">Music</span>
+          <div class="flex items-end justify-between">
+            <span class="font-mono text-[10px] uppercase tracking-wider text-mute">Soon</span>
+            <span class="text-3xl">🎤</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       CHAMPION MODE PROMO BAND
+  ══════════════════════════════════════════ -->
+  <section class="border-t border-hairline">
+    <div class="max-w-7xl mx-auto px-5 py-16 md:py-20">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+
+        <div class="max-w-xl">
+          <p class="font-mono text-[10px] uppercase tracking-widest text-lime mb-3">Champion Mode</p>
+          <h2
+            class="font-headline font-black uppercase leading-none tracking-tight text-ink"
+            style="font-size: clamp(2.5rem, 6vw, 4.5rem)"
+          >
+            PICK YOUR GOAT.<br>FIGHT EVERYONE ELSE.
+          </h2>
+          <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-sm">
+            Lock in your champion. Then battle through every contender one by one. Your votes move the global rankings.
+          </p>
+        </div>
+
+        <div class="shrink-0 w-full md:w-auto">
+          <div class="space-y-2 w-full md:w-72">
+            {[
+              { a: 'MESSI', b: 'PELÉ', done: true },
+              { a: 'MESSI', b: 'RONALDO', done: false, active: true },
+              { a: 'MESSI', b: 'MARADONA', done: false },
+            ].map(({ a, b, done, active }) => (
+              <div class={[
+                'flex items-center gap-3 px-4 py-3 rounded-sm border transition-all',
+                done   ? 'bg-canvas-soft border-hairline opacity-40' : '',
+                active ? 'bg-canvas-soft border-lime' : '',
+                !done && !active ? 'bg-canvas-soft border-hairline opacity-25' : '',
+              ].join(' ')}>
+                <span class={['font-headline font-black uppercase text-base leading-none', done ? 'text-mute line-through' : 'text-ink'].join(' ')}>{a}</span>
+                <span class={['font-headline font-black text-lg leading-none', active ? 'text-lime' : 'text-mute'].join(' ')}>/</span>
+                <span class={['font-headline font-black uppercase text-base leading-none', done ? 'text-mute line-through' : 'text-ink'].join(' ')}>{b}</span>
+                {done && <span class="ml-auto font-mono text-[10px] uppercase text-mute">Done</span>}
+                {active && <span class="ml-auto font-mono text-[10px] uppercase text-lime animate-pulse">Now</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10">
+        <a href="/play"
+          class="inline-flex items-center font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 rounded-sm hover:bg-lime-dark transition-colors">
+          Start Champion Mode
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       STATS PROOF BAND
+  ══════════════════════════════════════════ -->
+  <section class="border-t border-hairline bg-canvas-soft">
+    <div class="max-w-7xl mx-auto px-5 py-12">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        {[
+          { stat: '45', label: 'Active Battles' },
+          { stat: '10', label: 'Football GOATs' },
+          { stat: totalVotes > 0 ? compactNumber(totalVotes) : '∞', label: 'Votes Cast' },
+          { stat: '4', label: 'Arenas' },
+        ].map(({ stat, label }) => (
+          <div>
+            <p class="font-headline font-black text-5xl leading-none tracking-tight text-lime">{stat}</p>
+            <p class="font-sans text-sm text-body mt-2 uppercase tracking-wider">{label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
 </Layout>

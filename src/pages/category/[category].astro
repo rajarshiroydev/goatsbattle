@@ -1,0 +1,82 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BattleCard from '../../components/BattleCard.astro';
+import { footballEntities } from '../../data/football';
+import { getAllBattleSummaries } from '../../lib/queries';
+import { flagEmoji, compactNumber } from '../../lib/format';
+
+// Live catalog — ordering follows community votes.
+export const prerender = false;
+
+const { category } = Astro.params;
+if (category !== 'football') return Astro.redirect('/');
+
+const allBattles = await getAllBattleSummaries();
+const roster = [...footballEntities].sort((a, b) => Number(b.active) - Number(a.active));
+const totalVotes = allBattles.reduce((s, b) => s + b.total, 0);
+
+const title = 'Football GOAT Battles — Every Matchup | GOATSBattle';
+const description = 'All 45 football GOAT battles and 10 legendary players. Compare stats head-to-head and vote on who the world thinks is the greatest of all time.';
+---
+
+<Layout title={title} description={description}>
+
+  <!-- Header -->
+  <section class="border-b border-hairline relative overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
+      style="background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(200,255,0,0.07) 0%, transparent 60%)"></div>
+    <div class="relative max-w-7xl mx-auto px-5 py-12 md:py-16">
+      <div class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-mute mb-6">
+        <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
+        <span>/</span>
+        <span class="text-ink">Football</span>
+      </div>
+      <h1 class="font-headline font-black uppercase leading-none tracking-tight text-ink"
+        style="font-size: clamp(3rem, 9vw, 6rem)">
+        Football <span class="text-lime">Arena</span>
+      </h1>
+      <p class="mt-4 font-sans text-body text-base max-w-lg">
+        {allBattles.length} battles · {roster.length} legends · {totalVotes > 0 ? `${compactNumber(totalVotes)} votes cast` : 'voting just opened'}.
+      </p>
+    </div>
+  </section>
+
+  <!-- Players roster -->
+  <section class="border-b border-hairline bg-canvas-soft">
+    <div class="max-w-7xl mx-auto px-5 py-12">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-0.5 h-5 bg-lime inline-block"></span>
+        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">The Legends</h2>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {roster.map((e) => (
+          <a href={`/player/${e.slug}`}
+            class="group flex items-center gap-3 bg-canvas border border-hairline hover:border-lime rounded-md px-4 py-3 transition-colors">
+            <span class="text-2xl leading-none">{flagEmoji(e.countryCode)}</span>
+            <span class="min-w-0">
+              <span class="block font-headline font-black uppercase text-xl leading-none text-ink group-hover:text-lime transition-colors truncate">{e.shortName}</span>
+              <span class="block font-mono text-[10px] uppercase tracking-wider text-mute mt-1">{e.position}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- All battles -->
+  <section>
+    <div class="max-w-7xl mx-auto px-5 py-12">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-0.5 h-5 bg-lime inline-block"></span>
+        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">All Battles</h2>
+        <span class="font-mono text-[10px] uppercase tracking-widest text-mute hidden sm:inline">Sorted by votes</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {allBattles.map((battle) => (
+          <BattleCard battle={battle} badge={battle.total > 0 ? `${compactNumber(battle.total)} votes` : undefined} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+</Layout>
