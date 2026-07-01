@@ -7,7 +7,7 @@
  */
 import { sql } from 'drizzle-orm';
 import { db } from '../src/lib/db';
-import { footballEntities, footballBattlePairs } from '../src/data/football';
+import { allEntities, allBattlePairs } from '../src/data';
 import { getBattleId } from '../src/lib/battle';
 import { entities, battles } from '../src/lib/db/schema';
 
@@ -17,7 +17,7 @@ async function main() {
   await db
     .insert(entities)
     .values(
-      footballEntities.map((e) => ({
+      allEntities.map((e) => ({
         id: e.slug,
         name: e.name,
         shortName: e.shortName,
@@ -35,21 +35,22 @@ async function main() {
         countryCode: sql`excluded.country_code`,
       },
     });
-  console.log(`  ✓ ${footballEntities.length} entities`);
+  console.log(`  ✓ ${allEntities.length} entities`);
 
   console.log('→ Seeding battles…');
+  const categoryBySlug = new Map(allEntities.map((e) => [e.slug, e.category]));
   await db
     .insert(battles)
     .values(
-      footballBattlePairs.map(([a, b]) => ({
+      allBattlePairs.map(([a, b]) => ({
         id: getBattleId(a, b),
         entityA: a,
         entityB: b,
-        category: 'football',
+        category: categoryBySlug.get(a)!,
       })),
     )
     .onConflictDoNothing({ target: battles.id });
-  console.log(`  ✓ ${footballBattlePairs.length} battles`);
+  console.log(`  ✓ ${allBattlePairs.length} battles`);
 
   const [[entityRow], [battleRow]] = await Promise.all([
     db.select({ count: sql<number>`count(*)::int` }).from(entities),

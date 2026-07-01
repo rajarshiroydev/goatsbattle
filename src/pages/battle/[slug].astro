@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getEntityBySlug, getBattlesForEntity, footballBattlePairs } from '../../data/football';
+import { getEntityBySlug, getBattlesForEntity, allBattlePairs } from '../../data';
+import { categoryLabel } from '../../data/categories';
 import { getBattleId, parseBattleSlug, getCanonicalBattleSlug } from '../../lib/battle';
 import { compareEntities } from '../../lib/stats';
 import RadarChart from '../../components/RadarChart.astro';
@@ -8,7 +9,7 @@ import TrophyTimeline from '../../components/TrophyTimeline.astro';
 import VoteWidget from '../../components/VoteWidget.tsx';
 
 export function getStaticPaths() {
-  return footballBattlePairs.map(([a, b]) => ({
+  return allBattlePairs.map(([a, b]) => ({
     params: { slug: getBattleId(a, b) },
   }));
 }
@@ -38,6 +39,8 @@ const relatedA = getBattlesForEntity(slugA, { exclude: slugB, limit: 4 });
 const relatedB = getBattlesForEntity(slugB, { exclude: slugA, limit: 4 });
 
 const ogImage = `/og/battle/${canonical}.png`;
+const category = entityA.category;
+const catLabel = categoryLabel(category);
 ---
 
 <Layout title={title} description={description} image={ogImage}>
@@ -56,7 +59,7 @@ const ogImage = `/og/battle/${canonical}.png`;
       <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-6">
         <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
         <span>/</span>
-        <a href="/category/football" class="hover:text-body transition-colors">Football</a>
+        <a href={`/category/${category}`} class="hover:text-body transition-colors">{catLabel}</a>
         <span>/</span>
         <span class="text-ink">{entityA.shortName} vs {entityB.shortName}</span>
       </div>

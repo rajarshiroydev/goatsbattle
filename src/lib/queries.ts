@@ -1,7 +1,7 @@
 import { sql, gt, eq, desc } from 'drizzle-orm';
 import { db } from './db';
 import { battles, votes, entities } from './db/schema';
-import { getEntityBySlug } from '../data/football';
+import { getEntityBySlug, categories } from '../data';
 import type { Entity } from './types';
 
 /**
@@ -11,6 +11,8 @@ import type { Entity } from './types';
  */
 export interface BattleSummary {
   slug: string;
+  /** Arena this battle belongs to, e.g. "football". */
+  category: string;
   a: Entity;
   b: Entity;
   votesA: number;
@@ -44,6 +46,7 @@ function toSummary(row: BattleRow): BattleSummary | null {
 
   return {
     slug: row.id,
+    category: a.category,
     a,
     b,
     votesA: row.votesA,
@@ -78,6 +81,8 @@ export interface HomeBattleData {
   trending: BattleSummary[];
   mostVoted: BattleSummary[];
   closest: BattleSummary[];
+  /** One headline battle per arena, for the cross-category showcase. */
+  spotlight: BattleSummary[];
   totalVotes: number;
 }
 
@@ -139,11 +144,28 @@ export async function getHomeBattleData(limit = 6): Promise<HomeBattleData> {
     })
     .slice(0, limit);
 
-  return { trending, mostVoted, closest, totalVotes: totals?.total ?? 0 };
+  // One headline battle per arena — prefer the curated rivalry, else the arena's
+  // most-voted battle, so the cross-category showcase always fills.
+  const byId = new Map(summaries.map((s) => [s.slug, s]));
+  const seenCat = new Set<string>();
+  const spotlight: BattleSummary[] = [];
+  for (const { id: category, spotlightBattleSlug } of categories) {
+    const pick = byId.get(spotlightBattleSlug) ??
+      summaries.filter((s) => s.category === category).sort((a, b) => b.total - a.total)[0];
+    if (pick && !seenCat.has(pick.category)) {
+      spotlight.push(pick);
+      seenCat.add(pick.category);
+    }
+  }
+
+  return { trending, mostVoted, closest, spotlight, totalVotes: totals?.total ?? 0 };
 }
 
-/** Every battle, enriched and sorted by total votes (then featured order). */
-export async function getAllBattleSummaries(): Promise<BattleSummary[]> {
+/**
+ * Every battle, enriched and sorted by total votes (then featured order).
+ * Pass a `category` to restrict the catalog to a single arena.
+ */
+export async function getAllBattleSummaries(category?: string): Promise<BattleSummary[]> {
   const rows = await db
     .select({
       id: battles.id,
@@ -152,7 +174,8 @@ export async function getAllBattleSummaries(): Promise<BattleSummary[]> {
       votesA: battles.votesA,
       votesB: battles.votesB,
     })
-    .from(battles);
+    .from(battles)
+    .where(category ? eq(battles.category, category) : undefined);
 
   return rows
     .map(toSummary)

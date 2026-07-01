@@ -65,13 +65,13 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 
         <!-- Nav links (desktop) -->
         <div class="hidden md:flex items-center gap-1">
-          <a href="/rankings/football"
+          <a href="/goats"
             class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
-            Rankings
+            Goats
           </a>
-          <a href="/category/football"
+          <a href="/categories"
             class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
-            Football
+            Categories
           </a>
           <a href="/play"
             class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
@@ -113,17 +113,18 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
             <div>
               <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">Platform</p>
               <ul class="space-y-2">
-                <li><a href="/rankings/football" class="text-body hover:text-ink transition-colors">Football Rankings</a></li>
+                <li><a href="/goats" class="text-body hover:text-ink transition-colors">The Goats</a></li>
+                <li><a href="/categories" class="text-body hover:text-ink transition-colors">Categories</a></li>
                 <li><a href="/play" class="text-body hover:text-ink transition-colors">Champion Mode</a></li>
               </ul>
             </div>
             <div>
-              <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">Categories</p>
+              <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">Arenas</p>
               <ul class="space-y-2">
                 <li><a href="/category/football" class="text-body hover:text-ink transition-colors">Football</a></li>
-                <li><span class="text-mute">Cricket — soon</span></li>
-                <li><span class="text-mute">Tennis — soon</span></li>
-                <li><span class="text-mute">Music — soon</span></li>
+                <li><a href="/category/cricket" class="text-body hover:text-ink transition-colors">Cricket</a></li>
+                <li><a href="/category/tennis" class="text-body hover:text-ink transition-colors">Tennis</a></li>
+                <li><a href="/category/f1" class="text-body hover:text-ink transition-colors">Formula 1</a></li>
               </ul>
             </div>
             <div>

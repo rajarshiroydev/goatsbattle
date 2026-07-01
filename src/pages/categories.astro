@@ -1,0 +1,85 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { categories } from '../data/categories';
+import { getEntitiesByCategory, battlePairsByCategory } from '../data';
+
+const cards = categories.map((c) => ({
+  ...c,
+  legends: getEntitiesByCategory(c.id).length,
+  battles: (battlePairsByCategory[c.id] ?? []).length,
+}));
+
+const title = 'Categories — Every GOAT Arena | GOATSBattle';
+const description = 'Football, cricket, tennis, Formula 1 and more. Pick an arena and see the live GOAT rankings decided by the world.';
+---
+
+<Layout title={title} description={description}>
+
+  <!-- Header -->
+  <section class="border-b border-hairline relative overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
+      style="background: radial-gradient(ellipse 80% 55% at 50% -10%, rgba(200,255,0,0.08) 0%, transparent 60%)"></div>
+    <div class="relative max-w-7xl mx-auto px-5 py-14 md:py-20">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-lime mb-4">The Arenas</p>
+      <h1 class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
+        style="font-size: clamp(3rem, 10vw, 7rem)">
+        Pick your <span class="text-lime">arena</span>
+      </h1>
+      <p class="mt-5 font-sans text-body text-lg leading-relaxed max-w-xl">
+        Every sport has its eternal argument. Choose a category to see the live, community-voted
+        rankings — and settle the debate yourself.
+      </p>
+    </div>
+  </section>
+
+  <!-- Category grid -->
+  <section>
+    <div class="max-w-7xl mx-auto px-5 py-12 md:py-16">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cards.map((c) => (
+          <a href={`/rankings/${c.id}`}
+            class="group relative flex flex-col justify-between overflow-hidden rounded-lg border border-hairline bg-canvas-soft p-7 md:p-9 min-h-[220px] transition-all duration-200 hover:-translate-y-1"
+            style={`box-shadow: var(--shadow-card)`}
+            onmouseover={`this.style.borderColor='${c.accent}'`}
+            onmouseout={`this.style.borderColor=''`}>
+
+            <!-- Colour wash -->
+            <div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              aria-hidden="true"
+              style={`background: radial-gradient(ellipse 70% 90% at 100% 0%, ${c.accent}20 0%, transparent 60%)`}></div>
+
+            <div class="relative flex items-start justify-between">
+              <div>
+                <span class="font-mono text-[11px] uppercase tracking-widest" style={`color:${c.accent}`}>{c.debate}</span>
+                <h2 class="mt-3 font-headline font-black uppercase leading-none tracking-tight text-ink group-hover:opacity-95"
+                  style="font-size: clamp(2.5rem, 6vw, 4rem)">
+                  {c.label}
+                </h2>
+                <p class="mt-3 font-sans text-body text-base max-w-sm">{c.tagline}</p>
+              </div>
+              <span class="text-5xl md:text-6xl leading-none shrink-0" style={`filter: drop-shadow(0 0 20px ${c.accent}55)`}>{c.emoji}</span>
+            </div>
+
+            <div class="relative mt-6 flex items-center justify-between">
+              <div class="flex items-center gap-5 font-mono text-[11px] uppercase tracking-wider text-mute">
+                <span><span class="text-ink font-bold">{c.legends}</span> legends</span>
+                <span><span class="text-ink font-bold">{c.battles}</span> battles</span>
+                <span class="flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full inline-block" style={`background:${c.accent}`}></span>Live
+                </span>
+              </div>
+              <span class="font-headline font-black uppercase text-sm tracking-wider transition-transform group-hover:translate-x-1" style={`color:${c.accent}`}>
+                Rankings →
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      <p class="mt-8 font-mono text-[11px] uppercase tracking-widest text-mute text-center">
+        More arenas coming soon · suggest one at <a href="/goats" class="text-body hover:text-ink">the goats</a>
+      </p>
+    </div>
+  </section>
+
+</Layout>

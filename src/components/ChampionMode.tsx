@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { BattleResult } from "../lib/voteWire";
 import type { StatSection } from "../lib/types";
 
@@ -163,6 +163,10 @@ export default function ChampionMode({ roster }: Props) {
       advanceTimer.current = null;
     }
   }
+
+  // Cancel any pending auto-advance if the island unmounts mid-reveal, so the
+  // timeout never fires next()/setState on a torn-down component.
+  useEffect(() => clearTimer, []);
 
   function start(n: number) {
     clearTimer();

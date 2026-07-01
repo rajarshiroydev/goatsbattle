@@ -1,5 +1,6 @@
 import { pgTable, text, integer, timestamp, serial, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { SEED_ELO } from '../elo';
 
 /**
  * Entities — the curated GOAT candidates. The canonical profile/stat content
@@ -12,7 +13,7 @@ export const entities = pgTable('entities', {
   shortName: text('short_name').notNull(),
   category: text('category').notNull().default('football'),
   countryCode: text('country_code').notNull(),
-  elo: integer('elo').notNull().default(1500),
+  elo: integer('elo').notNull().default(SEED_ELO),
   votesFor: integer('votes_for').notNull().default(0), // total votes won across all battles
   votesAgainst: integer('votes_against').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

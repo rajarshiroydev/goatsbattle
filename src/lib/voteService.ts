@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from './db';
 import { votes } from './db/schema';
-import { DEFAULT_K } from './elo';
+import { eloDeltaSql } from './elo';
 import { getBattleSummary, type BattleSummary } from './queries';
 
 export type VoteOutcome =
@@ -52,10 +52,16 @@ export async function recordVote(
     // delta round(K·(1 − expected(winner))); both UPDATEs and the history insert
     // share that snapshot, so concurrent votes can't lose an update — the delta
     // is applied additively even if another vote lands first.
+    //
+    // Guarded for a partially-seeded DB: if a rating row is missing, `d` yields no
+    // row (delta → NULL) and the matching UPDATE touches nothing. COALESCE keeps
+    // the surviving side from writing NULL into a NOT NULL column, and the history
+    // rows are driven off the UPDATE's RETURNING (`FROM uw`/`FROM ul`) so a missing
+    // entity simply logs nothing rather than 500-ing the vote. The battle tally
+    // (`ub`) always bumps regardless.
     await db.execute(sql`
       WITH d AS (
-        SELECT
-          round(${DEFAULT_K}::numeric * (1 - 1.0 / (1 + power(10, (l.elo - w.elo) / 400.0))))::int AS delta
+        SELECT ${eloDeltaSql(sql`w.elo`, sql`l.elo`)} AS delta
         FROM entities w, entities l
         WHERE w.id = ${winner} AND l.id = ${loser}
       ),
@@ -64,20 +70,20 @@ export async function recordVote(
       ),
       uw AS (
         UPDATE entities
-        SET elo = elo + (SELECT delta FROM d), votes_for = votes_for + 1
+        SET elo = elo + COALESCE((SELECT delta FROM d), 0), votes_for = votes_for + 1
         WHERE id = ${winner}
         RETURNING elo AS new_elo
       ),
       ul AS (
         UPDATE entities
-        SET elo = elo - (SELECT delta FROM d), votes_against = votes_against + 1
+        SET elo = elo - COALESCE((SELECT delta FROM d), 0), votes_against = votes_against + 1
         WHERE id = ${loser}
         RETURNING elo AS new_elo
       )
       INSERT INTO elo_history (entity_id, battle_id, elo, delta)
-      SELECT ${winner}, ${battleId}, (SELECT new_elo FROM uw), (SELECT delta FROM d)
+      SELECT ${winner}, ${battleId}, uw.new_elo, COALESCE((SELECT delta FROM d), 0) FROM uw
       UNION ALL
-      SELECT ${loser}, ${battleId}, (SELECT new_elo FROM ul), -(SELECT delta FROM d)
+      SELECT ${loser}, ${battleId}, ul.new_elo, -COALESCE((SELECT delta FROM d), 0) FROM ul
     `);
   }
 

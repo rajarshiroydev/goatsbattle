@@ -1,17 +1,16 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getRankings } from '../../lib/queries';
+import { getCategory } from '../../data/categories';
 import { flagEmoji, compactNumber } from '../../lib/format';
 
 // Live leaderboard — recompute ranks on every request.
 export const prerender = false;
 
 const { category } = Astro.params;
-
-// Football is the only live arena at launch; anything else 404s cleanly.
-const CATEGORY_LABELS: Record<string, string> = { football: 'Football' };
-const label = category ? CATEGORY_LABELS[category] : undefined;
-if (!category || !label) return new Response('Not found', { status: 404 });
+const cat = category ? getCategory(category) : undefined;
+if (!category || !cat) return new Response('Not found', { status: 404 });
+const label = cat.label;
 
 const rankings = await getRankings(category);
 const totalVotes = rankings.reduce((s, r) => s + r.totalVotes, 0);

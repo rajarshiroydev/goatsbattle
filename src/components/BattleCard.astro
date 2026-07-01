@@ -1,6 +1,7 @@
 ---
 import type { BattleSummary } from '../lib/queries';
 import { flagEmoji, compactNumber } from '../lib/format';
+import { categoryLabel, categoryEmoji } from '../data/categories';
 
 interface Props {
   battle: BattleSummary;
@@ -9,57 +10,77 @@ interface Props {
 }
 
 const { battle, badge } = Astro.props;
-const { a, b, slug, pctA, pctB, total, leader } = battle;
+const { a, b, slug, pctA, pctB, total, leader, category } = battle;
 const hasVotes = total > 0;
+
+// Each side is themed with the athlete's own accent so cards read at a glance;
+// the losing/lower side is dimmed to a neutral bar.
+const dim = '#3a3a3e';
+
+// Each name shares a half-width column that varies with the grid (4-up on the
+// homepage, 3-up elsewhere). Size it to the card's own width via container
+// units, tightening the coefficient for longer names (Schumacher, Beckenbauer)
+// so they fit on one line without clipping. `break-words` is the safety net.
+function nameFont(name: string): string {
+  const k = (52 / Math.max(name.length, 3)).toFixed(1);
+  return `font-size: clamp(0.95rem, ${k}cqi, 2.5rem)`;
+}
 ---
 
 <a
   href={`/battle/${slug}`}
-  class="group block bg-canvas-soft border border-hairline hover:border-lime rounded-md overflow-hidden transition-all duration-200"
+  class="group relative block bg-canvas-soft border border-hairline rounded-md overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
   style="box-shadow: var(--shadow-card)"
+  onmouseover={`this.style.borderColor='${a.accent}88'`}
+  onmouseout={`this.style.borderColor=''`}
 >
+  <!-- Per-side colour wash -->
+  <div class="absolute inset-0 pointer-events-none opacity-70" aria-hidden="true"
+    style={`background: linear-gradient(90deg, ${a.accent}14 0%, transparent 34%, transparent 66%, ${b.accent}14 100%)`}></div>
+
   <!-- Card header -->
-  <div class="px-5 py-3 border-b border-hairline flex items-center justify-between">
-    <span class="font-mono text-[11px] uppercase tracking-widest text-body">⚽ Football</span>
+  <div class="relative px-5 py-3 border-b border-hairline flex items-center justify-between">
+    <span class="font-mono text-[11px] uppercase tracking-widest text-body">{categoryEmoji(category)} {categoryLabel(category)}</span>
     {badge && (
       <span class="font-mono text-[11px] uppercase tracking-wider text-lime">{badge}</span>
     )}
   </div>
 
   <!-- Players — the "/" split -->
-  <div class="relative flex items-stretch min-h-[140px]">
-    <div class="flex-1 flex flex-col justify-center px-5 py-6 gap-1">
-      <span class="font-headline font-black uppercase text-3xl lg:text-4xl leading-none tracking-tight text-ink">{a.shortName}</span>
+  <div class="@container relative flex items-stretch min-h-[140px]">
+    <div class="flex-1 min-w-0 flex flex-col justify-center px-5 py-6 gap-1">
+      <span class="font-headline font-black uppercase leading-none tracking-tight break-words" style={`color:${a.accent}; ${nameFont(a.shortName)}`}>{a.shortName}</span>
       <span class="font-sans text-xs text-body">{a.nationality} {flagEmoji(a.countryCode)}</span>
     </div>
 
     <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
-      <span class="font-headline font-black text-7xl leading-none text-lime select-none" style="text-shadow: 0 0 30px rgba(200,255,0,0.4)">/</span>
+      <span class="font-headline font-black text-7xl leading-none select-none"
+        style={`background:linear-gradient(150deg, ${a.accent}, ${b.accent}); -webkit-background-clip:text; background-clip:text; color:transparent`}>/</span>
     </div>
 
-    <div class="flex-1 flex flex-col justify-center items-end px-5 py-6 gap-1 text-right">
-      <span class="font-headline font-black uppercase text-3xl lg:text-4xl leading-none tracking-tight text-ink">{b.shortName}</span>
+    <div class="flex-1 min-w-0 flex flex-col justify-center items-end px-5 py-6 gap-1 text-right">
+      <span class="font-headline font-black uppercase leading-none tracking-tight break-words" style={`color:${b.accent}; ${nameFont(b.shortName)}`}>{b.shortName}</span>
       <span class="font-sans text-xs text-body">{flagEmoji(b.countryCode)} {b.nationality}</span>
     </div>
   </div>
 
   <!-- Card footer: live result bar, or a vote nudge while unvoted -->
   {hasVotes ? (
-    <div class="px-5 py-3 border-t border-hairline">
+    <div class="relative px-5 py-3 border-t border-hairline">
       <div class="flex items-center justify-between font-mono text-[11px] mb-2">
-        <span class={leader === 'a' ? 'text-lime' : 'text-body'}>{pctA}%</span>
+        <span style={`color:${leader === 'a' ? a.accent : '#8b8b95'}`}>{pctA}%</span>
         <span class="text-mute uppercase tracking-widest text-[11px]">{compactNumber(total)} votes</span>
-        <span class={leader === 'b' ? 'text-lime' : 'text-body'}>{pctB}%</span>
+        <span style={`color:${leader === 'b' ? b.accent : '#8b8b95'}`}>{pctB}%</span>
       </div>
       <div class="flex h-1.5 gap-0.5 rounded-full overflow-hidden">
-        <div style={`width:${pctA}%`} class={leader === 'a' ? 'bg-lime' : 'bg-hairline-strong'}></div>
-        <div style={`width:${pctB}%`} class={leader === 'b' ? 'bg-lime' : 'bg-hairline-strong'}></div>
+        <div style={`width:${pctA}%; background:${leader === 'b' ? dim : a.accent}`}></div>
+        <div style={`width:${pctB}%; background:${leader === 'a' ? dim : b.accent}`}></div>
       </div>
     </div>
   ) : (
-    <div class="px-5 py-3 border-t border-hairline flex items-center justify-between">
+    <div class="relative px-5 py-3 border-t border-hairline flex items-center justify-between">
       <span class="font-sans text-xs text-mute">Be the first to vote</span>
-      <span class="font-sans text-sm font-medium text-lime group-hover:translate-x-0.5 transition-transform">Vote →</span>
+      <span class="font-sans text-sm font-medium group-hover:translate-x-0.5 transition-transform" style={`color:${a.accent}`}>Vote →</span>
     </div>
   )}
 </a>
