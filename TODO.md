@@ -47,15 +47,15 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Capture `x-vercel-ip-country` per vote → stored on each vote row
 
 ## Phase 4 — Rankings (Elo)
-- [ ] Elo engine (K=32, seed 1500) shared by both entry points
-- [ ] Update Elo transactionally on each vote
-- [ ] Rankings page `/rankings` (SSR, live leaderboard)
-- [ ] Per-entity rank + record on player profiles
+- [x] Elo engine (K=32, seed 1500) shared by both entry points — `src/lib/elo.ts`
+- [x] Update Elo transactionally on each vote — extended `recordVote` batch (ratings + `elo_history` log)
+- [x] Rankings page `/rankings/[category]` (SSR, live leaderboard w/ podium + full table) + `/api/rankings` JSON
+- [x] Per-entity rank + record on player profiles — `PlayerRank` island (hydrates static page from `/api/rankings`)
 
 ## Phase 5 — Champion Mode
-- [ ] `/play` route — pick your GOAT, fight opponents one by one
-- [ ] Random-opponent draw logic (reuses same vote API + Elo)
-- [ ] `ChampionMode` Preact island (streak, progression UI)
+- [x] `/play` route — pick your GOAT, fight opponents one by one (static shell + island)
+- [x] Random-opponent draw logic (Fisher-Yates shuffle, reuses same vote API + Elo)
+- [x] `ChampionMode` Preact island (progress dots, crowd verdict per round, final run summary)
 
 ## Phase 6 — Discovery & engagement
 - [ ] `Search` Preact island (find entities & battles)

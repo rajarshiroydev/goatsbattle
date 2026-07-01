@@ -20,9 +20,9 @@ const hasVotes = total > 0;
 >
   <!-- Card header -->
   <div class="px-5 py-3 border-b border-hairline flex items-center justify-between">
-    <span class="font-mono text-[10px] uppercase tracking-widest text-body">⚽ Football</span>
+    <span class="font-mono text-[11px] uppercase tracking-widest text-body">⚽ Football</span>
     {badge && (
-      <span class="font-mono text-[10px] uppercase tracking-wider text-lime">{badge}</span>
+      <span class="font-mono text-[11px] uppercase tracking-wider text-lime">{badge}</span>
     )}
   </div>
 
@@ -48,7 +48,7 @@ const hasVotes = total > 0;
     <div class="px-5 py-3 border-t border-hairline">
       <div class="flex items-center justify-between font-mono text-[11px] mb-2">
         <span class={leader === 'a' ? 'text-lime' : 'text-body'}>{pctA}%</span>
-        <span class="text-mute uppercase tracking-widest text-[10px]">{compactNumber(total)} votes</span>
+        <span class="text-mute uppercase tracking-widest text-[11px]">{compactNumber(total)} votes</span>
         <span class={leader === 'b' ? 'text-lime' : 'text-body'}>{pctB}%</span>
       </div>
       <div class="flex h-1.5 gap-0.5 rounded-full overflow-hidden">

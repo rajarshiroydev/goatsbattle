@@ -45,15 +45,15 @@ const ogImage = `/og/battle/${canonical}.png`;
   <!-- Battle Hero — the main slash split -->
   <section class="border-b border-hairline relative overflow-hidden">
 
-    <!-- Atmospheric glows -->
+    <!-- Atmospheric glows — each side tinted with the player's own colour -->
     <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
-      style="background: radial-gradient(ellipse 40% 60% at 20% 50%, rgba(255,45,85,0.08) 0%, transparent 70%), radial-gradient(ellipse 40% 60% at 80% 50%, rgba(59,130,246,0.08) 0%, transparent 70%)">
+      style={`background: radial-gradient(ellipse 40% 60% at 20% 50%, ${entityA.accent}26 0%, transparent 70%), radial-gradient(ellipse 40% 60% at 80% 50%, ${entityB.accent}26 0%, transparent 70%)`}>
     </div>
 
     <div class="relative max-w-7xl mx-auto px-5 py-8">
 
       <!-- Breadcrumb -->
-      <div class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-mute mb-6">
+      <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-6">
         <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
         <span>/</span>
         <a href="/category/football" class="hover:text-body transition-colors">Football</a>
@@ -61,48 +61,47 @@ const ogImage = `/og/battle/${canonical}.png`;
         <span class="text-ink">{entityA.shortName} vs {entityB.shortName}</span>
       </div>
 
-      <!-- Title -->
-      <h1 class="font-headline font-black uppercase leading-none tracking-tight text-ink text-center mb-8"
-        style="font-size: clamp(2rem, 5vw, 4rem)">
-        {entityA.name}
-        <span class="text-lime"> / </span>
-        {entityB.name}
-      </h1>
+      <h1 class="sr-only">{entityA.name} vs {entityB.name} — who's the greater GOAT?</h1>
 
       <!-- Split card -->
-      <div class="relative flex items-stretch min-h-[220px] md:min-h-[280px] bg-canvas-soft border border-hairline rounded-md overflow-hidden">
+      <div class="relative flex items-stretch min-h-[240px] md:min-h-[300px] bg-canvas-soft border border-hairline rounded-md overflow-hidden">
+        <!-- Faint per-side colour wash -->
+        <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
+          style={`background: linear-gradient(90deg, ${entityA.accent}1a 0%, transparent 38%, transparent 62%, ${entityB.accent}1a 100%)`}></div>
 
         <!-- Player A -->
-        <div class="flex-1 flex flex-col justify-between px-6 py-8 md:px-10 md:py-10">
+        <div class="relative flex-1 flex flex-col justify-between px-6 py-8 md:px-10 md:py-10">
           <div>
-            <p class="font-mono text-[10px] uppercase tracking-widest text-body mb-2">{entityA.nationality}</p>
-            <h2 class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-              style="font-size: clamp(2.5rem, 6vw, 5rem)">
-              {entityA.shortName}
+            <p class="font-mono text-sm uppercase tracking-widest mb-3" style={`color:${entityA.accent}`}>{entityA.nationality}</p>
+            <h2 class="font-headline font-black uppercase leading-[0.95] tracking-tight text-ink"
+              style="font-size: clamp(1.75rem, 4vw, 3.25rem)">
+              {entityA.name}
             </h2>
+            <span class="block h-1.5 w-16 mt-4 rounded-full" style={`background:${entityA.accent}`}></span>
           </div>
           <div class="mt-4">
-            <span class="font-sans text-sm text-body">{entityA.position}</span>
+            <span class="font-sans text-lg text-body">{entityA.position}</span>
           </div>
         </div>
 
-        <!-- The "/" slash — battle divider -->
+        <!-- The "/" slash — battle divider, blended from both team colours -->
         <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
-          <span class="font-headline font-black text-[8rem] md:text-[12rem] leading-none text-lime select-none"
-            style="text-shadow: 0 0 60px rgba(200,255,0,0.3)">/</span>
+          <span class="font-headline font-black text-[8rem] md:text-[12rem] leading-none select-none"
+            style={`background:linear-gradient(150deg, ${entityA.accent}, ${entityB.accent}); -webkit-background-clip:text; background-clip:text; color:transparent`}>/</span>
         </div>
 
         <!-- Player B -->
-        <div class="flex-1 flex flex-col justify-between px-6 py-8 md:px-10 md:py-10 items-end text-right">
-          <div>
-            <p class="font-mono text-[10px] uppercase tracking-widest text-body mb-2">{entityB.nationality}</p>
-            <h2 class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-              style="font-size: clamp(2.5rem, 6vw, 5rem)">
-              {entityB.shortName}
+        <div class="relative flex-1 flex flex-col justify-between px-6 py-8 md:px-10 md:py-10 items-end text-right">
+          <div class="flex flex-col items-end">
+            <p class="font-mono text-sm uppercase tracking-widest mb-3" style={`color:${entityB.accent}`}>{entityB.nationality}</p>
+            <h2 class="font-headline font-black uppercase leading-[0.95] tracking-tight text-ink"
+              style="font-size: clamp(1.75rem, 4vw, 3.25rem)">
+              {entityB.name}
             </h2>
+            <span class="block h-1.5 w-16 mt-4 rounded-full" style={`background:${entityB.accent}`}></span>
           </div>
           <div class="mt-4">
-            <span class="font-sans text-sm text-body">{entityB.position}</span>
+            <span class="font-sans text-lg text-body">{entityB.position}</span>
           </div>
         </div>
       </div>
@@ -115,6 +114,8 @@ const ogImage = `/og/battle/${canonical}.png`;
         entityBId={entityB.id}
         shortA={entityA.shortName}
         shortB={entityB.shortName}
+        accentA={entityA.accent}
+        accentB={entityB.accent}
       />
     </div>
   </section>
@@ -123,31 +124,33 @@ const ogImage = `/og/battle/${canonical}.png`;
   <section class="border-b border-hairline bg-canvas-soft">
     <div class="max-w-7xl mx-auto px-5 py-8">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-0.5 h-5 bg-lime inline-block"></span>
-        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Stat Scoreline</h2>
-        <span class="font-mono text-[10px] uppercase tracking-widest text-mute hidden sm:inline">Categories led</span>
+        <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
+        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Stat Scoreline</h2>
+        <span class="font-mono text-xs uppercase tracking-widest text-mute hidden sm:inline">Categories led</span>
       </div>
 
       <div class="flex items-stretch gap-3">
         <!-- A tally -->
-        <div class={`flex-1 rounded-md border px-5 py-5 ${statLeader === 'a' ? 'border-lime bg-lime/5' : 'border-hairline bg-canvas'}`}>
-          <p class="font-mono text-[10px] uppercase tracking-widest text-mute mb-1">{entityA.shortName}</p>
+        <div class={`flex-1 rounded-md border px-5 py-5 ${statLeader === 'a' ? '' : 'border-hairline bg-canvas'}`}
+          style={statLeader === 'a' ? `border-color:${entityA.accent}; background:${entityA.accent}0f` : ''}>
+          <p class="font-mono text-xs uppercase tracking-widest text-mute mb-1">{entityA.shortName}</p>
           <div class="flex items-baseline gap-2">
-            <span class={`font-headline font-black leading-none ${statLeader === 'a' ? 'text-lime' : 'text-ink'}`} style="font-size: clamp(2.5rem, 7vw, 4rem)">{winsA}</span>
-            {statLeader === 'a' && <span class="font-mono text-[10px] uppercase tracking-widest text-lime">Leads</span>}
+            <span class="font-headline font-black leading-none" style={`font-size: clamp(2.5rem, 7vw, 4rem); color:${statLeader === 'a' ? entityA.accent : '#f0f0f2'}`}>{winsA}</span>
+            {statLeader === 'a' && <span class="font-mono text-xs uppercase tracking-widest" style={`color:${entityA.accent}`}>Leads</span>}
           </div>
         </div>
 
         <div class="flex items-center justify-center px-1">
-          <span class="font-mono text-[10px] uppercase tracking-widest text-mute">vs</span>
+          <span class="font-mono text-xs uppercase tracking-widest text-mute">vs</span>
         </div>
 
         <!-- B tally -->
-        <div class={`flex-1 rounded-md border px-5 py-5 text-right ${statLeader === 'b' ? 'border-lime bg-lime/5' : 'border-hairline bg-canvas'}`}>
-          <p class="font-mono text-[10px] uppercase tracking-widest text-mute mb-1">{entityB.shortName}</p>
+        <div class={`flex-1 rounded-md border px-5 py-5 text-right ${statLeader === 'b' ? '' : 'border-hairline bg-canvas'}`}
+          style={statLeader === 'b' ? `border-color:${entityB.accent}; background:${entityB.accent}0f` : ''}>
+          <p class="font-mono text-xs uppercase tracking-widest text-mute mb-1">{entityB.shortName}</p>
           <div class="flex items-baseline gap-2 justify-end">
-            {statLeader === 'b' && <span class="font-mono text-[10px] uppercase tracking-widest text-lime">Leads</span>}
-            <span class={`font-headline font-black leading-none ${statLeader === 'b' ? 'text-lime' : 'text-ink'}`} style="font-size: clamp(2.5rem, 7vw, 4rem)">{winsB}</span>
+            {statLeader === 'b' && <span class="font-mono text-xs uppercase tracking-widest" style={`color:${entityB.accent}`}>Leads</span>}
+            <span class="font-headline font-black leading-none" style={`font-size: clamp(2.5rem, 7vw, 4rem); color:${statLeader === 'b' ? entityB.accent : '#f0f0f2'}`}>{winsB}</span>
           </div>
         </div>
       </div>
@@ -160,11 +163,11 @@ const ogImage = `/og/battle/${canonical}.png`;
       <div class="max-w-7xl mx-auto px-5 py-10">
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
-            <span class="w-0.5 h-5 bg-lime inline-block"></span>
-            <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">{section.heading}</h2>
+            <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
+            <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">{section.heading}</h2>
           </div>
           <!-- Legend -->
-          <div class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-mute">
+          <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-mute">
             <span class="text-ink">{entityA.shortName}</span>
             <span>/</span>
             <span class="text-ink">{entityB.shortName}</span>
@@ -175,24 +178,24 @@ const ogImage = `/og/battle/${canonical}.png`;
           {section.rows.map(row => (
             <div class="bg-canvas-soft border border-hairline rounded-md px-5 py-4">
               <!-- Label -->
-              <p class="font-mono text-[10px] uppercase tracking-wider text-mute text-center mb-3">{row.label}</p>
+              <p class="font-mono text-sm uppercase tracking-wider text-mute text-center mb-3">{row.label}</p>
 
               <!-- Values -->
               <div class="flex items-end justify-between gap-3 mb-3">
                 <div class="flex items-center gap-1.5">
-                  {row.winner === 'a' && <span class="w-1.5 h-1.5 rounded-full bg-lime inline-block mb-1.5"></span>}
-                  <span class={`font-headline font-black text-3xl leading-none ${row.winner === 'a' ? 'text-lime' : 'text-ink'}`}>{row.valueA}</span>
+                  {row.winner === 'a' && <span class="w-2 h-2 rounded-full inline-block mb-1.5" style={`background:${entityA.accent}`}></span>}
+                  <span class="font-headline font-black text-4xl leading-none" style={`color:${row.winner === 'a' ? entityA.accent : '#f0f0f2'}`}>{row.valueA}</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                  <span class={`font-headline font-black text-3xl leading-none text-right ${row.winner === 'b' ? 'text-lime' : 'text-ink'}`}>{row.valueB}</span>
-                  {row.winner === 'b' && <span class="w-1.5 h-1.5 rounded-full bg-lime inline-block mb-1.5"></span>}
+                  <span class="font-headline font-black text-4xl leading-none text-right" style={`color:${row.winner === 'b' ? entityB.accent : '#f0f0f2'}`}>{row.valueB}</span>
+                  {row.winner === 'b' && <span class="w-1.5 h-1.5 rounded-full inline-block mb-1.5" style={`background:${entityB.accent}`}></span>}
                 </div>
               </div>
 
               <!-- Versus bar -->
               <div class="flex h-1.5 gap-0.5 rounded-full overflow-hidden">
-                <div style={`width:${row.pctA}%`} class={row.winner === 'a' ? 'bg-lime' : 'bg-hairline-strong'}></div>
-                <div style={`width:${row.pctB}%`} class={row.winner === 'b' ? 'bg-lime' : 'bg-hairline-strong'}></div>
+                <div style={`width:${row.pctA}%; background:${row.winner === 'a' ? entityA.accent : '#3a3a3e'}`}></div>
+                <div style={`width:${row.pctB}%; background:${row.winner === 'b' ? entityB.accent : '#3a3a3e'}`}></div>
               </div>
             </div>
           ))}
@@ -211,21 +214,22 @@ const ogImage = `/og/battle/${canonical}.png`;
   <section class="border-b border-hairline bg-canvas-soft">
     <div class="max-w-7xl mx-auto px-5 py-10">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-0.5 h-5 bg-lime inline-block"></span>
-        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Honours</h2>
+        <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
+        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Honours</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         {[entityA, entityB].map(entity => (
           <div>
             <div class="flex items-center gap-2 mb-4">
-              <h3 class="font-headline font-black uppercase text-base text-ink">{entity.shortName}</h3>
-              <span class="font-mono text-[10px] uppercase tracking-widest text-mute">{entity.achievements.reduce((s, a) => s + a.count, 0)} titles</span>
+              <span class="w-1 h-5 inline-block rounded-full" style={`background:${entity.accent}`}></span>
+              <h3 class="font-headline font-black uppercase text-xl text-ink">{entity.shortName}</h3>
+              <span class="font-mono text-sm uppercase tracking-widest text-mute">{entity.achievements.reduce((s, a) => s + a.count, 0)} titles</span>
             </div>
             <div class="flex flex-wrap gap-2">
               {entity.achievements.map(a => (
-                <div class="flex items-center gap-2 bg-canvas border border-hairline rounded-sm px-3 py-2">
-                  {a.count > 1 && <span class="font-headline font-black text-base leading-none text-lime">{a.count}×</span>}
-                  <span class="font-sans text-sm text-ink">{a.title}</span>
+                <div class="flex items-center gap-2 bg-canvas border rounded-sm px-3 py-2.5" style={`border-color:${entity.accent}33`}>
+                  {a.count > 1 && <span class="font-headline font-black text-lg leading-none" style={`color:${entity.accent}`}>{a.count}×</span>}
+                  <span class="font-sans text-base text-ink">{a.title}</span>
                 </div>
               ))}
             </div>
@@ -239,21 +243,24 @@ const ogImage = `/og/battle/${canonical}.png`;
   <section class="border-b border-hairline">
     <div class="max-w-7xl mx-auto px-5 py-10">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-0.5 h-5 bg-lime inline-block"></span>
-        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">More Battles</h2>
+        <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
+        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">More Battles</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         {[{ entity: entityA, related: relatedA }, { entity: entityB, related: relatedB }].map(({ entity, related }) => (
           <div>
-            <p class="font-mono text-[10px] uppercase tracking-widest text-mute mb-3">{entity.shortName} vs...</p>
+            <p class="font-mono text-sm uppercase tracking-widest mb-3" style={`color:${entity.accent}`}>{entity.shortName} vs...</p>
             <div class="space-y-2">
               {related.map(({ battleSlug, opponent }) => (
                 <a href={`/battle/${battleSlug}`}
-                  class="flex items-center justify-between bg-canvas-soft border border-hairline hover:border-lime rounded-sm px-4 py-3 transition-colors group">
-                  <span class="font-headline font-black uppercase text-base text-ink group-hover:text-lime transition-colors">
+                  class="flex items-center justify-between bg-canvas-soft border rounded-sm px-4 py-3.5 transition-colors group"
+                  style={`border-color:${entity.accent}33`}
+                  onmouseover={`this.style.borderColor='${entity.accent}'`}
+                  onmouseout={`this.style.borderColor='${entity.accent}33'`}>
+                  <span class="font-headline font-black uppercase text-lg text-ink">
                     {entity.shortName} / {opponent.shortName}
                   </span>
-                  <span class="font-mono text-[10px] text-mute group-hover:text-lime transition-colors">→</span>
+                  <span class="font-mono text-sm text-mute">→</span>
                 </a>
               ))}
             </div>
@@ -269,7 +276,10 @@ const ogImage = `/og/battle/${canonical}.png`;
       <div class="flex flex-wrap gap-4">
         {[entityA, entityB].map(entity => (
           <a href={`/player/${entity.slug}`}
-            class="font-sans text-sm text-body border border-hairline rounded-sm px-5 h-10 flex items-center hover:text-ink hover:border-hairline-strong transition-colors whitespace-nowrap">
+            class="font-sans text-base border rounded-sm px-6 h-11 flex items-center transition-colors whitespace-nowrap"
+            style={`color:${entity.accent}; border-color:${entity.accent}40`}
+            onmouseover={`this.style.borderColor='${entity.accent}'`}
+            onmouseout={`this.style.borderColor='${entity.accent}40'`}>
             {entity.name} Profile →
           </a>
         ))}

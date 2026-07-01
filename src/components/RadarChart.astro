@@ -38,8 +38,8 @@ const ringPath = (r: number) =>
     return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
   }).join(' ');
 
-const COLOR_A = '#c8ff00';
-const COLOR_B = '#3b82f6';
+const COLOR_A = entityA.accent;
+const COLOR_B = entityB.accent;
 ---
 
 {axes && (
@@ -47,12 +47,12 @@ const COLOR_B = '#3b82f6';
     <div class="max-w-7xl mx-auto px-5 py-10">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-          <span class="w-0.5 h-5 bg-lime inline-block"></span>
-          <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Shape of Greatness</h2>
+          <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${COLOR_A}, ${COLOR_B})`}></span>
+          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Shape of Greatness</h2>
         </div>
-        <div class="flex items-center gap-4 font-mono text-[10px] uppercase tracking-wider">
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm inline-block" style={`background:${COLOR_A}`}></span><span class="text-ink">{entityA.shortName}</span></span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm inline-block" style={`background:${COLOR_B}`}></span><span class="text-ink">{entityB.shortName}</span></span>
+        <div class="flex items-center gap-4 font-mono text-xs uppercase tracking-wider">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style={`background:${COLOR_A}`}></span><span class="text-ink">{entityA.shortName}</span></span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm inline-block" style={`background:${COLOR_B}`}></span><span class="text-ink">{entityB.shortName}</span></span>
         </div>
       </div>
 
@@ -72,7 +72,7 @@ const COLOR_B = '#3b82f6';
               <>
                 <line x1={C} y1={C} x2={tip.x} y2={tip.y} stroke="#252528" stroke-width="1" />
                 <text x={label.x} y={label.y} text-anchor={anchor} dominant-baseline="middle"
-                  fill="#8b8b95" font-size="10" font-family="ui-monospace, monospace"
+                  fill="#8b8b95" font-size="11" font-family="ui-monospace, monospace"
                   style="text-transform:uppercase; letter-spacing:0.05em">{axis.label}</text>
               </>
             );
@@ -93,7 +93,7 @@ const COLOR_B = '#3b82f6';
         </svg>
       </div>
 
-      <p class="text-center font-mono text-[10px] uppercase tracking-widest text-mute mt-4">
+      <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-4">
         Each axis scaled to the leader · raw totals in the breakdown above
       </p>
     </div>

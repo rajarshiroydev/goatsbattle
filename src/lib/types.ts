@@ -23,6 +23,8 @@ export interface Entity {
   category: string;
   nationality: string;
   countryCode: string;
+  /** Hex colour the player is popularly associated with (nation/club identity). */
+  accent: string;
   born: string;
   position: string;
   bio: string;

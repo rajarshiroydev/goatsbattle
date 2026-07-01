@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ChampionMode from '../components/ChampionMode.tsx';
+import type { Fighter } from '../components/ChampionMode.tsx';
+import { footballEntities } from '../data/football';
+
+// Static shell — the game runs entirely in the island against the vote API.
+// statSections travel with each fighter so the arena can show a stat comparison
+// for voting decisions without any extra request.
+const roster: Fighter[] = footballEntities.map((e) => ({
+  id: e.id,
+  slug: e.slug,
+  name: e.name,
+  shortName: e.shortName,
+  nationality: e.nationality,
+  countryCode: e.countryCode,
+  position: e.position,
+  statSections: e.statSections,
+}));
+
+const title = 'Champion Mode — Crown Your Football GOAT | GOATSBattle';
+const description =
+  'A blind gauntlet: two legends enter, you pick the greater, the winner fights on. Keep voting until one is left standing — your GOAT, chosen by your own calls. Every vote moves the live rankings.';
+---
+
+<Layout title={title} description={description}>
+  <ChampionMode client:load roster={roster} />
+</Layout>

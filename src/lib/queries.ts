@@ -1,6 +1,6 @@
-import { sql, gt } from 'drizzle-orm';
+import { sql, gt, eq, desc } from 'drizzle-orm';
 import { db } from './db';
-import { battles, votes } from './db/schema';
+import { battles, votes, entities } from './db/schema';
 import { getEntityBySlug } from '../data/football';
 import type { Entity } from './types';
 
@@ -160,6 +160,47 @@ export async function getAllBattleSummaries(): Promise<BattleSummary[]> {
     .sort(
       (x, y) => y.total - x.total || featuredRank(x.slug) - featuredRank(y.slug),
     );
+}
+
+/** One row of the Elo leaderboard: static display data + live rating/record. */
+export interface RankingRow {
+  rank: number;
+  entity: Entity;
+  elo: number;
+  votesFor: number;
+  votesAgainst: number;
+  totalVotes: number;
+  /** Share of head-to-head votes won, 0–100 (0 when the entity has no votes). */
+  winRate: number;
+}
+
+/**
+ * The Elo leaderboard for a category, highest-rated first. Ratings and records
+ * come from the DB; display fields (name, flag) come from the static dataset.
+ * Entities missing from the dataset are dropped so the board never half-renders.
+ */
+export async function getRankings(category = 'football'): Promise<RankingRow[]> {
+  const rows = await db
+    .select({
+      id: entities.id,
+      elo: entities.elo,
+      votesFor: entities.votesFor,
+      votesAgainst: entities.votesAgainst,
+    })
+    .from(entities)
+    .where(eq(entities.category, category))
+    .orderBy(desc(entities.elo), desc(entities.votesFor));
+
+  return rows
+    .map((r) => {
+      const entity = getEntityBySlug(r.id);
+      if (!entity) return null;
+      const totalVotes = r.votesFor + r.votesAgainst;
+      const winRate = totalVotes > 0 ? Math.round((r.votesFor / totalVotes) * 100) : 0;
+      return { entity, elo: r.elo, votesFor: r.votesFor, votesAgainst: r.votesAgainst, totalVotes, winRate };
+    })
+    .filter((r): r is Omit<RankingRow, 'rank'> => r !== null)
+    .map((r, i) => ({ rank: i + 1, ...r }));
 }
 
 /** Live tally for a single battle, used by the results/vote API endpoints. */

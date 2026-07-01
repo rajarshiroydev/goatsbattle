@@ -7,15 +7,28 @@ interface Props {
   entityBId: string;
   shortA: string;
   shortB: string;
+  /** Player-associated accent colours (hex). */
+  accentA: string;
+  accentB: string;
 }
 
-export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB }: Props) {
+/** Readable text colour (dark or light) for a solid accent background. */
+function textOn(hex: string): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
+}
+
+export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB }: Props) {
   const [result, setResult] = useState<BattleResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load current tally + whether this fingerprint already voted.
+  // Load current tally + whether this fingerprint already voted today.
   useEffect(() => {
     let active = true;
     fetch(`/api/results?battle=${encodeURIComponent(battleId)}`)
@@ -65,7 +78,7 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
   if (loading) {
     return (
       <div class="mt-6 flex items-center justify-center h-12">
-        <span class="font-mono text-[10px] uppercase tracking-widest text-mute animate-pulse">Loading votes…</span>
+        <span class="font-mono text-xs uppercase tracking-widest text-mute animate-pulse">Loading votes…</span>
       </div>
     );
   }
@@ -82,41 +95,45 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
             <button
               onClick={() => vote(entityAId)}
               disabled={pending}
-              class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-10 h-12 flex items-center rounded-sm whitespace-nowrap hover:bg-lime-dark transition-colors disabled:opacity-50"
+              style={{ background: accentA, color: textOn(accentA) }}
+              class="font-headline font-black uppercase tracking-wider text-lg px-10 h-12 flex items-center rounded-sm whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               Vote {shortA}
             </button>
-            <span class="font-mono text-[10px] uppercase tracking-widest text-mute">VS</span>
+            <span class="font-mono text-xs uppercase tracking-widest text-mute">VS</span>
             <button
               onClick={() => vote(entityBId)}
               disabled={pending}
-              class="font-headline font-black uppercase tracking-wider text-base bg-canvas-soft-2 text-ink border border-hairline-strong px-10 h-12 flex items-center rounded-sm whitespace-nowrap hover:border-lime transition-colors disabled:opacity-50"
+              style={{ background: accentB, color: textOn(accentB) }}
+              class="font-headline font-black uppercase tracking-wider text-lg px-10 h-12 flex items-center rounded-sm whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               Vote {shortB}
             </button>
           </div>
-          <p class="text-center font-mono text-[10px] uppercase tracking-widest text-mute mt-3">
-            One vote per battle · results revealed after you vote
+          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
+            One vote per battle each day · results revealed after you vote
           </p>
         </>
       ) : (
         <div>
           <div class="flex items-center justify-between font-headline font-black uppercase mb-2">
-            <span class={`text-2xl ${result!.pctA >= result!.pctB ? 'text-lime' : 'text-ink'}`}>{shortA} {result!.pctA}%</span>
-            <span class={`text-2xl ${result!.pctB > result!.pctA ? 'text-lime' : 'text-ink'}`}>{result!.pctB}% {shortB}</span>
+            <span class="text-3xl" style={{ color: accentA }}>{shortA} {result!.pctA}%</span>
+            <span class="text-3xl" style={{ color: accentB }}>{result!.pctB}% {shortB}</span>
           </div>
-          <div class="flex h-3 gap-0.5 rounded-full overflow-hidden">
-            <div style={`width:${result!.pctA}%`} class={result!.pctA >= result!.pctB ? 'bg-lime' : 'bg-hairline-strong'}></div>
-            <div style={`width:${result!.pctB}%`} class={result!.pctB > result!.pctA ? 'bg-lime' : 'bg-hairline-strong'}></div>
+          <div class="flex h-3.5 gap-0.5 rounded-full overflow-hidden">
+            <div style={{ width: `${result!.pctA}%`, background: accentA }}></div>
+            <div style={{ width: `${result!.pctB}%`, background: accentB }}></div>
           </div>
-          <p class="text-center font-mono text-[10px] uppercase tracking-widest text-mute mt-3">
+          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
             {result!.total.toLocaleString()} total votes · you backed {votedA ? shortA : votedB ? shortB : '—'}
-            {result!.alreadyVoted ? ' (already counted)' : ''}
+          </p>
+          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-lime mt-1.5">
+            ✓ Voted today — come back tomorrow to vote again
           </p>
         </div>
       )}
       {error && (
-        <p class="text-center font-mono text-[10px] uppercase tracking-widest text-red mt-3">{error}</p>
+        <p class="text-center font-mono text-[11px] uppercase tracking-widest text-red mt-3">{error}</p>
       )}
     </div>
   );

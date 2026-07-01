@@ -1,4 +1,5 @@
-import { pgTable, text, integer, timestamp, serial, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, serial, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 /**
  * Entities — the curated GOAT candidates. The canonical profile/stat content
@@ -33,8 +34,10 @@ export const battles = pgTable('battles', {
 
 /**
  * Votes — individual cast votes. A SHA-256 hash of (ip + server salt) gives
- * GDPR-safe per-battle dedup via the unique index. `choice` stores the entity
- * id that was voted for; `country` comes from the Vercel geo header.
+ * GDPR-safe dedup via the unique index. Uniqueness is bucketed by `voteDay`
+ * (UTC calendar day), so a fingerprint may vote each battle once per day and
+ * come back the next day. `choice` stores the entity id voted for; `country`
+ * comes from the Vercel geo header.
  */
 export const votes = pgTable(
   'votes',
@@ -44,11 +47,13 @@ export const votes = pgTable(
     choice: text('choice').notNull(), // entity id voted for
     ipHash: text('ip_hash').notNull(),
     country: text('country'),
+    // UTC calendar day this vote counts for; drives the daily dedup window.
+    voteDay: date('vote_day').notNull().default(sql`CURRENT_DATE`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    // one vote per fingerprint per battle
-    uniqueVote: uniqueIndex('votes_ip_battle_uniq').on(t.ipHash, t.battleId),
+    // one vote per fingerprint per battle per day
+    uniqueVote: uniqueIndex('votes_ip_battle_day_uniq').on(t.ipHash, t.battleId, t.voteDay),
     battleIdx: index('votes_battle_idx').on(t.battleId),
     countryIdx: index('votes_country_idx').on(t.battleId, t.country),
   })

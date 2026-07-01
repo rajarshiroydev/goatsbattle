@@ -57,3 +57,47 @@
 
   * { box-sizing: border-box; }
 }
+
+/* ── Champion Mode arena motion ───────────────────────────
+   Kept subtle: enough to signal "a new challenger stepped in"
+   without a carnival. Elements are re-keyed per round so the
+   animation retriggers on mount. */
+@keyframes arena-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes challenger-in {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes champion-in {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes slash-flash {
+  0%   { opacity: 0; transform: scale(0.55); }
+  55%  { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes verdict-pop {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.96); }
+  60%  { transform: translateY(0) scale(1.03); }
+  100% { opacity: 1; transform: none; }
+}
+
+.anim-arena       { animation: arena-enter 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anim-champion    { animation: champion-in 0.42s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anim-challenger  { animation: challenger-in 0.42s 0.06s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-slash       { animation: slash-flash 0.5s ease-out both; }
+.anim-bar         { transform-origin: left center; animation: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.anim-verdict     { animation: verdict-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-arena, .anim-champion, .anim-challenger, .anim-slash, .anim-bar, .anim-verdict {
+    animation: none;
+  }
+}

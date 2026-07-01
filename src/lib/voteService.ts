@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from './db';
-import { battles, votes, entities } from './db/schema';
+import { votes } from './db/schema';
+import { DEFAULT_K } from './elo';
 import { getBattleSummary, type BattleSummary } from './queries';
 
 export type VoteOutcome =
@@ -11,8 +12,10 @@ export type VoteOutcome =
 /**
  * Record a vote and bump the affected tallies. The unique (ip_hash, battle_id)
  * index makes this idempotent per fingerprint: a repeat vote is detected via an
- * empty insert and the counts are left untouched. The counter updates run as a
- * single Neon batch so they apply together.
+ * empty insert and the counts are left untouched. When the vote is fresh, one
+ * atomic data-modifying CTE bumps the battle count, computes the Elo delta from
+ * the two ratings, applies it to both entities, and appends the rating log — so
+ * there is no read-then-write race and it costs a single round-trip.
  */
 export async function recordVote(
   battleId: string,
@@ -27,30 +30,55 @@ export async function recordVote(
   const isB = choice === summary.b.id;
   if (!isA && !isB) return { status: 'bad_choice' };
 
+  // voteDay defaults to CURRENT_DATE; the conflict target is the per-day unique
+  // index, so a second vote on the same battle today is a no-op insert.
   const inserted = await db
     .insert(votes)
     .values({ battleId, choice, ipHash, country })
-    .onConflictDoNothing({ target: [votes.ipHash, votes.battleId] })
+    .onConflictDoNothing({ target: [votes.ipHash, votes.battleId, votes.voteDay] })
     .returning({ id: votes.id });
 
   const alreadyVoted = inserted.length === 0;
 
   if (!alreadyVoted) {
-    const opponent = isA ? summary.b.id : summary.a.id;
-    await db.batch([
-      db
-        .update(battles)
-        .set(isA ? { votesA: sql`${battles.votesA} + 1` } : { votesB: sql`${battles.votesB} + 1` })
-        .where(eq(battles.id, battleId)),
-      db
-        .update(entities)
-        .set({ votesFor: sql`${entities.votesFor} + 1` })
-        .where(eq(entities.id, choice)),
-      db
-        .update(entities)
-        .set({ votesAgainst: sql`${entities.votesAgainst} + 1` })
-        .where(eq(entities.id, opponent)),
-    ]);
+    const winner = choice; // the entity that took this vote
+    const loser = isA ? summary.b.id : summary.a.id;
+    // Which battle column this vote increments (canonical A/B ordering).
+    const battleBump = isA
+      ? sql`votes_a = votes_a + 1`
+      : sql`votes_b = votes_b + 1`;
+
+    // One atomic statement. `d` reads both current ratings and the standard Elo
+    // delta round(K·(1 − expected(winner))); both UPDATEs and the history insert
+    // share that snapshot, so concurrent votes can't lose an update — the delta
+    // is applied additively even if another vote lands first.
+    await db.execute(sql`
+      WITH d AS (
+        SELECT
+          round(${DEFAULT_K}::numeric * (1 - 1.0 / (1 + power(10, (l.elo - w.elo) / 400.0))))::int AS delta
+        FROM entities w, entities l
+        WHERE w.id = ${winner} AND l.id = ${loser}
+      ),
+      ub AS (
+        UPDATE battles SET ${battleBump} WHERE id = ${battleId}
+      ),
+      uw AS (
+        UPDATE entities
+        SET elo = elo + (SELECT delta FROM d), votes_for = votes_for + 1
+        WHERE id = ${winner}
+        RETURNING elo AS new_elo
+      ),
+      ul AS (
+        UPDATE entities
+        SET elo = elo - (SELECT delta FROM d), votes_against = votes_against + 1
+        WHERE id = ${loser}
+        RETURNING elo AS new_elo
+      )
+      INSERT INTO elo_history (entity_id, battle_id, elo, delta)
+      SELECT ${winner}, ${battleId}, (SELECT new_elo FROM uw), (SELECT delta FROM d)
+      UNION ALL
+      SELECT ${loser}, ${battleId}, (SELECT new_elo FROM ul), -(SELECT delta FROM d)
+    `);
   }
 
   const fresh = (await getBattleSummary(battleId)) ?? summary;
@@ -63,7 +91,7 @@ export interface VoteState {
   votedChoice: string | null;
 }
 
-/** Current tallies for a battle plus whether this fingerprint already voted. */
+/** Current tallies for a battle plus whether this fingerprint already voted today. */
 export async function getVoteState(battleId: string, ipHash: string): Promise<VoteState | null> {
   const summary = await getBattleSummary(battleId);
   if (!summary) return null;
@@ -71,7 +99,13 @@ export async function getVoteState(battleId: string, ipHash: string): Promise<Vo
   const [row] = await db
     .select({ choice: votes.choice })
     .from(votes)
-    .where(and(eq(votes.battleId, battleId), eq(votes.ipHash, ipHash)))
+    .where(
+      and(
+        eq(votes.battleId, battleId),
+        eq(votes.ipHash, ipHash),
+        eq(votes.voteDay, sql`CURRENT_DATE`),
+      ),
+    )
     .limit(1);
 
   return { summary, votedChoice: row?.choice ?? null };

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import PlayerRank from '../../components/PlayerRank.tsx';
 import { footballEntities, getEntityBySlug, getBattlesForEntity } from '../../data/football';
 
 export function getStaticPaths() {
@@ -18,16 +19,24 @@ const entityBattles = getBattlesForEntity(slug);
 const age = new Date().getFullYear() - new Date(entity.born).getFullYear();
 const title = `${entity.name} | GOATSBattle`;
 const description = `Is ${entity.name} the GOAT? Career stats, achievements, and head-to-head battles. Vote and see what the world thinks.`;
+
+// The player's associated colour themes this whole page.
+const accent = entity.accent;
+const h = accent.replace('#', '');
+const lum = (0.299 * parseInt(h.slice(0, 2), 16) + 0.587 * parseInt(h.slice(2, 4), 16) + 0.114 * parseInt(h.slice(4, 6), 16)) / 255;
+const onAccent = lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
 ---
 
 <Layout title={title} description={description}>
 
   <!-- Player Hero -->
-  <section class="border-b border-hairline">
-    <div class="max-w-7xl mx-auto px-5 py-12 md:py-16">
+  <section class="border-b border-hairline relative overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
+      style={`background: radial-gradient(ellipse 60% 70% at 12% 30%, ${accent}24 0%, transparent 60%)`}></div>
+    <div class="relative max-w-7xl mx-auto px-5 py-12 md:py-16">
 
       <!-- Breadcrumb -->
-      <div class="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-mute mb-8">
+      <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-8">
         <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
         <span>/</span>
         <a href="/category/football" class="hover:text-body transition-colors">Football</a>
@@ -37,9 +46,10 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
 
       <div class="flex flex-col lg:flex-row items-start gap-10">
 
-        <!-- Avatar placeholder -->
-        <div class="shrink-0 w-32 h-32 md:w-48 md:h-48 rounded-md bg-canvas-soft-2 border border-hairline flex items-center justify-center overflow-hidden">
-          <span class="font-headline font-black text-6xl md:text-8xl text-mute leading-none select-none">
+        <!-- Avatar placeholder — tinted with the player's colour -->
+        <div class="shrink-0 w-32 h-32 md:w-48 md:h-48 rounded-md border flex items-center justify-center overflow-hidden"
+          style={`background:${accent}1a; border-color:${accent}`}>
+          <span class="font-headline font-black text-6xl md:text-8xl leading-none select-none" style={`color:${accent}`}>
             {entity.shortName.charAt(0)}
           </span>
         </div>
@@ -49,13 +59,13 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
 
           <!-- Flag + nationality -->
           <div class="flex items-center gap-2 mb-3">
-            <span class="font-mono text-[10px] uppercase tracking-widest text-lime">{entity.category}</span>
+            <span class="font-mono text-sm uppercase tracking-widest" style={`color:${accent}`}>{entity.category}</span>
             <span class="text-mute">·</span>
-            <span class="font-mono text-[10px] uppercase tracking-widest text-body">{entity.nationality}</span>
+            <span class="font-mono text-sm uppercase tracking-widest text-body">{entity.nationality}</span>
             {entity.active && (
-              <span class="flex items-center gap-1 ml-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-lime inline-block animate-pulse"></span>
-                <span class="font-mono text-[10px] uppercase tracking-wider text-lime">Active</span>
+              <span class="flex items-center gap-1.5 ml-2">
+                <span class="w-2 h-2 rounded-full inline-block animate-pulse" style={`background:${accent}`}></span>
+                <span class="font-mono text-sm uppercase tracking-wider" style={`color:${accent}`}>Active</span>
               </span>
             )}
           </div>
@@ -65,7 +75,7 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
             {entity.name}
           </h1>
 
-          <div class="flex flex-wrap items-center gap-4 mt-3 font-sans text-sm text-body">
+          <div class="flex flex-wrap items-center gap-4 mt-4 font-sans text-base text-body">
             <span>{entity.position}</span>
             <span class="text-hairline-strong">·</span>
             <span>Born {new Date(entity.born).getFullYear()}</span>
@@ -73,19 +83,16 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
             <span>{entity.active ? `Age ${age}` : `${new Date(entity.born).getFullYear()}–${entity.active ? 'present' : 'retired'}`}</span>
           </div>
 
-          <p class="mt-5 font-sans text-body text-base leading-relaxed max-w-2xl">
+          <p class="mt-6 font-sans text-body text-xl leading-relaxed max-w-2xl">
             {entity.bio}
           </p>
 
           <!-- Quick CTA -->
           <div class="mt-6 flex flex-wrap gap-3">
             <a href={`/battle/${entityBattles[0]?.battleSlug}`}
-              class="font-headline font-black uppercase text-sm tracking-wider bg-lime text-canvas px-6 h-10 flex items-center rounded-sm hover:bg-lime-dark transition-colors whitespace-nowrap">
+              class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center rounded-sm transition-opacity hover:opacity-90 whitespace-nowrap"
+              style={`background:${accent}; color:${onAccent}`}>
               Battle {entityBattles[0]?.opponent.shortName}
-            </a>
-            <a href="/play"
-              class="font-sans font-medium text-sm text-ink border border-hairline-strong px-6 h-10 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors whitespace-nowrap">
-              Champion Mode
             </a>
           </div>
 
@@ -94,22 +101,39 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
     </div>
   </section>
 
+  <!-- Global Standing — live score/rank/votes (hydrated client-side) -->
+  <section class="border-b border-hairline bg-canvas-soft">
+    <div class="max-w-7xl mx-auto px-5 py-10">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
+          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Global Standing</h2>
+        </div>
+        <a href={`/rankings/${entity.category}`}
+          class="font-mono text-xs uppercase tracking-widest text-mute hover:text-ink transition-colors">
+          Full rankings →
+        </a>
+      </div>
+      <PlayerRank client:load slug={entity.slug} category={entity.category} accent={accent} />
+    </div>
+  </section>
+
   <!-- Achievements -->
   <section class="border-b border-hairline">
     <div class="max-w-7xl mx-auto px-5 py-12">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-0.5 h-5 bg-lime inline-block"></span>
-        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Honours</h2>
+        <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
+        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Honours</h2>
       </div>
       <div class="flex flex-wrap gap-3">
         {entity.achievements.map(a => (
-          <div class="flex items-center gap-2 bg-canvas-soft border border-hairline rounded-sm px-4 py-2">
+          <div class="flex items-center gap-2 bg-canvas-soft border border-hairline rounded-sm px-4 py-2.5" style={`border-color:${accent}33`}>
             {a.count > 1 && (
-              <span class="font-headline font-black text-lg leading-none text-lime">{a.count}×</span>
+              <span class="font-headline font-black text-xl leading-none" style={`color:${accent}`}>{a.count}×</span>
             )}
-            <span class="font-sans text-sm text-ink">{a.title}</span>
+            <span class="font-sans text-lg text-ink">{a.title}</span>
             {a.years && a.years.length > 0 && (
-              <span class="font-mono text-[10px] text-mute">
+              <span class="font-mono text-xs text-mute">
                 ({a.years.join(', ')})
               </span>
             )}
@@ -123,14 +147,14 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
   <section class="border-b border-hairline bg-canvas-soft">
     <div class="max-w-7xl mx-auto px-5 py-12">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-0.5 h-5 bg-lime inline-block"></span>
-        <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Career Highlights</h2>
+        <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
+        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Career Highlights</h2>
       </div>
-      <ul class="space-y-3">
+      <ul class="space-y-4">
         {entity.careerHighlights.map(highlight => (
           <li class="flex items-start gap-3">
-            <span class="font-headline font-black text-lime text-lg leading-none mt-0.5 shrink-0">/</span>
-            <span class="font-sans text-base text-body leading-relaxed">{highlight}</span>
+            <span class="font-headline font-black text-2xl leading-none mt-0.5 shrink-0" style={`color:${accent}`}>/</span>
+            <span class="font-sans text-lg text-body leading-relaxed">{highlight}</span>
           </li>
         ))}
       </ul>
@@ -142,14 +166,14 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
     <section class="border-b border-hairline">
       <div class="max-w-7xl mx-auto px-5 py-10">
         <div class="flex items-center gap-3 mb-6">
-          <span class="w-0.5 h-5 bg-lime inline-block"></span>
-          <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">{section.heading}</h2>
+          <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
+          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">{section.heading}</h2>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {section.stats.map(stat => (
-            <div class="bg-canvas-soft border border-hairline rounded-sm px-4 py-4">
-              <p class="font-headline font-black text-3xl leading-none text-ink">{stat.value}{stat.unit}</p>
-              <p class="font-sans text-xs text-mute mt-1 leading-snug">{stat.label}</p>
+            <div class="bg-canvas-soft border border-hairline rounded-md px-4 py-5 border-l-4" style={`border-left-color:${accent}`}>
+              <p class="font-headline font-black text-4xl leading-none" style={`color:${accent}`}>{stat.value}{stat.unit}</p>
+              <p class="font-sans text-base text-body mt-2 leading-snug">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -162,22 +186,25 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
     <div class="max-w-7xl mx-auto px-5 py-12">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-          <span class="w-0.5 h-5 bg-lime inline-block"></span>
-          <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">
+          <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
+          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">
             {entity.shortName} vs The World
           </h2>
         </div>
-        <span class="font-mono text-[10px] uppercase tracking-widest text-mute">{entityBattles.length} battles</span>
+        <span class="font-mono text-[11px] uppercase tracking-widest text-mute">{entityBattles.length} battles</span>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {entityBattles.map(({ battleSlug, opponent }) => (
           <a href={`/battle/${battleSlug}`}
-            class="group flex flex-col items-center gap-2 bg-canvas-soft border border-hairline hover:border-lime rounded-sm px-4 py-5 text-center transition-all duration-200">
-            <span class="font-headline font-black text-2xl leading-none text-ink group-hover:text-lime transition-colors">
+            class="group flex flex-col items-center gap-2 bg-canvas-soft border rounded-md px-4 py-6 text-center transition-all duration-200 hover:-translate-y-0.5"
+            style={`border-color:${opponent.accent}40`}
+            onmouseover={`this.style.borderColor='${opponent.accent}'`}
+            onmouseout={`this.style.borderColor='${opponent.accent}40'`}>
+            <span class="font-headline font-black text-3xl leading-none transition-colors" style={`color:${opponent.accent}`}>
               {opponent.shortName}
             </span>
-            <span class="font-mono text-[10px] uppercase tracking-wider text-mute">{opponent.nationality}</span>
-            <span class="font-mono text-[10px] uppercase tracking-wider text-lime opacity-0 group-hover:opacity-100 transition-opacity">
+            <span class="font-mono text-xs uppercase tracking-wider text-mute">{opponent.nationality}</span>
+            <span class="font-mono text-xs uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity" style={`color:${opponent.accent}`}>
               Vote →
             </span>
           </a>
