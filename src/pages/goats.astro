@@ -60,7 +60,7 @@ const description = 'Meet the greatest of all time across football, cricket, ten
 
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {entities.map((e) => (
-            <a href={`/player/${e.slug}`}
+            <a href={`/goats/${e.slug}`}
               class="group relative flex flex-col justify-between overflow-hidden rounded-md border bg-canvas-soft p-4 min-h-[150px] transition-all duration-200 hover:-translate-y-1"
               style={`border-color:${e.accent}33`}
               onmouseover={`this.style.borderColor='${e.accent}'`}

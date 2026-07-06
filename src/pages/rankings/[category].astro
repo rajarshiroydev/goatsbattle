@@ -74,7 +74,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
       <div class="max-w-5xl mx-auto px-5 py-10">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[top2, top1, top3].map((r, col) => r && (
-            <a href={`/player/${r.entity.slug}`}
+            <a href={`/goats/${r.entity.slug}`}
               class={`group relative flex flex-col items-center text-center rounded-md border px-5 py-6 transition-all duration-200 ${
                 r.rank === 1
                   ? 'border-lime bg-lime/5 sm:-translate-y-3'
@@ -118,7 +118,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
 
       <div class="space-y-1.5">
         {rankings.map((r) => (
-          <a href={`/player/${r.entity.slug}`}
+          <a href={`/goats/${r.entity.slug}`}
             class={`group grid grid-cols-[2.5rem_1fr_auto] md:grid-cols-[3rem_1fr_5rem_6rem_9rem] items-center gap-3 md:gap-4 rounded-sm border px-4 py-3.5 transition-all duration-200 ${
               r.rank <= 3 ? 'border-hairline-strong bg-canvas-soft' : 'border-hairline bg-canvas-soft hover:border-hairline-strong'
             }`}>

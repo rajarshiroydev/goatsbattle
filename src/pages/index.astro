@@ -174,7 +174,7 @@ const totalBattles = allBattlePairs.length;
 
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {featuredGoats.map((e) => (
-          <a href={`/player/${e.slug}`}
+          <a href={`/goats/${e.slug}`}
             class="group relative flex flex-col justify-between overflow-hidden rounded-md border bg-canvas p-4 min-h-[140px] transition-all duration-200 hover:-translate-y-1"
             style={`border-color:${e.accent}33`}
             onmouseover={`this.style.borderColor='${e.accent}'`}

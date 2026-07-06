@@ -4,8 +4,9 @@ Tracking the build of GOATSBattle (goatsbattle.com): a global GOAT-debate platfo
 with stat-rich entity profiles, dynamic 1v1 battles, community voting, live Elo
 rankings, and a paid data API.
 
-Launch scope: **Football only** — Messi, Ronaldo, Pelé, Maradona, Zidane,
-Ronaldinho, Mbappé, Neymar, Cruyff, Beckenbauer (10 entities → 45 battle combos).
+Launch scope: **four live arenas — football, cricket, tennis, F1** (was football-only).
+28 entities (football 10 + 6+6+6), 90 battle pairs (45+15+15+15). Per-arena roster
+files aggregated by `src/data/index.ts`; nav = Goats · Categories · Champion Mode.
 
 Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
@@ -56,6 +57,17 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] `/play` route — pick your GOAT, fight opponents one by one (static shell + island)
 - [x] Random-opponent draw logic (Fisher-Yates shuffle, reuses same vote API + Elo)
 - [x] `ChampionMode` Preact island (progress dots, crowd verdict per round, final run summary)
+
+## Phase 5.5 — Multi-arena expansion
+- [x] Category registry (`src/data/categories.ts`) — id, label, emoji, accent, tagline, debate, `spotlightBattleSlug`, active
+- [x] Per-arena roster files (cricket, tennis, f1) + aggregator (`src/data/index.ts`, `allEntities`/`allBattlePairs`); import from `../data`
+- [x] Elo formula single-sourced as SQL builder `eloDeltaSql` (removed dead JS `computeElo`); `SEED_ELO` feeds schema default
+- [x] Category-aware queries — `BattleSummary.category`, `getAllBattleSummaries(category?)`, cross-arena `spotlight` in `getHomeBattleData`
+- [x] New pages: `/goats` (rosters by arena), `/categories` (arena grid); nav = Goats · Categories · Champion Mode
+- [x] Homepage redesign — cross-arena Featured Rivalries + per-athlete accent theming on `BattleCard`
+- [x] Seed script generalized to all categories (per-entity category lookup)
+- [ ] Re-seed live DB with all 4 arenas (`npm run db:seed`) — verify 28 entities / 90 battles
+- [ ] Category-aware radar: `compareViz.ts` AXIS_DEFS are football-only (radar hidden for other sports)
 
 ## Phase 6 — Discovery & engagement
 - [ ] `Search` Preact island (find entities & battles)

@@ -403,7 +403,7 @@ export default function ChampionMode({ roster }: Props) {
 
         <div class="mt-10 flex flex-wrap gap-3 justify-center">
           <a
-            href={`/player/${champion.slug}`}
+            href={`/goats/${champion.slug}`}
             class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
           >
             {champion.shortName}'s Profile

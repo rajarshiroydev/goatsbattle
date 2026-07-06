@@ -278,7 +278,7 @@ const catLabel = categoryLabel(category);
     <div class="max-w-7xl mx-auto px-5 py-8">
       <div class="flex flex-wrap gap-4">
         {[entityA, entityB].map(entity => (
-          <a href={`/player/${entity.slug}`}
+          <a href={`/goats/${entity.slug}`}
             class="font-sans text-base border rounded-sm px-6 h-11 flex items-center transition-colors whitespace-nowrap"
             style={`color:${entity.accent}; border-color:${entity.accent}40`}
             onmouseover={`this.style.borderColor='${entity.accent}'`}
