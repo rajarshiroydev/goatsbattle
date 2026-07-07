@@ -18,6 +18,13 @@ export const GET: APIRoute = async ({ url }) => {
   const goat = url.searchParams.get('goat');
   if (!goat) return json({ error: 'goat query param required' }, 400);
 
-  const battles = await getContestedBattlesForEntity(goat, 6);
-  return json(battles.map((b) => toContestedBattle(b, goat)));
+  // The "hottest battles" strip is non-critical: a transient neon-http hiccup
+  // shouldn't 500 (and pop the dev error overlay). Degrade to an empty list.
+  try {
+    const battles = await getContestedBattlesForEntity(goat, 6);
+    return json(battles.map((b) => toContestedBattle(b, goat)));
+  } catch (err) {
+    console.error('goat-battles query failed:', err);
+    return json([]);
+  }
 };

@@ -38,7 +38,7 @@ function onAccent(hex: string): string {
  * both slots with same-arena GOATs unlocks the matchup and jumps to that
  * battle's vote page — the same `/battle/<id>` route every other link uses.
  *
- * Visiting `/battles?goat=<slug>` from a profile pre-selects that GOAT into
+ * Visiting `/faceoff?goat=<slug>` from a profile pre-selects that GOAT into
  * slot A and locks the arena to theirs; visiting from the navbar starts empty
  * so any two GOATs from one arena can be paired. See [[project-goatsbattle]].
  */

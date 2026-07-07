@@ -88,12 +88,12 @@ const accent = entity.accent;
           <!-- Quick CTAs — cast a daily vote, or head to the battle builder -->
           <div class="mt-6 flex flex-wrap items-start gap-3">
             <ProfileVoteButton client:load id={entity.id} shortName={entity.shortName} accent={accent} />
-            <a href={`/battles?goat=${entity.slug}`}
+            <a href={`/faceoff?goat=${entity.slug}`}
               class="font-sans text-lg border rounded-sm px-8 h-12 flex items-center gap-2 transition-colors whitespace-nowrap"
               style={`color:${accent}; border-color:${accent}40`}
               onmouseover={`this.style.borderColor='${accent}'`}
               onmouseout={`this.style.borderColor='${accent}40'`}>
-              Battle with GOATs
+              FaceOff
               <span class="text-base">→</span>
             </a>
           </div>

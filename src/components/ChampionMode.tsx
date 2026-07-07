@@ -134,6 +134,47 @@ function compareStats(champ: Fighter, opp: Fighter): StatCompare {
   return { winsChamp, winsOpp, rows };
 }
 
+/**
+ * One side of the arena. `isChampion` picks the reigning label + suppresses the
+ * entry animation, so a champion who holds their slot stays visually static
+ * while the incoming challenger (keyed by fighter id at the call site) animates.
+ */
+function FighterPanel({
+  fighter,
+  isChampion,
+  align,
+}: {
+  fighter: Fighter;
+  isChampion: boolean;
+  align: "left" | "right";
+}) {
+  const right = align === "right";
+  return (
+    <div
+      class={`flex-1 flex flex-col justify-between px-6 py-7 md:px-9 ${right ? "items-end text-right" : ""} ${isChampion ? "" : "anim-challenger"}`}
+    >
+      <div>
+        <p
+          class={`font-mono text-[11px] uppercase tracking-widest mb-2 ${isChampion ? "text-lime" : "text-body"}`}
+        >
+          {isChampion ? "👑 Reigning" : "Challenger"}
+        </p>
+        <h2
+          class="font-headline font-black uppercase leading-none tracking-tight text-ink"
+          style="font-size: clamp(2rem, 6vw, 4rem)"
+        >
+          {fighter.shortName}
+        </h2>
+      </div>
+      <span class="font-sans text-sm text-body">
+        {right
+          ? `${fighter.nationality} ${flag(fighter.countryCode)}`
+          : `${flag(fighter.countryCode)} ${fighter.nationality}`}
+      </span>
+    </div>
+  );
+}
+
 export default function ChampionMode({ roster }: Props) {
   const presets = useMemo(() => countPresets(roster.length), [roster.length]);
   const category = roster[0]?.category ?? "football";
@@ -145,6 +186,9 @@ export default function ChampionMode({ roster }: Props) {
   /** Result of the +5 crown award on a ranked run's finish. */
   const [crownResult, setCrownResult] = useState<{ awarded: number; total: number } | null>(null);
   const [champion, setChampion] = useState<Fighter | null>(null);
+  /** Which physical side the reigning champion sits on. The winner keeps their
+   *  side between bouts; only the incoming challenger takes the vacated slot. */
+  const [championSide, setChampionSide] = useState<"left" | "right">("left");
   const [queue, setQueue] = useState<Fighter[]>([]);
   const [idx, setIdx] = useState(0);
   const [rounds, setRounds] = useState<Round[]>([]);
@@ -199,6 +243,7 @@ export default function ChampionMode({ roster }: Props) {
 
     const pool = shuffle(eligible).slice(0, Math.min(n, eligible.length));
     setChampion(pool[0]);
+    setChampionSide("left");
     setQueue(pool.slice(1));
     setIdx(0);
     setRounds([]);
@@ -287,6 +332,10 @@ export default function ChampionMode({ roster }: Props) {
     if (!r) return;
     setRounds((prev) => [...prev, r]);
     setChampion(r.picked); // the winner of the bout carries on / holds the throne
+    // If the challenger won, they keep the side they were already on — so the
+    // reigning slot flips to the challenger's side and the next contender takes
+    // the vacated one. If the champion held, sides are unchanged.
+    if (r.dethroned) setChampionSide((s) => (s === "left" ? "right" : "left"));
     setCurrent(null);
     setError(null);
     if (idx + 1 >= queue.length) {
@@ -308,6 +357,7 @@ export default function ChampionMode({ roster }: Props) {
     setRounds([]);
     setCurrent(null);
     setCrownResult(null);
+    setChampionSide("left");
     setError(null);
   }
 
@@ -541,7 +591,17 @@ export default function ChampionMode({ roster }: Props) {
   const boutNo = idx + 1;
   const totalBouts = queue.length;
   const champPct = current ? current.championPct : 50;
-  const pickedIsChamp = current ? current.picked.id === champion.id : false;
+
+  // Physical layout: the reigning champion holds `championSide`; the challenger
+  // (always the new entrant) takes the other slot. Keying each panel by fighter
+  // id means only the changed slot remounts — so only the incoming GOAT animates.
+  const championOnLeft = championSide === "left";
+  const leftFighter = championOnLeft ? champion : opponent;
+  const rightFighter = championOnLeft ? opponent : champion;
+  const leftPct = championOnLeft ? champPct : 100 - champPct;
+  const rightPct = 100 - leftPct;
+  const leftPicked = current ? current.picked.id === leftFighter.id : false;
+  const rightPicked = current ? current.picked.id === rightFighter.id : false;
 
   return (
     <div class="max-w-4xl mx-auto px-5 py-8 md:py-10">
@@ -573,28 +633,15 @@ export default function ChampionMode({ roster }: Props) {
         })}
       </div>
 
-      {/* Matchup card — re-keyed per bout so it animates in each round */}
-      <div
-        key={`${champion.id}-${opponent.id}`}
-        class="anim-arena relative flex items-stretch min-h-[200px] md:min-h-[240px] bg-canvas-soft border border-hairline rounded-md overflow-hidden"
-      >
-        {/* Reigning champion */}
-        <div class="anim-champion flex-1 flex flex-col justify-between px-6 py-7 md:px-9">
-          <div>
-            <p class="font-mono text-[11px] uppercase tracking-widest text-lime mb-2">
-              👑 Reigning
-            </p>
-            <h2
-              class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-              style="font-size: clamp(2rem, 6vw, 4rem)"
-            >
-              {champion.shortName}
-            </h2>
-          </div>
-          <span class="font-sans text-sm text-body">
-            {flag(champion.countryCode)} {champion.nationality}
-          </span>
-        </div>
+      {/* Matchup card — the reigning GOAT stays put; only the new challenger
+          slot re-keys and animates in. */}
+      <div class="relative flex items-stretch min-h-[200px] md:min-h-[240px] bg-canvas-soft border border-hairline rounded-md overflow-hidden">
+        <FighterPanel
+          key={leftFighter.id}
+          fighter={leftFighter}
+          isChampion={championOnLeft}
+          align="left"
+        />
 
         <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
           <span
@@ -605,23 +652,12 @@ export default function ChampionMode({ roster }: Props) {
           </span>
         </div>
 
-        {/* Challenger */}
-        <div class="anim-challenger flex-1 flex flex-col justify-between px-6 py-7 md:px-9 items-end text-right">
-          <div>
-            <p class="font-mono text-[11px] uppercase tracking-widest text-body mb-2">
-              Challenger
-            </p>
-            <h2
-              class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-              style="font-size: clamp(2rem, 6vw, 4rem)"
-            >
-              {opponent.shortName}
-            </h2>
-          </div>
-          <span class="font-sans text-sm text-body">
-            {opponent.nationality} {flag(opponent.countryCode)}
-          </span>
-        </div>
+        <FighterPanel
+          key={rightFighter.id}
+          fighter={rightFighter}
+          isChampion={!championOnLeft}
+          align="right"
+        />
       </div>
 
       {/* Stat comparison — the decision aid */}
@@ -724,8 +760,8 @@ export default function ChampionMode({ roster }: Props) {
         /* Counting state — shown instantly on click while the vote is in flight */
         <div class="mt-6">
           <div class="flex items-center justify-between font-headline font-black uppercase mb-2 opacity-40">
-            <span class="text-2xl text-ink">{champion.shortName}</span>
-            <span class="text-2xl text-ink">{opponent.shortName}</span>
+            <span class="text-2xl text-ink">{leftFighter.shortName}</span>
+            <span class="text-2xl text-ink">{rightFighter.shortName}</span>
           </div>
           <div class="flex h-3 gap-0.5 rounded-full overflow-hidden bg-hairline">
             <div class="w-1/2 bg-hairline-strong animate-pulse"></div>
@@ -736,23 +772,23 @@ export default function ChampionMode({ roster }: Props) {
         </div>
       ) : (
         <div class="mt-6 anim-verdict">
-          {/* Crowd split — champion left, challenger right; the side you backed is lime */}
+          {/* Crowd split — kept in physical left/right order; the side you backed is lime */}
           <div class="flex items-center justify-between font-headline font-black uppercase mb-2">
-            <span class={`text-2xl ${pickedIsChamp ? "text-lime" : "text-ink"}`}>
-              {champion.shortName} {champPct}%
+            <span class={`text-2xl ${leftPicked ? "text-lime" : "text-ink"}`}>
+              {leftFighter.shortName} {leftPct}%
             </span>
-            <span class={`text-2xl ${!pickedIsChamp ? "text-lime" : "text-ink"}`}>
-              {100 - champPct}% {opponent.shortName}
+            <span class={`text-2xl ${rightPicked ? "text-lime" : "text-ink"}`}>
+              {rightPct}% {rightFighter.shortName}
             </span>
           </div>
           <div class="flex h-3 gap-0.5 rounded-full overflow-hidden">
             <div
-              style={`width:${champPct}%`}
-              class={`anim-bar ${pickedIsChamp ? "bg-lime" : "bg-hairline-strong"}`}
+              style={`width:${leftPct}%`}
+              class={`anim-bar ${leftPicked ? "bg-lime" : "bg-hairline-strong"}`}
             ></div>
             <div
-              style={`width:${100 - champPct}%`}
-              class={`anim-bar ${!pickedIsChamp ? "bg-lime" : "bg-hairline-strong"}`}
+              style={`width:${rightPct}%`}
+              class={`anim-bar ${rightPicked ? "bg-lime" : "bg-hairline-strong"}`}
             ></div>
           </div>
 
