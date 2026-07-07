@@ -1,0 +1,52 @@
+import type { APIRoute } from 'astro';
+import { recordRankingVote, getRankingVoteState } from '../../lib/voteService';
+import { getClientIp, hashIp } from '../../lib/ip';
+import { rateLimit } from '../../lib/ratelimit';
+import type { VoteChannel } from '../../lib/votes';
+
+export const prerender = false;
+
+const json = (data: unknown, status = 200, headers: Record<string, string> = {}) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...headers },
+  });
+
+const CHANNELS: VoteChannel[] = ['profile', 'champion'];
+
+/** GET ?entity=slug → this fingerprint's ranking-vote window state for that GOAT. */
+export const GET: APIRoute = async ({ url, request }) => {
+  const entityId = url.searchParams.get('entity');
+  if (!entityId) return json({ error: 'entity is required' }, 400);
+  const ipHash = hashIp(getClientIp(request.headers));
+  const state = await getRankingVoteState(entityId, ipHash);
+  return json(state);
+};
+
+/** POST { entityId, channel } → cast a ranking vote (+1 profile / +5 champion). */
+export const POST: APIRoute = async ({ request }) => {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const entityId = body && typeof (body as any).entityId === 'string' ? (body as any).entityId : null;
+  const channel = body && typeof (body as any).channel === 'string' ? (body as any).channel : null;
+  if (!entityId || !channel || !CHANNELS.includes(channel as VoteChannel)) {
+    return json({ error: 'entityId and a valid channel are required' }, 400);
+  }
+
+  const ipHash = hashIp(getClientIp(request.headers));
+
+  const rl = rateLimit(ipHash);
+  if (!rl.ok) {
+    return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+  }
+
+  const result = await recordRankingVote(entityId, channel as VoteChannel, ipHash);
+  if (result.status === 'unknown_entity') return json({ error: 'Unknown GOAT' }, 404);
+
+  return json(result);
+};

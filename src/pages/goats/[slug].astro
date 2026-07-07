@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PlayerRank from '../../components/PlayerRank.tsx';
+import ProfileVoteButton from '../../components/ProfileVoteButton.tsx';
 import ContestedBattles from '../../components/ContestedBattles.tsx';
 import { allEntities, getEntityBySlug } from '../../data';
 import { categoryLabel } from '../../data/categories';
@@ -22,9 +23,6 @@ const description = `Is ${entity.name} the GOAT? Career stats, achievements, and
 
 // The player's associated colour themes this whole page.
 const accent = entity.accent;
-const h = accent.replace('#', '');
-const lum = (0.299 * parseInt(h.slice(0, 2), 16) + 0.587 * parseInt(h.slice(2, 4), 16) + 0.114 * parseInt(h.slice(4, 6), 16)) / 255;
-const onAccent = lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
 ---
 
 <Layout title={title} description={description}>
@@ -87,11 +85,14 @@ const onAccent = lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
             {entity.bio}
           </p>
 
-          <!-- Quick CTA — head to the battle builder with this goat pre-picked -->
-          <div class="mt-6 flex flex-wrap gap-3">
+          <!-- Quick CTAs — cast a daily vote, or head to the battle builder -->
+          <div class="mt-6 flex flex-wrap items-start gap-3">
+            <ProfileVoteButton client:load id={entity.id} shortName={entity.shortName} accent={accent} />
             <a href={`/battles?goat=${entity.slug}`}
-              class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center gap-2 rounded-sm transition-opacity hover:opacity-90 whitespace-nowrap"
-              style={`background:${accent}; color:${onAccent}`}>
+              class="font-sans text-lg border rounded-sm px-8 h-12 flex items-center gap-2 transition-colors whitespace-nowrap"
+              style={`color:${accent}; border-color:${accent}40`}
+              onmouseover={`this.style.borderColor='${accent}'`}
+              onmouseout={`this.style.borderColor='${accent}40'`}>
               Battle with GOATs
               <span class="text-base">→</span>
             </a>

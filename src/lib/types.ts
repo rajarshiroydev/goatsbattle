@@ -31,6 +31,5 @@ export interface Entity {
   statSections: StatSection[];
   achievements: Achievement[];
   careerHighlights: string[];
-  initialElo: number;
   active: boolean;
 }

@@ -1,7 +1,7 @@
 /**
- * Seeds the database with the curated football entities and every canonical
- * battle pairing. Idempotent: re-running upserts entities/battles without
- * wiping vote counts or Elo.
+ * Seeds the database with the curated entities and every canonical battle
+ * pairing. Idempotent: re-running upserts entities/battles without wiping vote
+ * tallies.
  *
  * Run with:  npm run db:seed   (loads .env via --env-file)
  */
@@ -13,7 +13,8 @@ import { entities, battles } from '../src/lib/db/schema';
 
 async function main() {
   console.log('→ Seeding entities…');
-  // Single upsert: refresh display fields but preserve elo / vote tallies.
+  // Single upsert: refresh display fields but preserve vote tallies (votes
+  // default to 0 for new rows).
   await db
     .insert(entities)
     .values(
@@ -23,7 +24,6 @@ async function main() {
         shortName: e.shortName,
         category: e.category,
         countryCode: e.countryCode,
-        elo: e.initialElo,
       })),
     )
     .onConflictDoUpdate({

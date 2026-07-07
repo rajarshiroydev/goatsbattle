@@ -1,5 +1,4 @@
 import type { Entity } from '../lib/types';
-import { SEED_ELO } from '../lib/elo';
 
 /**
  * Cricket GOAT candidates. Figures are commonly-cited career totals; stat
@@ -53,7 +52,6 @@ export const cricketEntities: Entity[] = [
       'Captained the invincible 1948 Australians on their unbeaten Ashes tour',
       'Voted Wisden Cricketer of the 20th Century',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -104,7 +102,6 @@ export const cricketEntities: Entity[] = [
       'Won the 2011 World Cup at home in his sixth attempt',
       '200 Test matches — the most in history',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -155,7 +152,6 @@ export const cricketEntities: Entity[] = [
       'The greatest run-chaser the ODI game has known',
       'ICC Cricketer of the Decade (2011–2020)',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -206,7 +202,6 @@ export const cricketEntities: Entity[] = [
       'Carried a declining West Indies side almost single-handedly',
       '11,953 Test runs at an average of nearly 53',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -257,7 +252,6 @@ export const cricketEntities: Entity[] = [
       'One of five Wisden Cricketers of the Century',
       'The most feared strokemaker of his era',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -307,7 +301,6 @@ export const cricketEntities: Entity[] = [
       'Held the highest Test score (365*) for 36 years',
       'One of five Wisden Cricketers of the Century',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
 ];

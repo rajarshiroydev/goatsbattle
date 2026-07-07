@@ -13,11 +13,11 @@ if (!category || !cat) return new Response('Not found', { status: 404 });
 const label = cat.label;
 
 const rankings = await getRankings(category);
-const totalVotes = rankings.reduce((s, r) => s + r.totalVotes, 0);
+const totalVotes = rankings.reduce((s, r) => s + r.votes, 0);
 const [top1, top2, top3] = rankings;
 
-const title = `${label} GOAT Rankings — Live Score Leaderboard | GOATSBattle`;
-const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by community-voted score. See who the world crowns the greatest of all time.`;
+const title = `${label} GOAT Rankings — Live Vote Leaderboard | GOATSBattle`;
+const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by community votes. See who the world crowns the greatest of all time.`;
 ---
 
 <Layout title={title} description={description}>
@@ -41,7 +41,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-lime"></span>
         </span>
-        <span class="font-mono text-[11px] uppercase tracking-widest text-body">Live Score · Community-voted</span>
+        <span class="font-mono text-[11px] uppercase tracking-widest text-body">Live · Community-voted</span>
       </div>
 
       <h1 class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
@@ -49,8 +49,9 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
         {label} <span class="text-lime">Rankings</span>
       </h1>
       <p class="mt-5 font-sans text-body text-base leading-relaxed max-w-lg">
-        Every vote is a 1v1 match. Each player's score starts at 1500 and moves with the crowd —
-        this is the greatest-of-all-time order as the world sees it right now.
+        Ranked purely by votes — <span class="text-body">+1</span> from a profile vote,
+        <span class="text-body">+5</span> for winning Champion Mode. This is the greatest-of-all-time
+        order as the world sees it right now.
       </p>
 
       <div class="mt-8 flex flex-wrap gap-8">
@@ -87,10 +88,10 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
                 {r.entity.shortName}
               </span>
               <span class="mt-1.5 font-sans text-sm text-body">{flagEmoji(r.entity.countryCode)} {r.entity.nationality}</span>
-              <span class="mt-3 font-headline font-black text-2xl leading-none" style={`color:${r.entity.accent}`}>{r.elo.toLocaleString()}</span>
-              <span class="font-mono text-[11px] uppercase tracking-widest text-mute mt-0.5">Score</span>
-              {r.totalVotes > 0 && (
-                <span class="font-mono text-[11px] uppercase tracking-wider text-mute mt-1.5">{compactNumber(r.totalVotes)} votes · {r.winRate}% win</span>
+              <span class="mt-3 font-headline font-black text-2xl leading-none" style={`color:${r.entity.accent}`}>{r.votes.toLocaleString()}</span>
+              <span class="font-mono text-[11px] uppercase tracking-widest text-mute mt-0.5">Votes</span>
+              {r.headToHeadVotes > 0 && (
+                <span class="font-mono text-[11px] uppercase tracking-wider text-mute mt-1.5">{compactNumber(r.headToHeadVotes)} 1v1 · {r.winRate}% win</span>
               )}
             </a>
           ))}
@@ -111,9 +112,9 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
       <div class="hidden md:grid grid-cols-[3rem_1fr_5rem_6rem_9rem] gap-4 px-4 pb-3 font-mono text-[11px] uppercase tracking-widest text-mute">
         <span>Rank</span>
         <span>Player</span>
-        <span class="text-right">Score</span>
         <span class="text-right">Votes</span>
-        <span class="text-right">Win Rate</span>
+        <span class="text-right">1v1</span>
+        <span class="text-right">1v1 Win</span>
       </div>
 
       <div class="space-y-1.5">
@@ -139,30 +140,30 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
               <span class="font-sans text-sm text-mute">{r.entity.nationality} · {r.entity.position}</span>
             </div>
 
-            <!-- Score (mobile shows here compactly on the right) -->
+            <!-- Votes (mobile shows here compactly on the right) -->
             <span class="md:text-right font-headline font-black text-xl leading-none text-right" style={`color:${r.entity.accent}`}>
-              {r.elo.toLocaleString()}
-              <span class="md:hidden font-mono text-[11px] uppercase tracking-widest text-mute ml-1">Pts</span>
+              {r.votes.toLocaleString()}
+              <span class="md:hidden font-mono text-[11px] uppercase tracking-widest text-mute ml-1">Votes</span>
             </span>
 
-            <!-- Total votes -->
+            <!-- Head-to-head votes -->
             <span class="hidden md:block text-right font-mono text-sm text-body">
-              {r.totalVotes > 0 ? compactNumber(r.totalVotes) : '—'}
+              {r.headToHeadVotes > 0 ? compactNumber(r.headToHeadVotes) : '—'}
             </span>
 
-            <!-- Win rate bar -->
+            <!-- 1v1 win rate bar -->
             <div class="hidden md:flex items-center gap-2 justify-end">
               <div class="w-16 h-1.5 rounded-full bg-hairline overflow-hidden">
-                <div class="h-full" style={`width:${r.totalVotes > 0 ? r.winRate : 0}%; background:${r.entity.accent}`}></div>
+                <div class="h-full" style={`width:${r.headToHeadVotes > 0 ? r.winRate : 0}%; background:${r.entity.accent}`}></div>
               </div>
-              <span class="w-9 text-right font-mono text-sm text-body">{r.totalVotes > 0 ? `${r.winRate}%` : '—'}</span>
+              <span class="w-9 text-right font-mono text-sm text-body">{r.headToHeadVotes > 0 ? `${r.winRate}%` : '—'}</span>
             </div>
           </a>
         ))}
       </div>
 
       <p class="mt-6 font-mono text-[11px] uppercase tracking-widest text-mute">
-        Scores update instantly with every vote · seeded at 1500
+        Votes update instantly · +1 from a profile vote, +5 for winning Champion Mode
       </p>
     </div>
   </section>

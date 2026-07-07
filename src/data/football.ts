@@ -1,5 +1,4 @@
 import type { Entity } from '../lib/types';
-import { SEED_ELO } from '../lib/elo';
 
 export const footballEntities: Entity[] = [
   {
@@ -61,7 +60,6 @@ export const footballEntities: Entity[] = [
       'Led Argentina to the 2022 FIFA World Cup — a 36-year wait ended',
       '129 Champions League goals, 4 UCL titles, 48 career trophies',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -123,7 +121,6 @@ export const footballEntities: Entity[] = [
       '37 career trophies, 1,097 club appearances',
       '231 international caps — record for a European nation',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -181,7 +178,6 @@ export const footballEntities: Entity[] = [
       'Led Santos to back-to-back Copa Libertadores and Intercontinental Cups',
       'Named FIFA Co-Player of the Century alongside Maradona',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -240,7 +236,6 @@ export const footballEntities: Entity[] = [
       'FIFA World Cup Player of the Tournament 1986',
       'Named FIFA Co-Player of the Century alongside Pelé',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -300,7 +295,6 @@ export const footballEntities: Entity[] = [
       'Only player to win Ballon d\'Or while playing for two different clubs',
       'Later managed Real Madrid to three consecutive Champions League titles (2016–18)',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -359,7 +353,6 @@ export const footballEntities: Entity[] = [
       'Won the Champions League with Barcelona in 2006',
       'Widely regarded as the most skilful player of the 2000s decade',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -417,7 +410,6 @@ export const footballEntities: Entity[] = [
       'All-time top scorer for Paris Saint-Germain (256 goals)',
       'Fastest player in football — recorded at 38 km/h (23.6 mph)',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -476,7 +468,6 @@ export const footballEntities: Entity[] = [
       '€222m world-record transfer to PSG in 2017',
       'World Cup top performer in 2014 before injury ended his tournament',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -534,7 +525,6 @@ export const footballEntities: Entity[] = [
       'Led Netherlands to the 1974 World Cup Final',
       'As Barcelona manager, built the Dream Team that won 4 consecutive La Liga titles',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -594,7 +584,6 @@ export const footballEntities: Entity[] = [
       '2 Ballon d\'Or awards spanning 4 years',
       'Led West Germany to Euro 1972 and World Cup 1974 double',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
 ];

@@ -11,8 +11,11 @@ export interface Fighter {
   nationality: string;
   countryCode: string;
   position: string;
+  category: string;
   statSections: StatSection[];
 }
+
+type Mode = 'ranked' | 'friendly';
 
 interface Props {
   roster: Fighter[];
@@ -133,10 +136,14 @@ function compareStats(champ: Fighter, opp: Fighter): StatCompare {
 
 export default function ChampionMode({ roster }: Props) {
   const presets = useMemo(() => countPresets(roster.length), [roster.length]);
+  const category = roster[0]?.category ?? "football";
+  const [mode, setMode] = useState<Mode>("ranked");
   const [phase, setPhase] = useState<Phase>("setup");
   const [count, setCount] = useState<number>(
     presets.includes(8) ? 8 : presets[presets.length - 1],
   );
+  /** Result of the +5 crown award on a ranked run's finish. */
+  const [crownResult, setCrownResult] = useState<{ awarded: number; total: number } | null>(null);
   const [champion, setChampion] = useState<Fighter | null>(null);
   const [queue, setQueue] = useState<Fighter[]>([]);
   const [idx, setIdx] = useState(0);
@@ -168,16 +175,51 @@ export default function ChampionMode({ roster }: Props) {
   // timeout never fires next()/setState on a torn-down component.
   useEffect(() => clearTimer, []);
 
-  function start(n: number) {
+  async function start(n: number) {
     clearTimer();
-    const pool = shuffle(roster).slice(0, n);
+    setError(null);
+
+    // Ranked runs exclude GOATs this fingerprint has already crowned in the
+    // last 24h, so a favourite can't be farmed. Friendly runs use everyone.
+    let eligible = roster;
+    if (mode === "ranked") {
+      try {
+        const res = await fetch(`/api/locked?category=${encodeURIComponent(category)}`);
+        const data = await res.json();
+        const locked = new Set<string>(data.locked ?? []);
+        eligible = roster.filter((f) => !locked.has(f.id));
+      } catch {
+        /* on failure, fall back to the full roster */
+      }
+      if (eligible.length < 3) {
+        setError("You've already crowned most GOATs today — switch to Friendly to keep playing.");
+        return;
+      }
+    }
+
+    const pool = shuffle(eligible).slice(0, Math.min(n, eligible.length));
     setChampion(pool[0]);
     setQueue(pool.slice(1));
     setIdx(0);
     setRounds([]);
     setCurrent(null);
-    setError(null);
+    setCrownResult(null);
     setPhase("arena");
+  }
+
+  /** Award the crowned champion +5 votes (ranked runs only). */
+  async function awardCrown(champ: Fighter) {
+    try {
+      const res = await fetch("/api/rank-vote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId: champ.id, channel: "champion" }),
+      });
+      const data = await res.json();
+      setCrownResult({ awarded: res.ok ? data.awarded ?? 0 : 0, total: data.total ?? 0 });
+    } catch {
+      setCrownResult({ awarded: 0, total: 0 });
+    }
   }
 
   async function cast(picked: Fighter) {
@@ -188,14 +230,17 @@ export default function ChampionMode({ roster }: Props) {
     setPhase("reveal"); // flip immediately so the crowd-counting state shows without lag
 
     try {
-      const res = await fetch("/api/vote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          battleId: battleId(champion.slug, opponent.slug),
-          choice: picked.id,
-        }),
-      });
+      // Ranked bouts record a head-to-head vote; friendly bouts just read the
+      // matchup's current crowd split without writing anything.
+      const bid = battleId(champion.slug, opponent.slug);
+      const res =
+        mode === "ranked"
+          ? await fetch("/api/vote", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ battleId: bid, choice: picked.id }),
+            })
+          : await fetch(`/api/results?battle=${encodeURIComponent(bid)}`);
       const data: BattleResult = await res.json();
       if (!res.ok) throw new Error((data as any)?.error ?? "Vote failed");
 
@@ -246,6 +291,8 @@ export default function ChampionMode({ roster }: Props) {
     setError(null);
     if (idx + 1 >= queue.length) {
       setPhase("done");
+      // The last GOAT standing is crowned — a ranked run awards it +5 votes.
+      if (mode === "ranked") awardCrown(r.picked);
     } else {
       setIdx((i) => i + 1);
       setPhase("arena");
@@ -260,6 +307,7 @@ export default function ChampionMode({ roster }: Props) {
     setIdx(0);
     setRounds([]);
     setCurrent(null);
+    setCrownResult(null);
     setError(null);
   }
 
@@ -281,6 +329,42 @@ export default function ChampionMode({ roster }: Props) {
           the next challenger. Keep voting until one is left standing. No pre-picks,
           no bias: your GOAT is whoever survives your own calls.
         </p>
+
+        {/* Mode — Ranked counts toward the rankings, Friendly is just for fun. */}
+        <div class="mt-10">
+          <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-4">
+            Mode
+          </p>
+          <div class="flex flex-wrap gap-2 justify-center">
+            {([
+              { id: "ranked", label: "Ranked", note: "Winner earns +5 votes" },
+              { id: "friendly", label: "Friendly", note: "Nothing counts" },
+            ] as const).map((m) => (
+              <button
+                onClick={() => setMode(m.id)}
+                class={`flex flex-col items-start text-left px-5 py-3 rounded-sm border transition-all ${
+                  mode === m.id
+                    ? "bg-lime text-canvas border-lime"
+                    : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
+                }`}
+              >
+                <span class="font-headline font-black uppercase text-lg tracking-wide leading-none">
+                  {m.label}
+                </span>
+                <span
+                  class={`font-mono text-[11px] uppercase tracking-widest mt-1 ${mode === m.id ? "text-canvas/70" : "text-mute"}`}
+                >
+                  {m.note}
+                </span>
+              </button>
+            ))}
+          </div>
+          <p class="mt-3 font-mono text-[11px] uppercase tracking-widest text-mute max-w-md mx-auto">
+            {mode === "ranked"
+              ? "Crown a GOAT to give them +5 votes — you can't re-crown the same GOAT for 24h."
+              : "Replay freely with any GOAT — friendly runs never touch the rankings."}
+          </p>
+        </div>
 
         <div class="mt-10">
           <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-4">
@@ -318,6 +402,11 @@ export default function ChampionMode({ roster }: Props) {
         >
           Enter the Arena →
         </button>
+        {error && (
+          <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-red max-w-md mx-auto">
+            {error}
+          </p>
+        )}
       </div>
     );
   }
@@ -349,6 +438,27 @@ export default function ChampionMode({ roster }: Props) {
           {flag(champion.countryCode)} {champion.name} · left standing after {total}{" "}
           {total === 1 ? "bout" : "bouts"}
         </p>
+
+        {/* Crown outcome — ranked runs award +5 votes; friendly runs count nothing. */}
+        {mode === "ranked" ? (
+          crownResult && crownResult.awarded > 0 ? (
+            <p class="mt-4 font-headline font-black uppercase tracking-wider text-lg text-lime">
+              +{crownResult.awarded} votes → {champion.shortName} now has {crownResult.total.toLocaleString()}
+            </p>
+          ) : crownResult ? (
+            <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute max-w-md mx-auto">
+              Already crowned {champion.shortName} in the last 24h — no extra votes this run.
+            </p>
+          ) : (
+            <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute animate-pulse">
+              Awarding votes…
+            </p>
+          )
+        ) : (
+          <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute">
+            Friendly run · nothing counted toward the rankings
+          </p>
+        )}
 
         <div class="mt-10 grid grid-cols-3 gap-3 max-w-sm mx-auto">
           {[
@@ -409,7 +519,7 @@ export default function ChampionMode({ roster }: Props) {
             {champion.shortName}'s Profile
           </a>
           <a
-            href="/rankings/football"
+            href={`/rankings/${category}`}
             class="font-sans font-medium text-sm text-ink border border-hairline-strong px-6 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors"
           >
             See the Rankings
@@ -600,7 +710,9 @@ export default function ChampionMode({ roster }: Props) {
             </button>
           </div>
           <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
-            Pick the greater · your vote moves the global rankings
+            {mode === "ranked"
+              ? "Pick the greater · bouts build the head-to-head; the last standing earns +5"
+              : "Pick the greater · friendly run, nothing is recorded"}
           </p>
           {error && (
             <p class="text-center font-mono text-[11px] uppercase tracking-widest text-red mt-3">

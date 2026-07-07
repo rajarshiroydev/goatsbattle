@@ -8,10 +8,12 @@ export interface RankEntry {
   shortName: string;
   countryCode: string;
   nationality: string;
-  elo: number;
+  /** Ranking total — the number users see. */
+  votes: number;
+  /** Head-to-head record (separate from the ranking). */
   votesFor: number;
   votesAgainst: number;
-  totalVotes: number;
+  headToHeadVotes: number;
   winRate: number;
 }
 
@@ -23,10 +25,10 @@ export function toRankEntry(r: RankingRow): RankEntry {
     shortName: r.entity.shortName,
     countryCode: r.entity.countryCode,
     nationality: r.entity.nationality,
-    elo: r.elo,
+    votes: r.votes,
     votesFor: r.votesFor,
     votesAgainst: r.votesAgainst,
-    totalVotes: r.totalVotes,
+    headToHeadVotes: r.headToHeadVotes,
     winRate: r.winRate,
   };
 }

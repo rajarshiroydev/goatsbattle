@@ -115,7 +115,7 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
             </button>
           </div>
           <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
-            One vote per battle each day · results revealed after you vote
+            Head-to-head vote · one per matchup every 24h · results after you vote
           </p>
         </>
       ) : (
@@ -132,7 +132,7 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
             {result!.total.toLocaleString()} total votes · you backed {votedA ? shortA : votedB ? shortB : '—'}
           </p>
           <p class="text-center font-mono text-[11px] uppercase tracking-widest text-lime mt-1.5">
-            ✓ Voted today — come back tomorrow to vote again
+            ✓ Voted — this head-to-head is separate from the vote rankings
           </p>
           <div class="flex justify-center mt-5">
             <a href={`/rankings/${category}`}

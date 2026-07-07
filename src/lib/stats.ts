@@ -30,8 +30,8 @@ export interface EntityComparison {
 /**
  * Compare two entities across the stat sections they share. For each shared
  * stat we resolve a leader and the proportional split, and tally category wins.
- * Used by battle pages today; reusable by Elo seeding, rankings, and the data
- * API as voting wiring lands.
+ * Used by battle pages today; reusable by rankings and the data API as voting
+ * wiring lands.
  */
 export function compareEntities(entityA: Entity, entityB: Entity): EntityComparison {
   let winsA = 0;

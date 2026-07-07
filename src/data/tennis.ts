@@ -1,5 +1,4 @@
 import type { Entity } from '../lib/types';
-import { SEED_ELO } from '../lib/elo';
 
 /**
  * Tennis GOAT candidates. Stat sections share the same headings/labels across
@@ -56,7 +55,6 @@ export const tennisEntities: Entity[] = [
       'Reached 31 Grand Slam finals across 15 years',
       'Completed the career Grand Slam in 2009',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -109,7 +107,6 @@ export const tennisEntities: Entity[] = [
       'Career Golden Slam across singles and doubles',
       'Two-time career Grand Slam completer',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -162,7 +159,6 @@ export const tennisEntities: Entity[] = [
       'Held all four majors simultaneously (2015–16)',
       'Completed the Career Golden Slam in 2024',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -213,7 +209,6 @@ export const tennisEntities: Entity[] = [
       '7 Wimbledon titles in eight years',
       'Youngest US Open men\'s champion at 19',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -266,7 +261,6 @@ export const tennisEntities: Entity[] = [
       '4 Olympic gold medals across singles and doubles',
       '319 total weeks at world No. 1',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -317,7 +311,6 @@ export const tennisEntities: Entity[] = [
       'The only man to win the French Open and Wimbledon in the same year three times',
       'A career winning percentage above 82%',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
 ];

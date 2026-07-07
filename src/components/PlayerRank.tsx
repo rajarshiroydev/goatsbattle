@@ -41,15 +41,15 @@ export default function PlayerRank({ slug, category, accent }: Props) {
     state === 'ready' && me
       ? [
           { value: `#${me.rank}`, label: field ? `of ${field}` : 'Global rank', accent: true },
-          { value: me.elo.toLocaleString(), label: 'Score' },
-          { value: me.totalVotes.toLocaleString(), label: 'Total votes' },
-          { value: me.totalVotes > 0 ? `${me.winRate}%` : '—', label: 'Win rate' },
+          { value: me.votes.toLocaleString(), label: 'Votes' },
+          { value: me.headToHeadVotes.toLocaleString(), label: '1v1 votes' },
+          { value: me.headToHeadVotes > 0 ? `${me.winRate}%` : '—', label: '1v1 win rate' },
         ]
       : [
           { value: '—', label: 'Global rank', accent: true },
-          { value: '—', label: 'Score' },
-          { value: '—', label: 'Total votes' },
-          { value: '—', label: 'Win rate' },
+          { value: '—', label: 'Votes' },
+          { value: '—', label: '1v1 votes' },
+          { value: '—', label: '1v1 win rate' },
         ];
 
   const loading = state === 'loading';

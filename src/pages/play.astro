@@ -15,12 +15,13 @@ const roster: Fighter[] = footballEntities.map((e) => ({
   nationality: e.nationality,
   countryCode: e.countryCode,
   position: e.position,
+  category: e.category,
   statSections: e.statSections,
 }));
 
 const title = 'Champion Mode — Crown Your Football GOAT | GOATSBattle';
 const description =
-  'A blind gauntlet: two legends enter, you pick the greater, the winner fights on. Keep voting until one is left standing — your GOAT, chosen by your own calls. Every vote moves the live rankings.';
+  'A blind gauntlet: two legends enter, you pick the greater, the winner fights on. Keep voting until one is left standing. Crown your GOAT in a ranked run to give them +5 votes — or play Friendly, just for fun.';
 ---
 
 <Layout title={title} description={description}>

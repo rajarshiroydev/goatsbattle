@@ -1,11 +1,15 @@
-import { pgTable, text, integer, timestamp, serial, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
-import { SEED_ELO } from '../elo';
+import { pgTable, text, integer, timestamp, serial, boolean, index, primaryKey } from 'drizzle-orm/pg-core';
 
 /**
  * Entities — the curated GOAT candidates. The canonical profile/stat content
- * lives in code (src/data), but mutable global state (Elo, aggregate votes)
- * is stored here so it can evolve with community voting.
+ * lives in code (src/data), but mutable global state is stored here so it can
+ * evolve with community voting.
+ *
+ * `votes` is the single ranking metric (the number users ever see). It is fed
+ * only by ranking votes: profile "Vote <GOAT>" (+1) and Champion Mode crowns
+ * (+5). `votesFor`/`votesAgainst` are a separate head-to-head aggregate (votes
+ * won/lost across 1v1 matchups) used only for the head-to-head win-rate display
+ * — they do NOT affect the ranking.
  */
 export const entities = pgTable('entities', {
   id: text('id').primaryKey(), // slug, e.g. "messi"
@@ -13,15 +17,17 @@ export const entities = pgTable('entities', {
   shortName: text('short_name').notNull(),
   category: text('category').notNull().default('football'),
   countryCode: text('country_code').notNull(),
-  elo: integer('elo').notNull().default(SEED_ELO),
-  votesFor: integer('votes_for').notNull().default(0), // total votes won across all battles
-  votesAgainst: integer('votes_against').notNull().default(0),
+  votes: integer('votes').notNull().default(0), // ranking total (profile +1, crown +5)
+  votesFor: integer('votes_for').notNull().default(0), // head-to-head wins across battles
+  votesAgainst: integer('votes_against').notNull().default(0), // head-to-head losses
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 /**
  * Battles — one row per canonical pairing. `entityA`/`entityB` are always
  * stored alphabetically sorted (entityA < entityB) so the id is deterministic.
+ * `votesA`/`votesB` are the head-to-head tally for this matchup, fed by 1v1
+ * battle-page votes and every Champion Mode bout.
  */
 export const battles = pgTable('battles', {
   id: text('id').primaryKey(), // canonical slug, e.g. "messi-vs-ronaldo"
@@ -34,11 +40,11 @@ export const battles = pgTable('battles', {
 });
 
 /**
- * Votes — individual cast votes. A SHA-256 hash of (ip + server salt) gives
- * GDPR-safe dedup via the unique index. Uniqueness is bucketed by `voteDay`
- * (UTC calendar day), so a fingerprint may vote each battle once per day and
- * come back the next day. `choice` stores the entity id voted for; `country`
- * comes from the Vercel geo header.
+ * Votes — the head-to-head vote ledger. One row per cast 1v1/bout vote. A
+ * SHA-256 hash of (ip + server salt) gives GDPR-safe dedup. Uniqueness is a
+ * rolling 24h window per (ipHash, battleId), enforced by query against
+ * `createdAt` (no static unique index, since the window rolls). `choice` stores
+ * the entity id voted for; `country` comes from the Vercel geo header.
  */
 export const votes = pgTable(
   'votes',
@@ -48,37 +54,39 @@ export const votes = pgTable(
     choice: text('choice').notNull(), // entity id voted for
     ipHash: text('ip_hash').notNull(),
     country: text('country'),
-    // UTC calendar day this vote counts for; drives the daily dedup window.
-    voteDay: date('vote_day').notNull().default(sql`CURRENT_DATE`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    // one vote per fingerprint per battle per day
-    uniqueVote: uniqueIndex('votes_ip_battle_day_uniq').on(t.ipHash, t.battleId, t.voteDay),
     battleIdx: index('votes_battle_idx').on(t.battleId),
     countryIdx: index('votes_country_idx').on(t.battleId, t.country),
+    // Speeds up the rolling-window dedup lookup by fingerprint + battle.
+    ipBattleIdx: index('votes_ip_battle_idx').on(t.ipHash, t.battleId),
   })
 );
 
 /**
- * Elo history — append-only log of rating changes, for ranking trends and
- * "rating over time" charts later.
+ * Vote windows — ranking-vote enforcement + Champion Mode lockout, per
+ * (fingerprint, entity). `windowStart` anchors a shared 24h window opened by the
+ * user's first ranking vote for that GOAT. `profileUsed`/`championUsed` mark
+ * which channels have fired inside the current window; both reset together once
+ * the window expires. A live `championUsed` also excludes that GOAT from the
+ * user's next ranked Champion Mode run.
  */
-export const eloHistory = pgTable(
-  'elo_history',
+export const voteWindows = pgTable(
+  'vote_windows',
   {
-    id: serial('id').primaryKey(),
+    ipHash: text('ip_hash').notNull(),
     entityId: text('entity_id').notNull().references(() => entities.id),
-    battleId: text('battle_id').notNull().references(() => battles.id),
-    elo: integer('elo').notNull(),
-    delta: integer('delta').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),
+    profileUsed: boolean('profile_used').notNull().default(false),
+    championUsed: boolean('champion_used').notNull().default(false),
   },
   (t) => ({
-    entityIdx: index('elo_history_entity_idx').on(t.entityId),
+    pk: primaryKey({ columns: [t.ipHash, t.entityId] }),
   })
 );
 
 export type EntityRow = typeof entities.$inferSelect;
 export type BattleRow = typeof battles.$inferSelect;
 export type VoteRow = typeof votes.$inferSelect;
+export type VoteWindowRow = typeof voteWindows.$inferSelect;

@@ -1,5 +1,4 @@
 import type { Entity } from '../lib/types';
-import { SEED_ELO } from '../lib/elo';
 
 /**
  * Formula 1 GOAT candidates. Stat sections share headings/labels across the
@@ -51,7 +50,6 @@ export const f1Entities: Entity[] = [
       'Won 13 of 18 races in the 2004 season',
       'Built the modern Ferrari dynasty from the ground up',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -99,7 +97,6 @@ export const f1Entities: Entity[] = [
       'The greatest wet-weather driver of his generation',
       'The only Black driver in Formula 1 history',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -147,7 +144,6 @@ export const f1Entities: Entity[] = [
       'Widely considered the fastest qualifier in F1 history',
       'His genius transcended his three world titles',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -195,7 +191,6 @@ export const f1Entities: Entity[] = [
       'Four consecutive World Championships (2021–2024)',
       'The benchmark of the current generation',
     ],
-    initialElo: SEED_ELO,
     active: true,
   },
   {
@@ -243,7 +238,6 @@ export const f1Entities: Entity[] = [
       'His rivalry with Senna defined an era of Formula 1',
       'Finished championship runner-up four times',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
   {
@@ -291,7 +285,6 @@ export const f1Entities: Entity[] = [
       'His 1957 German GP drive is often called the greatest ever',
       'Dominated the sport\'s perilous first decade',
     ],
-    initialElo: SEED_ELO,
     active: false,
   },
 ];

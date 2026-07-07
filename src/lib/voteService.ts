@@ -1,8 +1,10 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import { db } from './db';
-import { votes } from './db/schema';
-import { eloDeltaSql } from './elo';
+import { votes, entities, voteWindows } from './db/schema';
+import { VOTE_VALUES, WINDOW_HOURS, type VoteChannel } from './votes';
 import { getBattleSummary, type BattleSummary } from './queries';
+
+// ─── Head-to-head votes (1v1 battle pages + Champion Mode bouts) ──────────────
 
 export type VoteOutcome =
   | { status: 'not_found' }
@@ -10,14 +12,15 @@ export type VoteOutcome =
   | { status: 'ok'; alreadyVoted: boolean; summary: BattleSummary; votedChoice: string };
 
 /**
- * Record a vote and bump the affected tallies. The unique (ip_hash, battle_id)
- * index makes this idempotent per fingerprint: a repeat vote is detected via an
- * empty insert and the counts are left untouched. When the vote is fresh, one
- * atomic data-modifying CTE bumps the battle count, computes the Elo delta from
- * the two ratings, applies it to both entities, and appends the rating log — so
- * there is no read-then-write race and it costs a single round-trip.
+ * Record a head-to-head vote and bump the matchup tally. Feeds the head-to-head
+ * plane only — it never touches a GOAT's ranking `votes`. Dedup is a rolling
+ * {@link WINDOW_HOURS} window per (ipHash, battleId): if this fingerprint voted
+ * this pairing within the window, the counts are left untouched.
+ *
+ * neon-http has no transactions, so this is a check-then-write; the small race
+ * (two simultaneous votes from one fingerprint) is acceptable at this scale.
  */
-export async function recordVote(
+export async function recordHeadToHeadVote(
   battleId: string,
   choice: string,
   ipHash: string,
@@ -30,60 +33,23 @@ export async function recordVote(
   const isB = choice === summary.b.id;
   if (!isA && !isB) return { status: 'bad_choice' };
 
-  // voteDay defaults to CURRENT_DATE; the conflict target is the per-day unique
-  // index, so a second vote on the same battle today is a no-op insert.
-  const inserted = await db
-    .insert(votes)
-    .values({ battleId, choice, ipHash, country })
-    .onConflictDoNothing({ target: [votes.ipHash, votes.battleId, votes.voteDay] })
-    .returning({ id: votes.id });
-
-  const alreadyVoted = inserted.length === 0;
+  const alreadyVoted = await hasRecentHeadToHeadVote(battleId, ipHash);
 
   if (!alreadyVoted) {
-    const winner = choice; // the entity that took this vote
     const loser = isA ? summary.b.id : summary.a.id;
-    // Which battle column this vote increments (canonical A/B ordering).
-    const battleBump = isA
-      ? sql`votes_a = votes_a + 1`
-      : sql`votes_b = votes_b + 1`;
+    const battleBump = isA ? sql`votes_a = votes_a + 1` : sql`votes_b = votes_b + 1`;
 
-    // One atomic statement. `d` reads both current ratings and the standard Elo
-    // delta round(K·(1 − expected(winner))); both UPDATEs and the history insert
-    // share that snapshot, so concurrent votes can't lose an update — the delta
-    // is applied additively even if another vote lands first.
-    //
-    // Guarded for a partially-seeded DB: if a rating row is missing, `d` yields no
-    // row (delta → NULL) and the matching UPDATE touches nothing. COALESCE keeps
-    // the surviving side from writing NULL into a NOT NULL column, and the history
-    // rows are driven off the UPDATE's RETURNING (`FROM uw`/`FROM ul`) so a missing
-    // entity simply logs nothing rather than 500-ing the vote. The battle tally
-    // (`ub`) always bumps regardless.
+    // Record the ledger row, bump the matchup tally, and update the two
+    // head-to-head aggregates (wins/losses) used for the win-rate display.
+    await db.insert(votes).values({ battleId, choice, ipHash, country });
     await db.execute(sql`
-      WITH d AS (
-        SELECT ${eloDeltaSql(sql`w.elo`, sql`l.elo`)} AS delta
-        FROM entities w, entities l
-        WHERE w.id = ${winner} AND l.id = ${loser}
-      ),
-      ub AS (
+      WITH ub AS (
         UPDATE battles SET ${battleBump} WHERE id = ${battleId}
       ),
       uw AS (
-        UPDATE entities
-        SET elo = elo + COALESCE((SELECT delta FROM d), 0), votes_for = votes_for + 1
-        WHERE id = ${winner}
-        RETURNING elo AS new_elo
-      ),
-      ul AS (
-        UPDATE entities
-        SET elo = elo - COALESCE((SELECT delta FROM d), 0), votes_against = votes_against + 1
-        WHERE id = ${loser}
-        RETURNING elo AS new_elo
+        UPDATE entities SET votes_for = votes_for + 1 WHERE id = ${choice}
       )
-      INSERT INTO elo_history (entity_id, battle_id, elo, delta)
-      SELECT ${winner}, ${battleId}, uw.new_elo, COALESCE((SELECT delta FROM d), 0) FROM uw
-      UNION ALL
-      SELECT ${loser}, ${battleId}, ul.new_elo, -COALESCE((SELECT delta FROM d), 0) FROM ul
+      UPDATE entities SET votes_against = votes_against + 1 WHERE id = ${loser}
     `);
   }
 
@@ -91,13 +57,29 @@ export async function recordVote(
   return { status: 'ok', alreadyVoted, summary: fresh, votedChoice: choice };
 }
 
+/** Whether this fingerprint voted this pairing within the rolling window. */
+async function hasRecentHeadToHeadVote(battleId: string, ipHash: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: votes.id })
+    .from(votes)
+    .where(
+      and(
+        eq(votes.battleId, battleId),
+        eq(votes.ipHash, ipHash),
+        gt(votes.createdAt, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 export interface VoteState {
   summary: BattleSummary;
-  /** The entity this fingerprint already voted for, or null. */
+  /** The entity this fingerprint voted for in this matchup's window, or null. */
   votedChoice: string | null;
 }
 
-/** Current tallies for a battle plus whether this fingerprint already voted today. */
+/** Current tallies for a battle plus this fingerprint's recent vote (if any). */
 export async function getVoteState(battleId: string, ipHash: string): Promise<VoteState | null> {
   const summary = await getBattleSummary(battleId);
   if (!summary) return null;
@@ -109,10 +91,154 @@ export async function getVoteState(battleId: string, ipHash: string): Promise<Vo
       and(
         eq(votes.battleId, battleId),
         eq(votes.ipHash, ipHash),
-        eq(votes.voteDay, sql`CURRENT_DATE`),
+        gt(votes.createdAt, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
       ),
     )
+    .orderBy(sql`${votes.createdAt} desc`)
     .limit(1);
 
   return { summary, votedChoice: row?.choice ?? null };
+}
+
+// ─── Ranking votes (profile "Vote X" +1, Champion Mode crown +5) ──────────────
+
+export type RankingVoteStatus = 'awarded' | 'already_used' | 'unknown_entity';
+
+export interface RankingVoteState {
+  /** Whether the profile +1 has fired in the current window. */
+  profileUsed: boolean;
+  /** Whether the champion +5 crown has fired in the current window. */
+  championUsed: boolean;
+  /** ISO timestamp the shared window resets (both channels free again), or null. */
+  windowResetsAt: string | null;
+}
+
+export interface RankingVoteResult extends RankingVoteState {
+  status: RankingVoteStatus;
+  /** Votes awarded this call (0 when not awarded). */
+  awarded: number;
+  /** The entity's new ranking total (unchanged when not awarded). */
+  total: number;
+}
+
+/**
+ * Cast a ranking vote for a GOAT through one channel. Enforces a shared rolling
+ * window per (ipHash, entity): the window opens on the user's first ranking vote
+ * for that GOAT and each channel may fire once inside it. `profile` adds +1,
+ * `champion` adds +5. Both channels reset together when the window expires.
+ */
+export async function recordRankingVote(
+  entityId: string,
+  channel: VoteChannel,
+  ipHash: string,
+): Promise<RankingVoteResult> {
+  const [entity] = await db
+    .select({ votes: entities.votes })
+    .from(entities)
+    .where(eq(entities.id, entityId))
+    .limit(1);
+  if (!entity) {
+    return { status: 'unknown_entity', awarded: 0, total: 0, profileUsed: false, championUsed: false, windowResetsAt: null };
+  }
+
+  const [win] = await db
+    .select({
+      profileUsed: voteWindows.profileUsed,
+      championUsed: voteWindows.championUsed,
+      windowStart: voteWindows.windowStart,
+      active: sql<boolean>`${voteWindows.windowStart} > now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`,
+    })
+    .from(voteWindows)
+    .where(and(eq(voteWindows.ipHash, ipHash), eq(voteWindows.entityId, entityId)))
+    .limit(1);
+
+  const active = !!win?.active;
+  const usedField = channel === 'profile' ? 'profileUsed' : 'championUsed';
+
+  // Already spent this channel in the live window → reject.
+  if (active && win?.[usedField]) {
+    return {
+      status: 'already_used',
+      awarded: 0,
+      total: entity.votes,
+      profileUsed: win.profileUsed,
+      championUsed: win.championUsed,
+      windowResetsAt: resetsAt(win.windowStart),
+    };
+  }
+
+  const value = VOTE_VALUES[channel];
+  const profileUsed = channel === 'profile' ? true : active ? !!win?.profileUsed : false;
+  const championUsed = channel === 'champion' ? true : active ? !!win?.championUsed : false;
+  // Keep the anchor when extending a live window; reset it when opening a new one.
+  const windowStart = active && win ? win.windowStart : new Date();
+
+  await db
+    .insert(voteWindows)
+    .values({ ipHash, entityId, windowStart, profileUsed, championUsed })
+    .onConflictDoUpdate({
+      target: [voteWindows.ipHash, voteWindows.entityId],
+      set: { windowStart, profileUsed, championUsed },
+    });
+
+  const [updated] = await db
+    .update(entities)
+    .set({ votes: sql`${entities.votes} + ${value}` })
+    .where(eq(entities.id, entityId))
+    .returning({ votes: entities.votes });
+
+  return {
+    status: 'awarded',
+    awarded: value,
+    total: updated?.votes ?? entity.votes + value,
+    profileUsed,
+    championUsed,
+    windowResetsAt: resetsAt(windowStart),
+  };
+}
+
+/** Read the ranking-vote window state for one GOAT (for button hydration). */
+export async function getRankingVoteState(entityId: string, ipHash: string): Promise<RankingVoteState> {
+  const [win] = await db
+    .select({
+      profileUsed: voteWindows.profileUsed,
+      championUsed: voteWindows.championUsed,
+      windowStart: voteWindows.windowStart,
+      active: sql<boolean>`${voteWindows.windowStart} > now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`,
+    })
+    .from(voteWindows)
+    .where(and(eq(voteWindows.ipHash, ipHash), eq(voteWindows.entityId, entityId)))
+    .limit(1);
+
+  if (!win?.active) return { profileUsed: false, championUsed: false, windowResetsAt: null };
+  return {
+    profileUsed: win.profileUsed,
+    championUsed: win.championUsed,
+    windowResetsAt: resetsAt(win.windowStart),
+  };
+}
+
+/**
+ * Entity ids this fingerprint has crowned within the live window — excluded from
+ * their next ranked Champion Mode run. Scoped to one arena.
+ */
+export async function getLockedEntities(category: string, ipHash: string): Promise<string[]> {
+  const rows = await db
+    .select({ entityId: voteWindows.entityId })
+    .from(voteWindows)
+    .innerJoin(entities, eq(entities.id, voteWindows.entityId))
+    .where(
+      and(
+        eq(voteWindows.ipHash, ipHash),
+        eq(voteWindows.championUsed, true),
+        eq(entities.category, category),
+        gt(voteWindows.windowStart, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
+      ),
+    );
+  return rows.map((r) => r.entityId);
+}
+
+/** When a window anchored at `start` resets, as an ISO string. */
+function resetsAt(start: Date): string {
+  return new Date(start.getTime() + WINDOW_HOURS * 3600_000).toISOString();
 }

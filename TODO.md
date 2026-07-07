@@ -6,7 +6,8 @@ rankings, and a paid data API.
 
 Launch scope: **four live arenas — football, cricket, tennis, F1** (was football-only).
 28 entities (football 10 + 6+6+6), 90 battle pairs (45+15+15+15). Per-arena roster
-files aggregated by `src/data/index.ts`; nav = Goats · Categories · Champion Mode.
+files aggregated by `src/data/index.ts`; nav = Goats · Categories · Battles ·
+Champion Mode · Rankings(▾).
 
 Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
@@ -68,6 +69,22 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Seed script generalized to all categories (per-entity category lookup)
 - [ ] Re-seed live DB with all 4 arenas (`npm run db:seed`) — verify 28 entities / 90 battles
 - [ ] Category-aware radar: `compareViz.ts` AXIS_DEFS are football-only (radar hidden for other sports)
+
+## Phase 5.6 — Battle builder & navigation (shipped 2026-07-07)
+- [x] Rename profile route `/player/[slug]` → `/goats/[slug]` (all links + breadcrumbs)
+- [x] `/battles` battle-builder page + "Battles" nav tab — `BattlePicker` island: pick arena → two same-arena GOATs → navigate to `/battle/<id>`
+- [x] Profile "battle" CTA deep-links `/battles?goat=<slug>` (pre-seeds slot A, locks arena)
+- [x] Rankings nav hover-dropdown (per-arena → `/rankings/<id>`) — replaced flat tab
+- [x] Post-vote "View {Category} Rankings →" CTA in `VoteWidget` (new `category`/`categoryLabel` props)
+
+## Phase 5.7 — Votes-only scoring model (shipped 2026-07-07)
+Replaced Elo/Score with a single **"Votes"** metric (users found two numbers confusing). See memory `votes-model.md`.
+- [x] Remove Elo entirely (`elo.ts`, `eloDeltaSql`, `elo_history` deleted; `initialElo`/`SEED_ELO` stripped from rosters). New constants in `src/lib/votes.ts` (`VOTE_VALUES` {profile:1, champion:5}, `WINDOW_HOURS`)
+- [x] Schema: `entities.votes` (ranking total) replaces `elo`; new `vote_windows` table; `votes` table → rolling-window head-to-head ledger (dropped `vote_day` + unique index). Applied via `scripts/migrate-votes.ts` (push --force can't resolve drop+add non-interactively)
+- [x] Ranking plane: profile **+1** (`ProfileVoteButton` island on `/goats/[slug]`), Champion crown **+5**; shared rolling 24h window per (user, GOAT) → stack up to +6; `vote_windows` enforces window + champion lockout
+- [x] `voteService`: `recordHeadToHeadVote` / `recordRankingVote` / `getRankingVoteState` / `getLockedEntities`; new `/api/rank-vote` + `/api/locked`; `/api/vote` is head-to-head only
+- [x] Champion Mode: **Ranked/Friendly** toggle; ranked excludes locked GOATs, crowns final winner (+5); friendly writes nothing; per-bout + 1v1 votes feed the head-to-head plane
+- [x] Terminology sweep (rankings page, PlayerRank, VoteWidget): "Score"/"1500" → "Votes"; verified end-to-end (profile +1, crown +5 stacking to 6, lockout, friendly, H2H dedup)
 
 ## Phase 6 — Discovery & engagement
 - [ ] `Search` Preact island (find entities & battles)

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { recordVote } from '../../lib/voteService';
+import { recordHeadToHeadVote } from '../../lib/voteService';
 import { getClientIp, hashIp, getCountry } from '../../lib/ip';
 import { rateLimit } from '../../lib/ratelimit';
 import { toResult } from '../../lib/voteWire';
@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const country = getCountry(request.headers);
-  const outcome = await recordVote(battleId, choice, ipHash, country);
+  const outcome = await recordHeadToHeadVote(battleId, choice, ipHash, country);
 
   if (outcome.status === 'not_found') return json({ error: 'Battle not found' }, 404);
   if (outcome.status === 'bad_choice') return json({ error: 'Invalid choice for this battle' }, 400);

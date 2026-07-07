@@ -185,42 +185,46 @@ export async function getAllBattleSummaries(category?: string): Promise<BattleSu
     );
 }
 
-/** One row of the Elo leaderboard: static display data + live rating/record. */
+/** One row of the leaderboard: static display data + live ranking votes + H2H record. */
 export interface RankingRow {
   rank: number;
   entity: Entity;
-  elo: number;
+  /** Ranking total — the number users see. Profile +1, Champion crown +5. */
+  votes: number;
+  /** Head-to-head wins across 1v1 matchups (separate from the ranking). */
   votesFor: number;
   votesAgainst: number;
-  totalVotes: number;
-  /** Share of head-to-head votes won, 0–100 (0 when the entity has no votes). */
+  /** Total head-to-head votes cast in this entity's matchups. */
+  headToHeadVotes: number;
+  /** Share of head-to-head votes won, 0–100 (0 when the entity has no H2H votes). */
   winRate: number;
 }
 
 /**
- * The Elo leaderboard for a category, highest-rated first. Ratings and records
- * come from the DB; display fields (name, flag) come from the static dataset.
- * Entities missing from the dataset are dropped so the board never half-renders.
+ * The vote leaderboard for a category, most-voted first. Ranking votes and the
+ * head-to-head record come from the DB; display fields (name, flag) come from
+ * the static dataset. Entities missing from the dataset are dropped so the board
+ * never half-renders.
  */
 export async function getRankings(category = 'football'): Promise<RankingRow[]> {
   const rows = await db
     .select({
       id: entities.id,
-      elo: entities.elo,
+      votes: entities.votes,
       votesFor: entities.votesFor,
       votesAgainst: entities.votesAgainst,
     })
     .from(entities)
     .where(eq(entities.category, category))
-    .orderBy(desc(entities.elo), desc(entities.votesFor));
+    .orderBy(desc(entities.votes), desc(entities.votesFor));
 
   return rows
     .map((r) => {
       const entity = getEntityBySlug(r.id);
       if (!entity) return null;
-      const totalVotes = r.votesFor + r.votesAgainst;
-      const winRate = totalVotes > 0 ? Math.round((r.votesFor / totalVotes) * 100) : 0;
-      return { entity, elo: r.elo, votesFor: r.votesFor, votesAgainst: r.votesAgainst, totalVotes, winRate };
+      const headToHeadVotes = r.votesFor + r.votesAgainst;
+      const winRate = headToHeadVotes > 0 ? Math.round((r.votesFor / headToHeadVotes) * 100) : 0;
+      return { entity, votes: r.votes, votesFor: r.votesFor, votesAgainst: r.votesAgainst, headToHeadVotes, winRate };
     })
     .filter((r): r is Omit<RankingRow, 'rank'> => r !== null)
     .map((r, i) => ({ rank: i + 1, ...r }));
