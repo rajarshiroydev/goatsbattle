@@ -25,7 +25,6 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
 
   <!-- ══ Header ══ -->
   <PageHeader
-    maxW="max-w-5xl"
     breadcrumb={[
       { label: 'GOATSBattle', href: '/' },
       { label: 'Rankings', href: '/rankings' },
@@ -51,7 +50,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
   <!-- ══ Podium (top 3) ══ -->
   {top1 && (
     <section class="border-b border-hairline bg-canvas-soft">
-      <div class="max-w-5xl mx-auto px-5 py-10">
+      <div class="max-w-7xl mx-auto px-5 py-10">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[top2, top1, top3].map((r, col) => r && (
             <a href={`/goats/${r.entity.slug}`}
@@ -81,7 +80,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
 
   <!-- ══ Full leaderboard ══ -->
   <section>
-    <div class="max-w-5xl mx-auto px-5 py-10">
+    <div class="max-w-7xl mx-auto px-5 py-10">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-0.5 h-5 bg-lime inline-block"></span>
         <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">Full Table</h2>
@@ -149,7 +148,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
 
   <!-- ══ CTA ══ -->
   <section class="border-t border-hairline bg-canvas-soft">
-    <div class="max-w-5xl mx-auto px-5 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+    <div class="max-w-7xl mx-auto px-5 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
       <div>
         <h2 class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Think the order's wrong?</h2>
         <p class="mt-2 font-sans text-body font-medium text-base">Pick your GOAT and move the rankings yourself.</p>
