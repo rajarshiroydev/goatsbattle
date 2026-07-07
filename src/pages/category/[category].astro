@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import BattleCard from '../../components/BattleCard.astro';
 import { getRoster } from '../../data';
 import { getCategory } from '../../data/categories';
@@ -25,41 +26,28 @@ const description = `Every ${cat.label} GOAT battle and the legends behind them.
 <Layout title={title} description={description}>
 
   <!-- Header -->
-  <section class="border-b border-hairline relative overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
-      style={`background: radial-gradient(ellipse 70% 60% at 50% 0%, ${accent}14 0%, transparent 60%)`}></div>
-    <div class="relative max-w-7xl mx-auto px-5 py-12 md:py-16">
-      <div class="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-mute mb-6">
-        <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
-        <span>/</span>
-        <a href="/categories" class="hover:text-body transition-colors">Categories</a>
-        <span>/</span>
-        <span class="text-ink">{cat.label}</span>
-      </div>
-      <div class="flex items-center gap-3 mb-2">
-        <span class="text-4xl md:text-5xl leading-none">{cat.emoji}</span>
-        <span class="font-mono text-[11px] uppercase tracking-widest" style={`color:${accent}`}>Live Arena</span>
-      </div>
-      <h1 class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-        style="font-size: clamp(3rem, 9vw, 6rem)">
-        {cat.label} <span style={`color:${accent}`}>Arena</span>
-      </h1>
-      <p class="mt-4 font-sans text-body text-base max-w-lg">
-        {allBattles.length} battles · {roster.length} legends · {totalVotes > 0 ? `${compactNumber(totalVotes)} votes cast` : 'voting just opened'}.
-      </p>
-      <div class="mt-6 flex flex-wrap gap-3">
-        <a href={`/rankings/${category}`}
-          class="font-headline font-black uppercase tracking-wider text-sm px-6 h-11 flex items-center rounded-sm transition-opacity hover:opacity-90"
-          style={`background:${accent}; color:#0d0d0f`}>
-          View Rankings →
-        </a>
-        <a href="/categories"
-          class="font-sans text-sm text-ink border border-hairline-strong px-6 h-11 flex items-center rounded-sm hover:border-ink transition-colors">
-          All Arenas
-        </a>
-      </div>
+  <PageHeader
+    accent={accent}
+    breadcrumb={[
+      { label: 'GOATSBattle', href: '/' },
+      { label: 'Arenas', href: '/categories' },
+      { label: cat.label },
+    ]}
+    title={cat.label}
+    highlight="Arena"
+    subtitle={`${allBattles.length} battles · ${roster.length} legends · ${totalVotes > 0 ? `${compactNumber(totalVotes)} votes cast` : 'voting just opened'}.`}>
+    <div class="mt-6 flex flex-wrap gap-3">
+      <a href={`/rankings/${category}`}
+        class="font-headline font-black uppercase tracking-wider text-sm px-6 h-11 flex items-center rounded-sm transition-opacity hover:opacity-90"
+        style={`background:${accent}; color:#0d0d0f`}>
+        View Rankings →
+      </a>
+      <a href="/categories"
+        class="font-sans text-sm text-ink border border-hairline-strong px-6 h-11 flex items-center rounded-sm hover:border-ink transition-colors">
+        All Arenas
+      </a>
     </div>
-  </section>
+  </PageHeader>
 
   <!-- Players roster -->
   <section class="border-b border-hairline bg-canvas-soft">
@@ -78,7 +66,7 @@ const description = `Every ${cat.label} GOAT battle and the legends behind them.
             <span class="text-2xl leading-none">{flagEmoji(e.countryCode)}</span>
             <span class="min-w-0">
               <span class="block font-headline font-black uppercase text-xl leading-none truncate" style={`color:${e.accent}`}>{e.shortName}</span>
-              <span class="block font-mono text-[11px] uppercase tracking-wider text-mute mt-1">{e.position}</span>
+              <span class="block font-mono text-[13px] uppercase tracking-wider text-mute mt-1">{e.position}</span>
             </span>
           </a>
         ))}
@@ -92,7 +80,7 @@ const description = `Every ${cat.label} GOAT battle and the legends behind them.
       <div class="flex items-center gap-3 mb-6">
         <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
         <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">All Battles</h2>
-        <span class="font-mono text-[11px] uppercase tracking-widest text-mute hidden sm:inline">Sorted by votes</span>
+        <span class="font-mono text-[13px] uppercase tracking-widest text-mute hidden sm:inline">Sorted by votes</span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {allBattles.map((battle) => (

@@ -69,7 +69,7 @@ export default function ContestedBattles({ slug, accent }: Props) {
             <span class="font-headline font-black uppercase text-2xl leading-none" style={`color:${b.opponentAccent}`}>
               {b.opponentShortName}
             </span>
-            <span class="font-mono text-[11px] uppercase tracking-wider text-mute shrink-0">
+            <span class="font-mono text-[13px] uppercase tracking-wider text-mute shrink-0">
               {b.total.toLocaleString()} votes
             </span>
           </div>
@@ -79,7 +79,7 @@ export default function ContestedBattles({ slug, accent }: Props) {
             <div class="bg-hairline-strong" style={`width:${b.opponentPct}%`}></div>
           </div>
 
-          <div class="flex items-center justify-between mt-1.5 font-mono text-[11px] uppercase tracking-wider">
+          <div class="flex items-center justify-between mt-1.5 font-mono text-[13px] uppercase tracking-wider">
             <span style={`color:${accent}`}>{b.goatPct}%</span>
             <span class="text-mute">{b.opponentPct}%</span>
           </div>

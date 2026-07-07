@@ -155,7 +155,7 @@ function FighterPanel({
     >
       <div>
         <p
-          class={`font-mono text-[11px] uppercase tracking-widest mb-2 ${isChampion ? "text-lime" : "text-body"}`}
+          class={`font-mono text-[13px] uppercase tracking-widest mb-2 ${isChampion ? "text-lime" : "text-body"}`}
         >
           {isChampion ? "👑 Reigning" : "Challenger"}
         </p>
@@ -364,100 +364,110 @@ export default function ChampionMode({ roster }: Props) {
   // ── SETUP ────────────────────────────────────────────
   if (phase === "setup") {
     return (
-      <div class="max-w-2xl mx-auto px-5 py-12 md:py-20 text-center">
-        <p class="font-mono text-[11px] uppercase tracking-widest text-lime mb-4">
-          Champion Mode
-        </p>
-        <h1
-          class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
-          style="font-size: clamp(2.5rem, 8vw, 5.5rem)"
-        >
-          Crown Your <span class="text-lime">GOAT</span>
-        </h1>
-        <p class="mt-5 font-sans text-body text-base leading-relaxed max-w-md mx-auto">
-          Two legends enter — you pick the greater. Your winner stays on and faces
-          the next challenger. Keep voting until one is left standing. No pre-picks,
-          no bias: your GOAT is whoever survives your own calls.
-        </p>
+      <>
+        {/* Header band — matches the shared PageHeader shape used across the site. */}
+        <section class="border-b border-hairline relative overflow-hidden">
+          <div
+            class="absolute inset-0 pointer-events-none"
+            aria-hidden="true"
+            style="background: radial-gradient(ellipse 70% 60% at 50% -10%, rgba(200,255,0,0.08) 0%, transparent 60%)"
+          ></div>
+          <div class="relative max-w-7xl mx-auto px-5 py-14 md:py-20 text-center">
+            <h1
+              class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
+              style="font-size: clamp(3.5rem, 9vw, 7rem)"
+            >
+              Crown Your <span class="text-lime">GOAT</span>
+            </h1>
+            <p class="mt-6 font-sans text-body font-medium text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
+              Two legends enter — you pick the greater. Your winner stays on and faces
+              the next challenger. Keep voting until one is left standing. No pre-picks,
+              no bias: your GOAT is whoever survives your own calls.
+            </p>
+          </div>
+        </section>
 
-        {/* Mode — Ranked counts toward the rankings, Friendly is just for fun. */}
-        <div class="mt-10">
-          <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-4">
-            Mode
-          </p>
-          <div class="flex flex-wrap gap-2 justify-center">
-            {([
-              { id: "ranked", label: "Ranked", note: "Winner earns +5 votes" },
-              { id: "friendly", label: "Friendly", note: "Nothing counts" },
-            ] as const).map((m) => (
-              <button
-                onClick={() => setMode(m.id)}
-                class={`flex flex-col items-start text-left px-5 py-3 rounded-sm border transition-all ${
-                  mode === m.id
-                    ? "bg-lime text-canvas border-lime"
-                    : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
-                }`}
-              >
-                <span class="font-headline font-black uppercase text-lg tracking-wide leading-none">
-                  {m.label}
-                </span>
-                <span
-                  class={`font-mono text-[11px] uppercase tracking-widest mt-1 ${mode === m.id ? "text-canvas/70" : "text-mute"}`}
+        {/* Setup controls — centred column */}
+        <div class="max-w-2xl mx-auto px-5 pt-8 pb-12 md:pt-10 md:pb-16 text-center">
+          {/* Mode — Ranked counts toward the rankings, Friendly is just for fun. */}
+          <div>
+            <p class="font-mono text-sm uppercase tracking-widest text-mute mb-4">
+              Mode
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+              {([
+                { id: "ranked", label: "Ranked", note: "Winner earns +5 votes" },
+                { id: "friendly", label: "Friendly", note: "Nothing counts" },
+              ] as const).map((m) => (
+                <button
+                  onClick={() => setMode(m.id)}
+                  class={`flex flex-col items-center text-center px-6 py-4 rounded-sm border transition-all ${
+                    mode === m.id
+                      ? "bg-lime text-canvas border-lime"
+                      : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
+                  }`}
                 >
-                  {m.note}
-                </span>
-              </button>
-            ))}
-          </div>
-          <p class="mt-3 font-mono text-[11px] uppercase tracking-widest text-mute max-w-md mx-auto">
-            {mode === "ranked"
-              ? "Crown a GOAT to give them +5 votes — you can't re-crown the same GOAT for 24h."
-              : "Replay freely with any GOAT — friendly runs never touch the rankings."}
-          </p>
-        </div>
-
-        <div class="mt-10">
-          <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-4">
-            How many contenders?
-          </p>
-          <div class="flex flex-wrap gap-2 justify-center">
-            {presets.map((n) => (
-              <button
-                onClick={() => setCount(n)}
-                class={`font-headline font-black uppercase text-lg tracking-wide px-6 h-12 flex items-center rounded-sm border transition-all ${
-                  count === n
-                    ? "bg-lime text-canvas border-lime"
-                    : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
-                }`}
-              >
-                {n}
-                {n === roster.length && (
-                  <span
-                    class={`ml-2 font-mono text-[11px] tracking-widest ${count === n ? "text-canvas/70" : "text-mute"}`}
-                  >
-                    ALL
+                  <span class="font-headline font-black uppercase text-xl tracking-wide leading-none">
+                    {m.label}
                   </span>
-                )}
-              </button>
-            ))}
+                  <span
+                    class={`font-mono text-[13px] uppercase tracking-widest mt-1.5 ${mode === m.id ? "text-canvas/80" : "text-mute"}`}
+                  >
+                    {m.note}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p class="mt-4 font-sans text-base text-body max-w-md mx-auto">
+              {mode === "ranked"
+                ? "Crown a GOAT to give them +5 votes — you can't re-crown the same GOAT for 24h."
+                : "Replay freely with any GOAT — friendly runs never touch the rankings."}
+            </p>
           </div>
-          <p class="mt-3 font-mono text-[11px] uppercase tracking-widest text-mute">
-            {count} legends · {count - 1} bouts
-          </p>
-        </div>
 
-        <button
-          onClick={() => start(count)}
-          class="mt-10 font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-10 h-12 inline-flex items-center rounded-sm hover:bg-lime-dark transition-colors"
-        >
-          Enter the Arena →
-        </button>
-        {error && (
-          <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-red max-w-md mx-auto">
-            {error}
-          </p>
-        )}
-      </div>
+          <div class="mt-12">
+            <p class="font-mono text-sm uppercase tracking-widest text-mute mb-4">
+              How many contenders?
+            </p>
+            <div class="flex flex-wrap gap-3 justify-center">
+              {presets.map((n) => (
+                <button
+                  onClick={() => setCount(n)}
+                  class={`font-headline font-black uppercase text-xl tracking-wide px-7 h-12 flex items-center rounded-sm border transition-all ${
+                    count === n
+                      ? "bg-lime text-canvas border-lime"
+                      : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
+                  }`}
+                >
+                  {n}
+                  {n === roster.length && (
+                    <span
+                      class={`ml-2 font-mono text-[13px] tracking-widest ${count === n ? "text-canvas/80" : "text-mute"}`}
+                    >
+                      ALL
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p class="mt-4 font-sans text-base text-body">
+              {count} legends · {count - 1} bouts
+            </p>
+          </div>
+
+          <button
+            onClick={() => start(count)}
+            class="mt-12 font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-12 h-14 inline-flex items-center rounded-sm hover:bg-lime-dark transition-colors"
+          >
+            Enter the Arena →
+          </button>
+          {error && (
+            <p class="mt-4 font-sans text-base text-red max-w-md mx-auto">
+              {error}
+            </p>
+          )}
+        </div>
+      </>
     );
   }
 
@@ -475,7 +485,7 @@ export default function ChampionMode({ roster }: Props) {
 
     return (
       <div class="max-w-3xl mx-auto px-5 py-14 md:py-20 text-center anim-arena">
-        <p class="font-mono text-[11px] uppercase tracking-widest text-lime mb-4">
+        <p class="font-mono text-[13px] uppercase tracking-widest text-lime mb-4">
           Your GOAT
         </p>
         <h1
@@ -496,16 +506,16 @@ export default function ChampionMode({ roster }: Props) {
               +{crownResult.awarded} votes → {champion.shortName} now has {crownResult.total.toLocaleString()}
             </p>
           ) : crownResult ? (
-            <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute max-w-md mx-auto">
+            <p class="mt-4 font-mono text-[13px] uppercase tracking-widest text-mute max-w-md mx-auto">
               Already crowned {champion.shortName} in the last 24h — no extra votes this run.
             </p>
           ) : (
-            <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute animate-pulse">
+            <p class="mt-4 font-mono text-[13px] uppercase tracking-widest text-mute animate-pulse">
               Awarding votes…
             </p>
           )
         ) : (
-          <p class="mt-4 font-mono text-[11px] uppercase tracking-widest text-mute">
+          <p class="mt-4 font-mono text-[13px] uppercase tracking-widest text-mute">
             Friendly run · nothing counted toward the rankings
           </p>
         )}
@@ -518,7 +528,7 @@ export default function ChampionMode({ roster }: Props) {
           ].map(({ n, l, c }) => (
             <div class="bg-canvas-soft border border-hairline rounded-md py-4">
               <p class={`font-headline font-black text-3xl leading-none ${c}`}>{n}</p>
-              <p class="font-mono text-[11px] uppercase tracking-widest text-mute mt-1.5">
+              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">
                 {l}
               </p>
             </div>
@@ -531,7 +541,7 @@ export default function ChampionMode({ roster }: Props) {
 
         {/* Path recap */}
         <div class="mt-10 text-left max-w-md mx-auto">
-          <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">
+          <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">
             Your path
           </p>
           <div class="space-y-1.5">
@@ -541,7 +551,7 @@ export default function ChampionMode({ roster }: Props) {
                   {r.champion.shortName} <span class="text-mute">vs</span>{" "}
                   {r.challenger.shortName}
                 </span>
-                <span class="font-mono text-[11px] uppercase tracking-wider text-lime">
+                <span class="font-mono text-[13px] uppercase tracking-wider text-lime">
                   ▸ {r.picked.shortName}
                 </span>
                 <span
@@ -607,11 +617,11 @@ export default function ChampionMode({ roster }: Props) {
     <div class="max-w-4xl mx-auto px-5 py-8 md:py-10">
       {/* Status bar */}
       <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-mute">
+        <div class="flex items-center gap-2 font-mono text-[13px] uppercase tracking-widest text-mute">
           <span class="text-lime">👑 {champion.shortName}</span>
           <span>· Bout {boutNo} / {totalBouts}</span>
         </div>
-        <div class="font-mono text-[11px] uppercase tracking-widest text-mute">
+        <div class="font-mono text-[13px] uppercase tracking-widest text-mute">
           In sync <span class="text-lime">{agreed}</span>
         </div>
       </div>
@@ -671,7 +681,7 @@ export default function ChampionMode({ roster }: Props) {
             class="w-full flex items-center justify-between px-5 py-3 text-left"
           >
             <div class="flex items-center gap-3">
-              <span class="font-mono text-[11px] uppercase tracking-widest text-mute">
+              <span class="font-mono text-[13px] uppercase tracking-widest text-mute">
                 Stat Scoreline
               </span>
               <span class="font-headline font-black uppercase text-sm">
@@ -684,7 +694,7 @@ export default function ChampionMode({ roster }: Props) {
                 </span>
               </span>
             </div>
-            <span class="font-mono text-[11px] uppercase tracking-widest text-mute">
+            <span class="font-mono text-[13px] uppercase tracking-widest text-mute">
               {showStats ? "Hide ▴" : `${cmp.rows.length} stats ▾`}
             </span>
           </button>
@@ -699,7 +709,7 @@ export default function ChampionMode({ roster }: Props) {
                     {row.champ}
                   </span>
                   <div class="flex-1 min-w-0">
-                    <p class="font-mono text-[11px] uppercase tracking-wider text-mute truncate text-center mb-1">
+                    <p class="font-mono text-[13px] uppercase tracking-wider text-mute truncate text-center mb-1">
                       {row.label}
                     </p>
                     <div class="flex h-1 gap-0.5 rounded-full overflow-hidden">
@@ -738,7 +748,7 @@ export default function ChampionMode({ roster }: Props) {
             >
               {championOnLeft ? "Keep" : "Crown"} {leftFighter.shortName}
             </button>
-            <span class="font-mono text-[11px] uppercase tracking-widest text-mute">vs</span>
+            <span class="font-mono text-[13px] uppercase tracking-widest text-mute">vs</span>
             <button
               onClick={() => cast(rightFighter)}
               disabled={pending}
@@ -747,13 +757,13 @@ export default function ChampionMode({ roster }: Props) {
               {championOnLeft ? "Crown" : "Keep"} {rightFighter.shortName}
             </button>
           </div>
-          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
             {mode === "ranked"
               ? "Pick the greater · bouts build the head-to-head; the last standing earns +5"
               : "Pick the greater · friendly run, nothing is recorded"}
           </p>
           {error && (
-            <p class="text-center font-mono text-[11px] uppercase tracking-widest text-red mt-3">
+            <p class="text-center font-mono text-[13px] uppercase tracking-widest text-red mt-3">
               {error}
             </p>
           )}
@@ -768,7 +778,7 @@ export default function ChampionMode({ roster }: Props) {
           <div class="flex h-3 gap-0.5 rounded-full overflow-hidden bg-hairline">
             <div class="w-1/2 bg-hairline-strong animate-pulse"></div>
           </div>
-          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3 animate-pulse">
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3 animate-pulse">
             Reading the room…
           </p>
         </div>
@@ -803,7 +813,7 @@ export default function ChampionMode({ roster }: Props) {
             )}
           </p>
           {/* Crowd agreement */}
-          <p class="text-center font-mono text-[11px] uppercase tracking-widest mt-1">
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest mt-1">
             {current.crowd === "agree" && (
               <span class="text-lime">The world's with you</span>
             )}
@@ -823,7 +833,7 @@ export default function ChampionMode({ roster }: Props) {
             >
               {boutNo >= totalBouts ? "Crown Your GOAT →" : "Next Challenger →"}
             </button>
-            <span class="font-mono text-[11px] uppercase tracking-widest text-mute">
+            <span class="font-mono text-[13px] uppercase tracking-widest text-mute">
               Auto-advancing…
             </span>
           </div>

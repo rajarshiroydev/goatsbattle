@@ -9,25 +9,8 @@ import { getEntityBySlug, getEntitiesByCategory, allEntities, allBattlePairs } f
 // Live scoreboard — read the latest tallies on every request.
 export const prerender = false;
 
-const { trending, closest, spotlight, totalVotes } = await getHomeBattleData(6);
-
-const sections = [
-  {
-    id: 'trending',
-    label: 'Trending Now',
-    href: '/categories',
-    badge: (i: number) => (i === 0 ? '🔥 Hot' : undefined),
-    battles: trending,
-  },
-  {
-    id: 'closest',
-    label: 'Closest Battles',
-    href: '/categories',
-    badge: (_: number, total: number, margin?: number) =>
-      total > 0 ? `${margin}% gap` : undefined,
-    battles: closest,
-  },
-];
+// Six marquee rivalries for the featured strip (most-voted, curated fallback).
+const { mostVoted: featuredBattles, totalVotes } = await getHomeBattleData(6);
 
 // A cross-arena selection of legends for the profiles strip.
 const featuredGoatSlugs = ['messi', 'ronaldo', 'bradman', 'tendulkar', 'federer', 'djokovic', 'hamilton', 'senna'];
@@ -40,6 +23,7 @@ const arenaCards = categories.map((c) => ({
   legends: getEntitiesByCategory(c.id).length,
 }));
 const totalBattles = allBattlePairs.length;
+const totalGoats = allEntities.length;
 ---
 
 <Layout>
@@ -58,13 +42,13 @@ const totalBattles = allBattlePairs.length;
 
     <div class="relative z-10 max-w-5xl w-full mx-auto">
 
-      <!-- Live pill -->
-      <div class="inline-flex items-center gap-2 mb-8">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-lime"></span>
-        </span>
-        <span class="font-mono text-[11px] uppercase tracking-widest text-body">{categories.length} Arenas · Live Now</span>
+      <!-- Eyebrow — live counts -->
+      <div class="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-8 font-mono text-sm uppercase tracking-widest">
+        <span class="text-lime font-semibold">{categories.length} Arenas</span>
+        <span class="text-mute">·</span>
+        <span class="text-lime font-semibold">{totalGoats} Goats</span>
+        <span class="text-mute">·</span>
+        <span class="text-lime font-semibold">{totalBattles} Battles</span>
       </div>
 
       <h1
@@ -74,46 +58,34 @@ const totalBattles = allBattlePairs.length;
         WHO'S<br>THE <span class="text-lime">GOAT?</span>
       </h1>
 
-      <p class="mt-6 font-sans text-body text-lg leading-relaxed max-w-md mx-auto">
+      <p class="mt-6 font-sans text-body font-medium text-lg md:text-xl leading-relaxed max-w-xl mx-auto">
         Football, cricket, tennis, F1. Vote, compare the stats, and see who the world crowns the greatest.
       </p>
 
-      <div class="mt-10 flex flex-wrap gap-3 justify-center">
-        <a href="/play"
-          class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors">
-          Champion Mode
-        </a>
-        <a href="/categories"
-          class="font-sans font-medium text-sm text-ink border border-hairline-strong px-8 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors">
-          Browse Arenas →
-        </a>
-      </div>
-
-      <!-- Arena quick-jump -->
-      <div class="mt-8 flex flex-wrap gap-2 justify-center">
+      <!-- Arena quick-jump — the four arenas, front and centre -->
+      <div class="mt-12 flex flex-wrap gap-3 justify-center">
         {categories.map((c) => (
           <a href={`/category/${c.id}`}
-            class="group inline-flex items-center gap-2 rounded-full border border-hairline px-4 py-1.5 transition-colors"
+            class="group relative inline-flex items-center gap-3 rounded-lg border border-hairline bg-canvas-soft px-6 py-3.5 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+            style="box-shadow: var(--shadow-card)"
             onmouseover={`this.style.borderColor='${c.accent}'`}
             onmouseout={`this.style.borderColor=''`}>
-            <span class="text-base leading-none">{c.emoji}</span>
-            <span class="font-mono text-[11px] uppercase tracking-wider text-body group-hover:text-ink transition-colors">{c.label}</span>
+            <div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              aria-hidden="true"
+              style={`background: radial-gradient(ellipse 90% 120% at 0% 100%, ${c.accent}26 0%, transparent 65%)`}></div>
+            <span class="relative text-2xl leading-none" style={`filter: drop-shadow(0 0 10px ${c.accent}66)`}>{c.emoji}</span>
+            <span class="relative font-headline font-black uppercase text-lg tracking-tight text-ink">{c.label}</span>
           </a>
         ))}
       </div>
 
     </div>
-
-    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-40">
-      <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Scroll</span>
-      <div class="w-px h-8 bg-gradient-to-b from-mute to-transparent"></div>
-    </div>
   </section>
 
   <!-- ══════════════════════════════════════════
-       FEATURED RIVALRIES — one marquee battle per arena
+       FEATURED RIVALRIES — six marquee battles
   ══════════════════════════════════════════ -->
-  {spotlight.length > 0 && (
+  {featuredBattles.length > 0 && (
     <section class="border-t border-hairline bg-canvas-soft" id="featured">
       <div class="max-w-7xl mx-auto px-5 py-14 md:py-16">
         <div class="flex items-center justify-between mb-8">
@@ -121,43 +93,16 @@ const totalBattles = allBattlePairs.length;
             <span class="w-0.5 h-6 bg-lime inline-block"></span>
             <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Featured Rivalries</span>
           </div>
-          <span class="font-mono text-[11px] uppercase tracking-widest text-mute hidden sm:inline">One per arena</span>
+          <a href="/categories" class="font-sans text-base text-body hover:text-lime transition-colors">See all →</a>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {spotlight.map((battle) => (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {featuredBattles.map((battle) => (
             <BattleCard battle={battle} badge="Marquee" />
           ))}
         </div>
       </div>
     </section>
   )}
-
-  <!-- ══════════════════════════════════════════
-       LIVE BATTLE SECTIONS — trending / closest
-  ══════════════════════════════════════════ -->
-  {sections.map((section) => (
-    <section class="border-t border-hairline" id={section.id}>
-      <div class="max-w-7xl mx-auto px-5 py-14 md:py-16">
-
-        <div class="flex items-center justify-between mb-8">
-          <div class="flex items-center gap-3">
-            <span class="w-0.5 h-6 bg-lime inline-block"></span>
-            <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">{section.label}</span>
-          </div>
-          <a href={section.href}
-            class="font-sans text-sm text-body hover:text-lime transition-colors">
-            See all →
-          </a>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {section.battles.map((battle, i) => (
-            <BattleCard battle={battle} badge={section.badge(i, battle.total, battle.margin)} />
-          ))}
-        </div>
-      </div>
-    </section>
-  ))}
 
   <!-- ══════════════════════════════════════════
        MEET THE GOATS — cross-arena profile strip
@@ -169,7 +114,7 @@ const totalBattles = allBattlePairs.length;
           <span class="w-0.5 h-6 bg-lime inline-block"></span>
           <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Meet the Goats</span>
         </div>
-        <a href="/goats" class="font-sans text-sm text-body hover:text-lime transition-colors">All goats →</a>
+        <a href="/goats" class="font-sans text-base text-body hover:text-lime transition-colors">All goats →</a>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -187,7 +132,7 @@ const totalBattles = allBattlePairs.length;
             </span>
             <div class="relative mt-3">
               <span class="block font-headline font-black uppercase text-lg leading-none tracking-tight text-ink truncate">{e.shortName}</span>
-              <span class="block font-mono text-[11px] uppercase tracking-wider text-mute mt-1 truncate">{e.category}</span>
+              <span class="block font-mono text-[13px] uppercase tracking-wider text-mute mt-1 truncate">{e.category}</span>
             </div>
           </a>
         ))}
@@ -206,7 +151,7 @@ const totalBattles = allBattlePairs.length;
           <span class="w-0.5 h-6 bg-lime inline-block"></span>
           <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Arenas</span>
         </div>
-        <a href="/categories" class="font-sans text-sm text-body hover:text-lime transition-colors">All arenas →</a>
+        <a href="/categories" class="font-sans text-base text-body hover:text-lime transition-colors">All arenas →</a>
       </div>
 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -224,10 +169,10 @@ const totalBattles = allBattlePairs.length;
               <span class="text-3xl leading-none shrink-0">{c.emoji}</span>
             </div>
             <div class="relative flex items-end justify-between">
-              <span class="font-mono text-[11px] uppercase tracking-wider flex items-center gap-1.5" style={`color:${c.accent}`}>
+              <span class="font-mono text-[13px] uppercase tracking-wider flex items-center gap-1.5" style={`color:${c.accent}`}>
                 <span class="w-1.5 h-1.5 rounded-full inline-block" style={`background:${c.accent}`}></span>{c.legends} Goats
               </span>
-              <span class="font-mono text-[11px] uppercase tracking-wider text-mute group-hover:text-body transition-colors">Enter →</span>
+              <span class="font-mono text-[13px] uppercase tracking-wider text-mute group-hover:text-body transition-colors">Enter →</span>
             </div>
           </a>
         ))}
@@ -243,14 +188,14 @@ const totalBattles = allBattlePairs.length;
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
 
         <div class="max-w-xl">
-          <p class="font-mono text-[11px] uppercase tracking-widest text-lime mb-3">Champion Mode</p>
+          <p class="font-mono text-[13px] uppercase tracking-widest text-lime mb-3">Champion Mode</p>
           <h2
             class="font-headline font-black uppercase leading-none tracking-tight text-ink"
             style="font-size: clamp(2.5rem, 6vw, 4.5rem)"
           >
             CROWN YOUR GOAT,<br>ONE VOTE AT A TIME.
           </h2>
-          <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-sm">
+          <p class="mt-4 font-sans text-body font-medium text-lg leading-relaxed max-w-md">
             A blind gauntlet. The reigning winner stays on the throne and faces the next challenger —
             you decide who survives. The last one standing is your GOAT.
           </p>
@@ -272,9 +217,9 @@ const totalBattles = allBattlePairs.length;
                 <span class={['font-headline font-black uppercase text-base leading-none', state === 'done' ? 'text-mute' : 'text-ink'].join(' ')}>{a}</span>
                 <span class={['font-headline font-black text-lg leading-none', state === 'active' ? 'text-lime' : 'text-mute'].join(' ')}>/</span>
                 <span class={['font-headline font-black uppercase text-base leading-none', state === 'done' ? 'text-mute' : 'text-ink'].join(' ')}>{b}</span>
-                {state === 'done'   && <span class="ml-auto font-mono text-[11px] uppercase text-mute">Winner stays</span>}
-                {state === 'active' && <span class="ml-auto font-mono text-[11px] uppercase text-lime animate-pulse">Now</span>}
-                {state === 'next'   && <span class="ml-auto font-mono text-[11px] uppercase text-mute">Next up</span>}
+                {state === 'done'   && <span class="ml-auto font-mono text-[13px] uppercase text-mute">Winner stays</span>}
+                {state === 'active' && <span class="ml-auto font-mono text-[13px] uppercase text-lime animate-pulse">Now</span>}
+                {state === 'next'   && <span class="ml-auto font-mono text-[13px] uppercase text-mute">Next up</span>}
               </div>
             ))}
           </div>
@@ -295,16 +240,16 @@ const totalBattles = allBattlePairs.length;
   ══════════════════════════════════════════ -->
   <section class="border-t border-hairline">
     <div class="max-w-7xl mx-auto px-5 py-12">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div class="flex flex-wrap justify-between gap-y-8 gap-x-6">
         {[
           { stat: String(totalBattles), label: 'Active Battles' },
           { stat: String(allEntities.length), label: 'Legendary Goats' },
           { stat: totalVotes > 0 ? compactNumber(totalVotes) : '∞', label: 'Votes Cast' },
           { stat: String(categories.length), label: 'Arenas' },
-        ].map(({ stat, label }) => (
-          <div>
-            <p class="font-headline font-black text-5xl leading-none tracking-tight text-lime">{stat}</p>
-            <p class="font-sans text-sm text-body mt-2 uppercase tracking-wider">{label}</p>
+        ].map(({ stat, label }, i, arr) => (
+          <div class={i === arr.length - 1 ? 'text-right' : ''}>
+            <p class="font-headline font-black text-5xl md:text-6xl leading-none tracking-tight text-lime">{stat}</p>
+            <p class="font-sans text-base font-medium text-body mt-2 uppercase tracking-wider">{label}</p>
           </div>
         ))}
       </div>

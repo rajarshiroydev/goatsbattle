@@ -197,7 +197,7 @@ export default function BattlePicker({ roster, categories }: Props) {
                 )}
               </div>
               <p class="font-sans text-sm text-body truncate">{e.name}</p>
-              <p class="font-mono text-[11px] uppercase tracking-wider text-mute mt-0.5">
+              <p class="font-mono text-[13px] uppercase tracking-wider text-mute mt-0.5">
                 {e.nationality}
               </p>
             </button>
@@ -251,7 +251,7 @@ function Slot({
       <button
         type="button"
         onClick={onClear}
-        class="font-mono text-[11px] uppercase tracking-widest text-mute hover:text-ink transition-colors mt-3"
+        class="font-mono text-[13px] uppercase tracking-widest text-mute hover:text-ink transition-colors mt-3"
       >
         ✕ Change
       </button>

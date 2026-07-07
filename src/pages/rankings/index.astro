@@ -1,28 +1,27 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import PageHeader from '../components/PageHeader.astro';
-import { categories } from '../data/categories';
-import { getEntitiesByCategory, battlePairsByCategory } from '../data';
+import Layout from '../../layouts/Layout.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import { categories } from '../../data/categories';
+import { getEntitiesByCategory } from '../../data';
 
 const cards = categories.map((c) => ({
   ...c,
   legends: getEntitiesByCategory(c.id).length,
-  battles: (battlePairsByCategory[c.id] ?? []).length,
 }));
 
-const title = 'Arenas — Every GOAT Arena | GOATSBattle';
-const description = 'Football, cricket, tennis, Formula 1 and more. Pick an arena and see the live GOAT rankings decided by the world.';
+const title = 'Rankings — Live GOAT Leaderboards | GOATSBattle';
+const description = 'Pick an arena and see its live, community-voted GOAT rankings. Football, cricket, tennis and Formula 1 — the greatest of all time, decided by the world.';
 ---
 
 <Layout title={title} description={description}>
 
   <!-- Header -->
   <PageHeader
-    title="Pick your"
-    highlight="arena"
-    subtitle="Every sport has its eternal argument. Choose a category to see the community-voted rankings — and settle the debate yourself." />
+    title="GOAT"
+    highlight="Rankings"
+    subtitle="Pick an arena to see its live, community-voted leaderboard — the greatest of all time, ranked by the world right now." />
 
-  <!-- Category grid -->
+  <!-- Arena grid → each opens that arena's rankings -->
   <section>
     <div class="max-w-7xl mx-auto px-5 py-12 md:py-16">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -52,11 +51,10 @@ const description = 'Football, cricket, tennis, Formula 1 and more. Pick an aren
 
             <div class="relative mt-6 flex items-center justify-between">
               <div class="flex items-center gap-5 font-mono text-[13px] uppercase tracking-wider text-mute">
-                <span><span class="text-ink font-bold">{c.legends}</span> legends</span>
-                <span><span class="text-ink font-bold">{c.battles}</span> battles</span>
+                <span><span class="text-ink font-bold">{c.legends}</span> legends ranked</span>
               </div>
               <span class="font-headline font-black uppercase text-sm tracking-wider transition-transform group-hover:translate-x-1" style={`color:${c.accent}`}>
-                Rankings →
+                View Rankings →
               </span>
             </div>
           </a>
@@ -64,7 +62,7 @@ const description = 'Football, cricket, tennis, Formula 1 and more. Pick an aren
       </div>
 
       <p class="mt-8 font-mono text-[13px] uppercase tracking-widest text-mute text-center">
-        More arenas coming soon · suggest one at <a href="/goats" class="text-body hover:text-ink">the goats</a>
+        Ranked purely by votes · +1 from a profile vote, +5 for winning Champion Mode
       </p>
     </div>
   </section>

@@ -1,6 +1,5 @@
 ---
 import '../styles/global.css';
-import { categories } from '../data/categories';
 
 interface Props {
   title?: string;
@@ -18,6 +17,18 @@ const {
 // Resolve canonical + absolute image URLs against the configured site.
 const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
+
+// Primary nav — `match` marks the active tab (highlighted) via path prefix.
+const pathname = Astro.url.pathname;
+const navLinks = [
+  { href: '/goats', label: 'Goats', match: ['/goats'] },
+  { href: '/categories', label: 'Arenas', match: ['/categories', '/category'] },
+  { href: '/rankings', label: 'Rankings', match: ['/rankings'] },
+  { href: '/faceoff', label: 'Face Off', match: ['/faceoff'] },
+  { href: '/play', label: 'Champion Mode', match: ['/play'] },
+];
+const isActive = (m: string[]) =>
+  m.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 ---
 
 <!doctype html>
@@ -57,57 +68,33 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 
     <!-- ── Site Header ── -->
     <header class="sticky top-0 z-50 border-b border-hairline bg-canvas/90 backdrop-blur-md">
-      <nav class="max-w-7xl mx-auto px-5 h-14 flex items-center justify-between gap-4">
+      <nav class="relative max-w-7xl mx-auto px-5 h-[72px] flex items-center justify-between gap-4">
 
         <!-- Logo -->
-        <a href="/" class="shrink-0 font-headline font-black text-xl uppercase tracking-tight leading-none">
+        <a href="/" class="shrink-0 font-headline font-black text-2xl uppercase tracking-tight leading-none">
           GOATS<span class="text-lime">BATTLE</span>
         </a>
 
-        <!-- Nav links (desktop) -->
-        <div class="hidden md:flex items-center gap-1">
-          <a href="/goats"
-            class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
-            Goats
-          </a>
-          <a href="/categories"
-            class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
-            Categories
-          </a>
-          <a href="/faceoff"
-            class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
-            Face Off
-          </a>
-          <a href="/play"
-            class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
-            Champion Mode
-          </a>
-
-          <!-- Rankings — hover to pick an arena -->
-          <div class="relative group">
-            <button type="button"
-              class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink group-hover:text-ink group-hover:bg-canvas-soft transition-colors">
-              Rankings
-            </button>
-            <div class="absolute right-0 top-full pt-2 min-w-[13rem] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
-              <div class="rounded-md border border-hairline bg-canvas shadow-xl overflow-hidden py-1">
-                {categories.map((c) => (
-                  <a href={`/rankings/${c.id}`}
-                    class="flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-canvas-soft transition-colors group/item">
-                    <span class="text-base leading-none">{c.emoji}</span>
-                    <span class="font-sans text-sm text-body group-hover/item:text-ink transition-colors">{c.label}</span>
-                    <span class="ml-auto w-1 h-4 rounded-full" style={`background:${c.accent}`}></span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
+        <!-- Nav links (desktop) — absolutely centred in the bar -->
+        <div class="hidden md:flex items-center gap-1.5 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          {navLinks.map((link) => (
+            <a href={link.href}
+              class:list={[
+                'font-sans text-base px-4 py-2 rounded-md transition-colors',
+                isActive(link.match)
+                  ? 'text-lime bg-lime/12 font-semibold ring-1 ring-lime/40'
+                  : 'text-body font-medium hover:text-ink hover:bg-canvas-soft',
+              ]}
+              aria-current={isActive(link.match) ? 'page' : undefined}>
+              {link.label}
+            </a>
+          ))}
         </div>
 
         <!-- CTA -->
         <div class="flex items-center gap-2 shrink-0">
           <a href="/play"
-            class="font-headline font-black uppercase text-sm tracking-wider bg-lime text-canvas px-4 h-8 flex items-center rounded-sm hover:bg-lime-dark transition-colors">
+            class="font-headline font-black uppercase text-base tracking-wider bg-lime text-canvas px-5 h-10 flex items-center rounded-sm hover:bg-lime-dark transition-colors">
             Play Now
           </a>
         </div>
@@ -127,26 +114,26 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 
           <!-- Brand -->
           <div>
-            <span class="font-headline font-black text-xl uppercase tracking-tight leading-none">
+            <span class="font-headline font-black text-2xl uppercase tracking-tight leading-none">
               GOATS<span class="text-lime">BATTLE</span>
             </span>
-            <p class="font-sans text-mute text-sm mt-2">The Internet's Greatness Database.</p>
+            <p class="font-sans text-body text-sm mt-2">The Internet's Greatness Database.</p>
           </div>
 
           <!-- Links -->
           <div class="flex flex-wrap gap-10 font-sans text-sm">
             <div>
-              <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">Platform</p>
-              <ul class="space-y-2">
+              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Platform</p>
+              <ul class="space-y-2.5">
                 <li><a href="/goats" class="text-body hover:text-ink transition-colors">The Goats</a></li>
-                <li><a href="/categories" class="text-body hover:text-ink transition-colors">Categories</a></li>
+                <li><a href="/categories" class="text-body hover:text-ink transition-colors">Arenas</a></li>
                 <li><a href="/faceoff" class="text-body hover:text-ink transition-colors">Face Off</a></li>
                 <li><a href="/play" class="text-body hover:text-ink transition-colors">Champion Mode</a></li>
               </ul>
             </div>
             <div>
-              <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">Arenas</p>
-              <ul class="space-y-2">
+              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Arenas</p>
+              <ul class="space-y-2.5">
                 <li><a href="/category/football" class="text-body hover:text-ink transition-colors">Football</a></li>
                 <li><a href="/category/cricket" class="text-body hover:text-ink transition-colors">Cricket</a></li>
                 <li><a href="/category/tennis" class="text-body hover:text-ink transition-colors">Tennis</a></li>
@@ -154,8 +141,8 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
               </ul>
             </div>
             <div>
-              <p class="font-mono text-[11px] uppercase tracking-widest text-mute mb-3">Developers</p>
-              <ul class="space-y-2">
+              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Developers</p>
+              <ul class="space-y-2.5">
                 <li><a href="/api" class="text-body hover:text-ink transition-colors">Public API</a></li>
               </ul>
             </div>
@@ -163,8 +150,8 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
         </div>
 
         <div class="mt-10 pt-6 border-t border-hairline flex flex-col sm:flex-row justify-between gap-3">
-          <p class="font-sans text-mute text-xs">© 2026 GOATSBattle. All rights reserved.</p>
-          <div class="flex gap-4 font-sans text-xs text-mute">
+          <p class="font-sans text-mute text-sm">© 2026 GOATSBattle. All rights reserved.</p>
+          <div class="flex gap-4 font-sans text-sm text-mute">
             <a href="#" class="hover:text-body transition-colors">Privacy</a>
             <a href="#" class="hover:text-body transition-colors">Terms</a>
             <a href="/api" class="hover:text-body transition-colors">API</a>

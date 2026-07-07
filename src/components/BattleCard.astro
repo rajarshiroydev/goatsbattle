@@ -40,9 +40,9 @@ function nameFont(name: string): string {
 
   <!-- Card header -->
   <div class="relative px-5 py-3 border-b border-hairline flex items-center justify-between">
-    <span class="font-mono text-[11px] uppercase tracking-widest text-body">{categoryEmoji(category)} {categoryLabel(category)}</span>
+    <span class="font-mono text-[13px] uppercase tracking-widest text-body">{categoryEmoji(category)} {categoryLabel(category)}</span>
     {badge && (
-      <span class="font-mono text-[11px] uppercase tracking-wider text-lime">{badge}</span>
+      <span class="font-mono text-[13px] uppercase tracking-wider text-lime">{badge}</span>
     )}
   </div>
 
@@ -50,7 +50,7 @@ function nameFont(name: string): string {
   <div class="@container relative flex items-stretch min-h-[140px]">
     <div class="flex-1 min-w-0 flex flex-col justify-center px-5 py-6 gap-1">
       <span class="font-headline font-black uppercase leading-none tracking-tight break-words" style={`color:${a.accent}; ${nameFont(a.shortName)}`}>{a.shortName}</span>
-      <span class="font-sans text-xs text-body">{a.nationality} {flagEmoji(a.countryCode)}</span>
+      <span class="font-sans text-sm text-body">{a.nationality} {flagEmoji(a.countryCode)}</span>
     </div>
 
     <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
@@ -60,16 +60,16 @@ function nameFont(name: string): string {
 
     <div class="flex-1 min-w-0 flex flex-col justify-center items-end px-5 py-6 gap-1 text-right">
       <span class="font-headline font-black uppercase leading-none tracking-tight break-words" style={`color:${b.accent}; ${nameFont(b.shortName)}`}>{b.shortName}</span>
-      <span class="font-sans text-xs text-body">{flagEmoji(b.countryCode)} {b.nationality}</span>
+      <span class="font-sans text-sm text-body">{flagEmoji(b.countryCode)} {b.nationality}</span>
     </div>
   </div>
 
   <!-- Card footer: live result bar, or a vote nudge while unvoted -->
   {hasVotes ? (
     <div class="relative px-5 py-3 border-t border-hairline">
-      <div class="flex items-center justify-between font-mono text-[11px] mb-2">
+      <div class="flex items-center justify-between font-mono text-[13px] mb-2">
         <span style={`color:${leader === 'a' ? a.accent : '#8b8b95'}`}>{pctA}%</span>
-        <span class="text-mute uppercase tracking-widest text-[11px]">{compactNumber(total)} votes</span>
+        <span class="text-mute uppercase tracking-widest text-[13px]">{compactNumber(total)} votes</span>
         <span style={`color:${leader === 'b' ? b.accent : '#8b8b95'}`}>{pctB}%</span>
       </div>
       <div class="flex h-1.5 gap-0.5 rounded-full overflow-hidden">
@@ -79,7 +79,7 @@ function nameFont(name: string): string {
     </div>
   ) : (
     <div class="relative px-5 py-3 border-t border-hairline flex items-center justify-between">
-      <span class="font-sans text-xs text-mute">Be the first to vote</span>
+      <span class="font-sans text-sm text-body">Be the first to vote</span>
       <span class="font-sans text-sm font-medium group-hover:translate-x-0.5 transition-transform" style={`color:${a.accent}`}>Vote →</span>
     </div>
   )}

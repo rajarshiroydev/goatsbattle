@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import PageHeader from '../../components/PageHeader.astro';
 import { getRankings } from '../../lib/queries';
 import { getCategory } from '../../data/categories';
 import { flagEmoji, compactNumber } from '../../lib/format';
@@ -23,51 +24,29 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
 <Layout title={title} description={description}>
 
   <!-- ══ Header ══ -->
-  <section class="border-b border-hairline relative overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
-      style="background: radial-gradient(ellipse 70% 60% at 50% -10%, rgba(200,255,0,0.08) 0%, transparent 60%)">
+  <PageHeader
+    maxW="max-w-5xl"
+    breadcrumb={[
+      { label: 'GOATSBattle', href: '/' },
+      { label: 'Rankings', href: '/rankings' },
+      { label },
+    ]}
+    title={label}
+    highlight="Rankings"
+    subtitle="Ranked purely by votes — +1 from a profile vote, +5 for winning Champion Mode. This is the greatest-of-all-time order as the world sees it right now.">
+    <div class="mt-8 flex flex-wrap gap-8">
+      {[
+        { stat: String(rankings.length), label: 'GOATs ranked' },
+        { stat: totalVotes > 0 ? compactNumber(totalVotes) : '—', label: 'Votes counted' },
+        { stat: top1 ? top1.entity.shortName : '—', label: 'Current #1' },
+      ].map(({ stat, label }) => (
+        <div>
+          <p class="font-headline font-black text-3xl leading-none tracking-tight text-lime">{stat}</p>
+          <p class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">{label}</p>
+        </div>
+      ))}
     </div>
-    <div class="relative max-w-5xl mx-auto px-5 py-12 md:py-16">
-      <div class="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-mute mb-6">
-        <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
-        <span>/</span>
-        <a href={`/category/${category}`} class="hover:text-body transition-colors">{label}</a>
-        <span>/</span>
-        <span class="text-ink">Rankings</span>
-      </div>
-
-      <div class="inline-flex items-center gap-2 mb-5">
-        <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-lime"></span>
-        </span>
-        <span class="font-mono text-[11px] uppercase tracking-widest text-body">Live · Community-voted</span>
-      </div>
-
-      <h1 class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
-        style="font-size: clamp(3rem, 9vw, 6rem)">
-        {label} <span class="text-lime">Rankings</span>
-      </h1>
-      <p class="mt-5 font-sans text-body text-base leading-relaxed max-w-lg">
-        Ranked purely by votes — <span class="text-body">+1</span> from a profile vote,
-        <span class="text-body">+5</span> for winning Champion Mode. This is the greatest-of-all-time
-        order as the world sees it right now.
-      </p>
-
-      <div class="mt-8 flex flex-wrap gap-8">
-        {[
-          { stat: String(rankings.length), label: 'GOATs ranked' },
-          { stat: totalVotes > 0 ? compactNumber(totalVotes) : '—', label: 'Votes counted' },
-          { stat: top1 ? top1.entity.shortName : '—', label: 'Current #1' },
-        ].map(({ stat, label }) => (
-          <div>
-            <p class="font-headline font-black text-3xl leading-none tracking-tight text-lime">{stat}</p>
-            <p class="font-mono text-[11px] uppercase tracking-widest text-mute mt-1.5">{label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
+  </PageHeader>
 
   <!-- ══ Podium (top 3) ══ -->
   {top1 && (
@@ -89,9 +68,9 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
               </span>
               <span class="mt-1.5 font-sans text-sm text-body">{flagEmoji(r.entity.countryCode)} {r.entity.nationality}</span>
               <span class="mt-3 font-headline font-black text-2xl leading-none" style={`color:${r.entity.accent}`}>{r.votes.toLocaleString()}</span>
-              <span class="font-mono text-[11px] uppercase tracking-widest text-mute mt-0.5">Votes</span>
+              <span class="font-mono text-[13px] uppercase tracking-widest text-mute mt-0.5">Votes</span>
               {r.headToHeadVotes > 0 && (
-                <span class="font-mono text-[11px] uppercase tracking-wider text-mute mt-1.5">{compactNumber(r.headToHeadVotes)} 1v1 · {r.winRate}% win</span>
+                <span class="font-mono text-[13px] uppercase tracking-wider text-mute mt-1.5">{compactNumber(r.headToHeadVotes)} 1v1 · {r.winRate}% win</span>
               )}
             </a>
           ))}
@@ -109,7 +88,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
       </div>
 
       <!-- Column labels (desktop) -->
-      <div class="hidden md:grid grid-cols-[3rem_1fr_5rem_6rem_9rem] gap-4 px-4 pb-3 font-mono text-[11px] uppercase tracking-widest text-mute">
+      <div class="hidden md:grid grid-cols-[3rem_1fr_5rem_6rem_9rem] gap-4 px-4 pb-3 font-mono text-[13px] uppercase tracking-widest text-mute">
         <span>Rank</span>
         <span>Player</span>
         <span class="text-right">Votes</span>
@@ -137,13 +116,13 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
                 </span>
                 <span class="text-sm shrink-0">{flagEmoji(r.entity.countryCode)}</span>
               </div>
-              <span class="font-sans text-sm text-mute">{r.entity.nationality} · {r.entity.position}</span>
+              <span class="font-sans text-sm text-body">{r.entity.nationality} · {r.entity.position}</span>
             </div>
 
             <!-- Votes (mobile shows here compactly on the right) -->
             <span class="md:text-right font-headline font-black text-xl leading-none text-right" style={`color:${r.entity.accent}`}>
               {r.votes.toLocaleString()}
-              <span class="md:hidden font-mono text-[11px] uppercase tracking-widest text-mute ml-1">Votes</span>
+              <span class="md:hidden font-mono text-[13px] uppercase tracking-widest text-mute ml-1">Votes</span>
             </span>
 
             <!-- Head-to-head votes -->
@@ -162,7 +141,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
         ))}
       </div>
 
-      <p class="mt-6 font-mono text-[11px] uppercase tracking-widest text-mute">
+      <p class="mt-6 font-mono text-[13px] uppercase tracking-widest text-mute">
         Votes update instantly · +1 from a profile vote, +5 for winning Champion Mode
       </p>
     </div>
@@ -173,7 +152,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
     <div class="max-w-5xl mx-auto px-5 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
       <div>
         <h2 class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Think the order's wrong?</h2>
-        <p class="mt-2 font-sans text-body text-sm">Pick your GOAT and move the rankings yourself.</p>
+        <p class="mt-2 font-sans text-body font-medium text-base">Pick your GOAT and move the rankings yourself.</p>
       </div>
       <a href="/play"
         class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors whitespace-nowrap">

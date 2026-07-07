@@ -8,8 +8,8 @@
 
   /* ── Text ── */
   --color-ink:  #f0f0f2;           /* primary text (off-white) */
-  --color-body: #8b8b95;           /* secondary text */
-  --color-mute: #52525a;           /* tertiary / very muted */
+  --color-body: #b6b6c0;           /* secondary text — kept bright for comfortable reading */
+  --color-mute: #8c8c96;           /* tertiary — muted but still legible on the dark canvas */
 
   /* ── Borders ── */
   --color-hairline:        #252528; /* default border */

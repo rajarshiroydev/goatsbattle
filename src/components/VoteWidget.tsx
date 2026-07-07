@@ -114,7 +114,7 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
               Vote {shortB}
             </button>
           </div>
-          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
             Head-to-head vote · one per matchup every 24h · results after you vote
           </p>
         </>
@@ -128,10 +128,10 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
             <div style={{ width: `${result!.pctA}%`, background: accentA }}></div>
             <div style={{ width: `${result!.pctB}%`, background: accentB }}></div>
           </div>
-          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
             {result!.total.toLocaleString()} total votes · you backed {votedA ? shortA : votedB ? shortB : '—'}
           </p>
-          <p class="text-center font-mono text-[11px] uppercase tracking-widest text-lime mt-1.5">
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-lime mt-1.5">
             ✓ Voted — this head-to-head is separate from the vote rankings
           </p>
           <div class="flex justify-center mt-5">
@@ -143,7 +143,7 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
         </div>
       )}
       {error && (
-        <p class="text-center font-mono text-[11px] uppercase tracking-widest text-red mt-3">{error}</p>
+        <p class="text-center font-mono text-[13px] uppercase tracking-widest text-red mt-3">{error}</p>
       )}
     </div>
   );

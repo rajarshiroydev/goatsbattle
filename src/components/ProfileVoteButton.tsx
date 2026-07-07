@@ -96,7 +96,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
         >
           ✓ {justVoted ? `Voted ${shortName}` : `${shortName} Voted`}
         </div>
-        <span class="font-mono text-[11px] uppercase tracking-widest text-mute mt-1.5">
+        <span class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">
           {resetLabel(state?.windowResetsAt ?? null) || 'one vote per day'}
         </span>
       </div>
@@ -116,7 +116,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
         <span class="text-base">✦</span>
       </button>
       {error && (
-        <span class="font-mono text-[11px] uppercase tracking-widest text-red mt-1.5">{error}</span>
+        <span class="font-mono text-[13px] uppercase tracking-widest text-red mt-1.5">{error}</span>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import PageHeader from '../components/PageHeader.astro';
 import { categories } from '../data/categories';
 import { getRoster } from '../data';
 import { flagEmoji } from '../lib/format';
@@ -21,24 +22,10 @@ const description = 'Meet the greatest of all time across football, cricket, ten
 <Layout title={title} description={description}>
 
   <!-- Header -->
-  <section class="border-b border-hairline relative overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
-      style="background:
-        radial-gradient(ellipse 60% 50% at 12% 0%, rgba(78,165,224,0.08) 0%, transparent 55%),
-        radial-gradient(ellipse 60% 50% at 88% 10%, rgba(232,32,42,0.07) 0%, transparent 55%),
-        radial-gradient(ellipse 80% 55% at 50% 120%, rgba(200,255,0,0.06) 0%, transparent 60%)"></div>
-    <div class="relative max-w-7xl mx-auto px-5 py-14 md:py-20">
-      <p class="font-mono text-[11px] uppercase tracking-widest text-lime mb-4">{totalGoats} legends · {groups.length} arenas</p>
-      <h1 class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
-        style="font-size: clamp(3rem, 10vw, 7rem)">
-        The <span class="text-lime">Goats</span>
-      </h1>
-      <p class="mt-5 font-sans text-body text-lg leading-relaxed max-w-xl">
-        The greatest of all time, across every arena. Explore their careers, dive into the stats,
-        and pit them against each other head-to-head.
-      </p>
-    </div>
-  </section>
+  <PageHeader
+    title="The"
+    highlight="Goats"
+    subtitle="The greatest of all time, across every arena. Explore their careers, dive into the stats, and pit them against each other head-to-head." />
 
   <!-- Per-arena rosters -->
   {groups.map(({ category: c, entities }) => (
@@ -50,10 +37,10 @@ const description = 'Meet the greatest of all time across football, cricket, ten
             <span class="text-2xl leading-none">{c.emoji}</span>
             <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">{c.label}</h2>
             <span class="w-8 h-px" style={`background:${c.accent}`}></span>
-            <span class="font-mono text-[11px] uppercase tracking-widest text-mute hidden sm:inline">{entities.length} goats</span>
+            <span class="font-mono text-[13px] uppercase tracking-widest text-mute hidden sm:inline">{entities.length} goats</span>
           </div>
           <a href={`/rankings/${c.id}`}
-            class="font-mono text-[11px] uppercase tracking-widest text-mute hover:text-ink transition-colors">
+            class="font-mono text-[13px] uppercase tracking-widest text-mute hover:text-ink transition-colors">
             Rankings →
           </a>
         </div>
@@ -80,7 +67,7 @@ const description = 'Meet the greatest of all time across football, cricket, ten
               <div class="relative mt-4">
                 <span class="block font-headline font-black uppercase text-xl leading-none tracking-tight text-ink truncate">{e.shortName}</span>
                 <div class="flex items-center gap-1.5 mt-1.5">
-                  <span class="font-mono text-[11px] uppercase tracking-wider text-mute truncate">{e.position}</span>
+                  <span class="font-mono text-[13px] uppercase tracking-wider text-mute truncate">{e.position}</span>
                   {e.active && (
                     <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={`background:${e.accent}`}></span>
                   )}
@@ -98,7 +85,7 @@ const description = 'Meet the greatest of all time across football, cricket, ten
     <div class="max-w-7xl mx-auto px-5 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
       <div>
         <h2 class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Missing a legend?</h2>
-        <p class="mt-2 font-sans text-body text-sm">We add new goats as the arenas grow. Explore the battles while you wait.</p>
+        <p class="mt-2 font-sans text-body font-medium text-base">We add new goats as the arenas grow. Explore the battles while you wait.</p>
       </div>
       <a href="/categories"
         class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors whitespace-nowrap">
