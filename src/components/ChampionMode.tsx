@@ -729,20 +729,22 @@ export default function ChampionMode({ roster }: Props) {
       {phase === "arena" ? (
         <div class="mt-6">
           <div class="flex flex-col sm:flex-row items-center gap-3 justify-center">
+            {/* Buttons follow the physical layout: left button = left GOAT,
+                right button = right GOAT — "Keep" the reigning one, "Crown" the challenger. */}
             <button
-              onClick={() => cast(champion)}
+              onClick={() => cast(leftFighter)}
               disabled={pending}
               class="font-headline font-black uppercase tracking-wider text-base bg-canvas-soft-2 text-ink border border-hairline-strong px-8 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors disabled:opacity-50 whitespace-nowrap"
             >
-              Keep {champion.shortName}
+              {championOnLeft ? "Keep" : "Crown"} {leftFighter.shortName}
             </button>
             <span class="font-mono text-[11px] uppercase tracking-widest text-mute">vs</span>
             <button
-              onClick={() => cast(opponent)}
+              onClick={() => cast(rightFighter)}
               disabled={pending}
               class="font-headline font-black uppercase tracking-wider text-base bg-canvas-soft-2 text-ink border border-hairline-strong px-8 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors disabled:opacity-50 whitespace-nowrap"
             >
-              Crown {opponent.shortName}
+              {championOnLeft ? "Crown" : "Keep"} {rightFighter.shortName}
             </button>
           </div>
           <p class="text-center font-mono text-[11px] uppercase tracking-widest text-mute mt-3">
