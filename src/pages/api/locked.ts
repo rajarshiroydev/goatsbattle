@@ -11,14 +11,14 @@ const json = (data: unknown, status = 200) =>
   });
 
 /**
- * GET ?category=football → entity ids this fingerprint has crowned within the
+ * GET ?arena=football → entity ids this fingerprint has crowned within the
  * live window. Champion Mode uses this to drop recently-crowned GOATs from a
  * ranked run's pool.
  */
 export const GET: APIRoute = async ({ url, request }) => {
-  const category = url.searchParams.get('category');
-  if (!category) return json({ error: 'category is required' }, 400);
+  const arena = url.searchParams.get('arena');
+  if (!arena) return json({ error: 'arena is required' }, 400);
   const ipHash = hashIp(getClientIp(request.headers));
-  const locked = await getLockedEntities(category, ipHash);
+  const locked = await getLockedEntities(arena, ipHash);
   return json({ locked });
 };

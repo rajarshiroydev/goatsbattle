@@ -1,12 +1,12 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PageHeader from '../../components/PageHeader.astro';
-import { categories } from '../../data/categories';
-import { getEntitiesByCategory } from '../../data';
+import { arenas } from '../../data/arenas';
+import { getEntitiesByArena } from '../../data';
 
-const cards = categories.map((c) => ({
+const cards = arenas.map((c) => ({
   ...c,
-  legends: getEntitiesByCategory(c.id).length,
+  legends: getEntitiesByArena(c.id).length,
 }));
 
 const title = 'Rankings — Live GOAT Leaderboards | GOATSBattle';

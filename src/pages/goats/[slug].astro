@@ -4,7 +4,7 @@ import PlayerRank from '../../components/PlayerRank.tsx';
 import ProfileVoteButton from '../../components/ProfileVoteButton.tsx';
 import ContestedBattles from '../../components/ContestedBattles.tsx';
 import { allEntities, getEntityBySlug } from '../../data';
-import { categoryLabel } from '../../data/categories';
+import { arenaLabel } from '../../data/arenas';
 
 export function getStaticPaths() {
   return allEntities.map(entity => ({
@@ -37,7 +37,7 @@ const accent = entity.accent;
       <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-8">
         <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
         <span>/</span>
-        <a href={`/category/${entity.category}`} class="hover:text-body transition-colors">{categoryLabel(entity.category)}</a>
+        <a href={`/arenas/${entity.arena}`} class="hover:text-body transition-colors">{arenaLabel(entity.arena)}</a>
         <span>/</span>
         <span class="text-ink">{entity.shortName}</span>
       </div>
@@ -57,7 +57,7 @@ const accent = entity.accent;
 
           <!-- Flag + nationality -->
           <div class="flex items-center gap-2 mb-3">
-            <span class="font-mono text-sm uppercase tracking-widest" style={`color:${accent}`}>{entity.category}</span>
+            <span class="font-mono text-sm uppercase tracking-widest" style={`color:${accent}`}>{entity.arena}</span>
             <span class="text-mute">·</span>
             <span class="font-mono text-sm uppercase tracking-widest text-body">{entity.nationality}</span>
             {entity.active && (
@@ -111,12 +111,12 @@ const accent = entity.accent;
           <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
           <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Global Standing</h2>
         </div>
-        <a href={`/rankings/${entity.category}`}
+        <a href={`/rankings/${entity.arena}`}
           class="font-mono text-xs uppercase tracking-widest text-mute hover:text-ink transition-colors">
           Full rankings →
         </a>
       </div>
-      <PlayerRank client:load slug={entity.slug} category={entity.category} accent={accent} />
+      <PlayerRank client:load slug={entity.slug} arena={entity.arena} accent={accent} />
     </div>
   </section>
 

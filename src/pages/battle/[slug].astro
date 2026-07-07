@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getEntityBySlug, getBattlesForEntity, allBattlePairs } from '../../data';
-import { categoryLabel } from '../../data/categories';
+import { arenaLabel } from '../../data/arenas';
 import { getBattleId, parseBattleSlug, getCanonicalBattleSlug } from '../../lib/battle';
 import { compareEntities } from '../../lib/stats';
 import RadarChart from '../../components/RadarChart.astro';
@@ -32,15 +32,15 @@ const title = `${entityA.name} vs ${entityB.name} — Who's the Greater GOAT? | 
 const description = `${entityA.name} vs ${entityB.name}: side-by-side career stats, achievements, and head-to-head comparison. Cast your vote and see what the world thinks.`;
 
 // Stat comparison: shared sections with per-stat leader + proportional split,
-// plus the category-win tally. See src/lib/stats.ts.
+// plus the arena-win tally. See src/lib/stats.ts.
 const { sections: sharedSections, winsA, winsB, leader: statLeader } = compareEntities(entityA, entityB);
 
 const relatedA = getBattlesForEntity(slugA, { exclude: slugB, limit: 4 });
 const relatedB = getBattlesForEntity(slugB, { exclude: slugA, limit: 4 });
 
 const ogImage = `/og/battle/${canonical}.png`;
-const category = entityA.category;
-const catLabel = categoryLabel(category);
+const arena = entityA.arena;
+const catLabel = arenaLabel(arena);
 ---
 
 <Layout title={title} description={description} image={ogImage}>
@@ -59,7 +59,7 @@ const catLabel = categoryLabel(category);
       <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-6">
         <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
         <span>/</span>
-        <a href={`/category/${category}`} class="hover:text-body transition-colors">{catLabel}</a>
+        <a href={`/arenas/${arena}`} class="hover:text-body transition-colors">{catLabel}</a>
         <span>/</span>
         <span class="text-ink">{entityA.shortName} vs {entityB.shortName}</span>
       </div>
@@ -119,8 +119,8 @@ const catLabel = categoryLabel(category);
         shortB={entityB.shortName}
         accentA={entityA.accent}
         accentB={entityB.accent}
-        category={category}
-        categoryLabel={catLabel}
+        arena={arena}
+        arenaLabel={catLabel}
       />
     </div>
   </section>
@@ -131,7 +131,7 @@ const catLabel = categoryLabel(category);
       <div class="flex items-center gap-3 mb-6">
         <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
         <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Stat Scoreline</h2>
-        <span class="font-mono text-xs uppercase tracking-widest text-mute hidden sm:inline">Categories led</span>
+        <span class="font-mono text-xs uppercase tracking-widest text-mute hidden sm:inline">Arenas led</span>
       </div>
 
       <div class="flex items-stretch gap-3">

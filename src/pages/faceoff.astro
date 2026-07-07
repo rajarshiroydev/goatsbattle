@@ -2,9 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 import PageHeader from '../components/PageHeader.astro';
 import BattlePicker from '../components/BattlePicker.tsx';
-import type { PickerEntity, PickerCategory } from '../components/BattlePicker.tsx';
+import type { PickerEntity, PickerArena } from '../components/BattlePicker.tsx';
 import { allEntities } from '../data';
-import { categories } from '../data/categories';
+import { arenas } from '../data/arenas';
 
 // Everything the picker needs travels in the initial payload — no per-arena
 // fetch. Static shell; the island reads ?goat=<slug> for any pre-selection.
@@ -14,10 +14,10 @@ const roster: PickerEntity[] = allEntities.map((e) => ({
   shortName: e.shortName,
   nationality: e.nationality,
   accent: e.accent,
-  category: e.category,
+  arena: e.arena,
 }));
 
-const pickerCategories: PickerCategory[] = categories
+const pickerArenas: PickerArena[] = arenas
   .filter((c) => c.active)
   .map((c) => ({ id: c.id, label: c.label, emoji: c.emoji, accent: c.accent }));
 
@@ -34,7 +34,7 @@ const description =
 
   <section>
     <div class="max-w-7xl mx-auto px-5 py-10 md:py-12">
-      <BattlePicker client:load roster={roster} categories={pickerCategories} />
+      <BattlePicker client:load roster={roster} arenas={pickerArenas} />
     </div>
   </section>
 </Layout>

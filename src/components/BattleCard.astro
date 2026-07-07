@@ -1,7 +1,7 @@
 ---
 import type { BattleSummary } from '../lib/queries';
 import { flagEmoji, compactNumber } from '../lib/format';
-import { categoryLabel, categoryEmoji } from '../data/categories';
+import { arenaLabel, arenaEmoji } from '../data/arenas';
 
 interface Props {
   battle: BattleSummary;
@@ -10,7 +10,7 @@ interface Props {
 }
 
 const { battle, badge } = Astro.props;
-const { a, b, slug, pctA, pctB, total, leader, category } = battle;
+const { a, b, slug, pctA, pctB, total, leader, arena } = battle;
 const hasVotes = total > 0;
 
 // Each side is themed with the athlete's own accent so cards read at a glance;
@@ -40,7 +40,7 @@ function nameFont(name: string): string {
 
   <!-- Card header -->
   <div class="relative px-5 py-3 border-b border-hairline flex items-center justify-between">
-    <span class="font-mono text-[13px] uppercase tracking-widest text-body">{categoryEmoji(category)} {categoryLabel(category)}</span>
+    <span class="font-mono text-[13px] uppercase tracking-widest text-body">{arenaEmoji(arena)} {arenaLabel(arena)}</span>
     {badge && (
       <span class="font-mono text-[13px] uppercase tracking-wider text-lime">{badge}</span>
     )}

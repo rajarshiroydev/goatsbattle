@@ -20,7 +20,7 @@ export interface Entity {
   slug: string;
   name: string;
   shortName: string;
-  category: string;
+  arena: string;
   nationality: string;
   countryCode: string;
   /** Hex colour the player is popularly associated with (nation/club identity). */

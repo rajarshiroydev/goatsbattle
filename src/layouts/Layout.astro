@@ -22,7 +22,7 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 const pathname = Astro.url.pathname;
 const navLinks = [
   { href: '/goats', label: 'Goats', match: ['/goats'] },
-  { href: '/categories', label: 'Arenas', match: ['/categories', '/category'] },
+  { href: '/arenas', label: 'Arenas', match: ['/arenas'] },
   { href: '/rankings', label: 'Rankings', match: ['/rankings'] },
   { href: '/faceoff', label: 'Face Off', match: ['/faceoff'] },
   { href: '/play', label: 'Champion Mode', match: ['/play'] },
@@ -126,7 +126,7 @@ const isActive = (m: string[]) =>
               <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Platform</p>
               <ul class="space-y-2.5">
                 <li><a href="/goats" class="text-body hover:text-ink transition-colors">The Goats</a></li>
-                <li><a href="/categories" class="text-body hover:text-ink transition-colors">Arenas</a></li>
+                <li><a href="/arenas" class="text-body hover:text-ink transition-colors">Arenas</a></li>
                 <li><a href="/faceoff" class="text-body hover:text-ink transition-colors">Face Off</a></li>
                 <li><a href="/play" class="text-body hover:text-ink transition-colors">Champion Mode</a></li>
               </ul>
@@ -134,10 +134,10 @@ const isActive = (m: string[]) =>
             <div>
               <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Arenas</p>
               <ul class="space-y-2.5">
-                <li><a href="/category/football" class="text-body hover:text-ink transition-colors">Football</a></li>
-                <li><a href="/category/cricket" class="text-body hover:text-ink transition-colors">Cricket</a></li>
-                <li><a href="/category/tennis" class="text-body hover:text-ink transition-colors">Tennis</a></li>
-                <li><a href="/category/f1" class="text-body hover:text-ink transition-colors">Formula 1</a></li>
+                <li><a href="/arenas/football" class="text-body hover:text-ink transition-colors">Football</a></li>
+                <li><a href="/arenas/cricket" class="text-body hover:text-ink transition-colors">Cricket</a></li>
+                <li><a href="/arenas/tennis" class="text-body hover:text-ink transition-colors">Tennis</a></li>
+                <li><a href="/arenas/f1" class="text-body hover:text-ink transition-colors">Formula 1</a></li>
               </ul>
             </div>
             <div>

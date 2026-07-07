@@ -3,7 +3,7 @@ import type { RankEntry } from '../lib/rankWire';
 
 interface Props {
   slug: string;
-  category: string;
+  arena: string;
   /** Player accent colour (hex) for the headline rank figure. */
   accent: string;
 }
@@ -13,14 +13,14 @@ interface Props {
  * (prerendered), so the mutable rank/score/record are hydrated client-side from
  * the shared /api/rankings endpoint. See [[project-goatsbattle]].
  */
-export default function PlayerRank({ slug, category, accent }: Props) {
+export default function PlayerRank({ slug, arena, accent }: Props) {
   const [me, setMe] = useState<RankEntry | null>(null);
   const [field, setField] = useState(0);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/rankings?category=${encodeURIComponent(category)}`)
+    fetch(`/api/rankings?arena=${encodeURIComponent(arena)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((rows: RankEntry[]) => {
         if (!active) return;
@@ -33,7 +33,7 @@ export default function PlayerRank({ slug, category, accent }: Props) {
     return () => {
       active = false;
     };
-  }, [slug, category]);
+  }, [slug, arena]);
 
   if (state === 'error') return null;
 

@@ -22,7 +22,7 @@ async function main() {
         id: e.slug,
         name: e.name,
         shortName: e.shortName,
-        category: e.category,
+        arena: e.arena,
         countryCode: e.countryCode,
       })),
     )
@@ -31,14 +31,14 @@ async function main() {
       set: {
         name: sql`excluded.name`,
         shortName: sql`excluded.short_name`,
-        category: sql`excluded.category`,
+        arena: sql`excluded.arena`,
         countryCode: sql`excluded.country_code`,
       },
     });
   console.log(`  ✓ ${allEntities.length} entities`);
 
   console.log('→ Seeding battles…');
-  const categoryBySlug = new Map(allEntities.map((e) => [e.slug, e.category]));
+  const arenaBySlug = new Map(allEntities.map((e) => [e.slug, e.arena]));
   await db
     .insert(battles)
     .values(
@@ -46,7 +46,7 @@ async function main() {
         id: getBattleId(a, b),
         entityA: a,
         entityB: b,
-        category: categoryBySlug.get(a)!,
+        arena: arenaBySlug.get(a)!,
       })),
     )
     .onConflictDoNothing({ target: battles.id });

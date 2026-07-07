@@ -11,7 +11,7 @@ export interface Fighter {
   nationality: string;
   countryCode: string;
   position: string;
-  category: string;
+  arena: string;
   statSections: StatSection[];
 }
 
@@ -177,7 +177,7 @@ function FighterPanel({
 
 export default function ChampionMode({ roster }: Props) {
   const presets = useMemo(() => countPresets(roster.length), [roster.length]);
-  const category = roster[0]?.category ?? "football";
+  const arena = roster[0]?.arena ?? "football";
   const [mode, setMode] = useState<Mode>("ranked");
   const [phase, setPhase] = useState<Phase>("setup");
   const [count, setCount] = useState<number>(
@@ -228,7 +228,7 @@ export default function ChampionMode({ roster }: Props) {
     let eligible = roster;
     if (mode === "ranked") {
       try {
-        const res = await fetch(`/api/locked?category=${encodeURIComponent(category)}`);
+        const res = await fetch(`/api/locked?arena=${encodeURIComponent(arena)}`);
         const data = await res.json();
         const locked = new Set<string>(data.locked ?? []);
         eligible = roster.filter((f) => !locked.has(f.id));
@@ -579,7 +579,7 @@ export default function ChampionMode({ roster }: Props) {
             {champion.shortName}'s Profile
           </a>
           <a
-            href={`/rankings/${category}`}
+            href={`/rankings/${arena}`}
             class="font-sans font-medium text-sm text-ink border border-hairline-strong px-6 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors"
           >
             See the Rankings

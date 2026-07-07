@@ -7,10 +7,10 @@ export interface PickerEntity {
   shortName: string;
   nationality: string;
   accent: string;
-  category: string;
+  arena: string;
 }
 
-export interface PickerCategory {
+export interface PickerArena {
   id: string;
   label: string;
   emoji: string;
@@ -19,7 +19,7 @@ export interface PickerCategory {
 
 interface Props {
   roster: PickerEntity[];
-  categories: PickerCategory[];
+  arenas: PickerArena[];
 }
 
 /** Readable text colour (near-black or near-white) on top of a hex accent. */
@@ -34,7 +34,7 @@ function onAccent(hex: string): string {
 }
 
 /**
- * The battle builder. Two slots, a category tab bar, and a roster grid. Filling
+ * The battle builder. Two slots, an arena tab bar, and a roster grid. Filling
  * both slots with same-arena GOATs unlocks the matchup and jumps to that
  * battle's vote page — the same `/battle/<id>` route every other link uses.
  *
@@ -42,8 +42,8 @@ function onAccent(hex: string): string {
  * slot A and locks the arena to theirs; visiting from the navbar starts empty
  * so any two GOATs from one arena can be paired. See [[project-goatsbattle]].
  */
-export default function BattlePicker({ roster, categories }: Props) {
-  const [category, setCategory] = useState(categories[0]?.id ?? '');
+export default function BattlePicker({ roster, arenas }: Props) {
+  const [arena, setArena] = useState(arenas[0]?.id ?? '');
   const [pickA, setPickA] = useState<string | null>(null);
   const [pickB, setPickB] = useState<string | null>(null);
 
@@ -57,19 +57,19 @@ export default function BattlePicker({ roster, categories }: Props) {
     const seed = new URLSearchParams(window.location.search).get('goat');
     const entity = seed ? bySlug[seed] : undefined;
     if (entity) {
-      setCategory(entity.category);
+      setArena(entity.arena);
       setPickA(entity.slug);
     }
   }, [bySlug]);
 
   const contenders = useMemo(
-    () => roster.filter((e) => e.category === category),
-    [roster, category],
+    () => roster.filter((e) => e.arena === arena),
+    [roster, arena],
   );
 
-  function switchCategory(id: string) {
-    if (id === category) return;
-    setCategory(id);
+  function switchArena(id: string) {
+    if (id === arena) return;
+    setArena(id);
     setPickA(null);
     setPickB(null);
   }
@@ -101,12 +101,12 @@ export default function BattlePicker({ roster, categories }: Props) {
     <div>
       {/* Arena tabs — pick the battleground first. */}
       <div class="flex flex-wrap gap-2 mb-8">
-        {categories.map((c) => {
-          const on = c.id === category;
+        {arenas.map((c) => {
+          const on = c.id === arena;
           return (
             <button
               type="button"
-              onClick={() => switchCategory(c.id)}
+              onClick={() => switchArena(c.id)}
               class="font-headline font-black uppercase tracking-wider text-sm px-4 h-10 flex items-center gap-2 rounded-sm border transition-colors"
               style={
                 on

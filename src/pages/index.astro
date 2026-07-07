@@ -3,8 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import BattleCard from '../components/BattleCard.astro';
 import { getHomeBattleData } from '../lib/queries';
 import { compactNumber } from '../lib/format';
-import { categories } from '../data/categories';
-import { getEntityBySlug, getEntitiesByCategory, allEntities, allBattlePairs } from '../data';
+import { arenas } from '../data/arenas';
+import { getEntityBySlug, getEntitiesByArena, allEntities, allBattlePairs } from '../data';
 
 // Live scoreboard — read the latest tallies on every request.
 export const prerender = false;
@@ -18,9 +18,9 @@ const featuredGoats = featuredGoatSlugs
   .map((s) => getEntityBySlug(s))
   .filter((e): e is NonNullable<typeof e> => Boolean(e));
 
-const arenaCards = categories.map((c) => ({
+const arenaCards = arenas.map((c) => ({
   ...c,
-  legends: getEntitiesByCategory(c.id).length,
+  legends: getEntitiesByArena(c.id).length,
 }));
 const totalBattles = allBattlePairs.length;
 const totalGoats = allEntities.length;
@@ -44,7 +44,7 @@ const totalGoats = allEntities.length;
 
       <!-- Eyebrow — live counts -->
       <div class="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-8 font-mono text-sm uppercase tracking-widest">
-        <span class="text-lime font-semibold">{categories.length} Arenas</span>
+        <span class="text-lime font-semibold">{arenas.length} Arenas</span>
         <span class="text-mute">·</span>
         <span class="text-lime font-semibold">{totalGoats} Goats</span>
         <span class="text-mute">·</span>
@@ -64,8 +64,8 @@ const totalGoats = allEntities.length;
 
       <!-- Arena quick-jump — the four arenas, front and centre -->
       <div class="mt-12 flex flex-wrap gap-3 justify-center">
-        {categories.map((c) => (
-          <a href={`/category/${c.id}`}
+        {arenas.map((c) => (
+          <a href={`/arenas/${c.id}`}
             class="group relative inline-flex items-center gap-3 rounded-lg border border-hairline bg-canvas-soft px-6 py-3.5 overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
             style="box-shadow: var(--shadow-card)"
             onmouseover={`this.style.borderColor='${c.accent}'`}
@@ -93,7 +93,7 @@ const totalGoats = allEntities.length;
             <span class="w-0.5 h-6 bg-lime inline-block"></span>
             <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Featured Rivalries</span>
           </div>
-          <a href="/categories" class="font-sans text-base text-body hover:text-lime transition-colors">See all →</a>
+          <a href="/arenas" class="font-sans text-base text-body hover:text-lime transition-colors">See all →</a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {featuredBattles.map((battle) => (
@@ -132,7 +132,7 @@ const totalGoats = allEntities.length;
             </span>
             <div class="relative mt-3">
               <span class="block font-headline font-black uppercase text-lg leading-none tracking-tight text-ink truncate">{e.shortName}</span>
-              <span class="block font-mono text-[13px] uppercase tracking-wider text-mute mt-1 truncate">{e.category}</span>
+              <span class="block font-mono text-[13px] uppercase tracking-wider text-mute mt-1 truncate">{e.arena}</span>
             </div>
           </a>
         ))}
@@ -141,7 +141,7 @@ const totalGoats = allEntities.length;
   </section>
 
   <!-- ══════════════════════════════════════════
-       ARENAS (CATEGORY GRID) — all live
+       ARENAS (ARENA GRID) — all live
   ══════════════════════════════════════════ -->
   <section class="border-t border-hairline">
     <div class="max-w-7xl mx-auto px-5 py-16 md:py-20">
@@ -151,12 +151,12 @@ const totalGoats = allEntities.length;
           <span class="w-0.5 h-6 bg-lime inline-block"></span>
           <span class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Arenas</span>
         </div>
-        <a href="/categories" class="font-sans text-base text-body hover:text-lime transition-colors">All arenas →</a>
+        <a href="/arenas" class="font-sans text-base text-body hover:text-lime transition-colors">All arenas →</a>
       </div>
 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {arenaCards.map((c) => (
-          <a href={`/category/${c.id}`}
+          <a href={`/arenas/${c.id}`}
             class="group relative flex flex-col justify-between bg-canvas-soft border border-hairline rounded-md p-5 h-40 overflow-hidden transition-all duration-200"
             style="box-shadow: var(--shadow-card)"
             onmouseover={`this.style.borderColor='${c.accent}'`}
@@ -245,7 +245,7 @@ const totalGoats = allEntities.length;
           { stat: String(totalBattles), label: 'Active Battles' },
           { stat: String(allEntities.length), label: 'Legendary Goats' },
           { stat: totalVotes > 0 ? compactNumber(totalVotes) : '∞', label: 'Votes Cast' },
-          { stat: String(categories.length), label: 'Arenas' },
+          { stat: String(arenas.length), label: 'Arenas' },
         ].map(({ stat, label }, i, arr) => (
           <div class={i === arr.length - 1 ? 'text-right' : ''}>
             <p class="font-headline font-black text-5xl md:text-6xl leading-none tracking-tight text-lime">{stat}</p>

@@ -1,16 +1,16 @@
 /**
- * Category registry — the arenas GOATs compete in. Metadata only (labels,
- * chrome). The competitors themselves live in the per-category data files and
+ * Arena registry — the arenas GOATs compete in. Metadata only (labels,
+ * chrome). The competitors themselves live in the per-arena data files and
  * are aggregated in src/data/index.ts.
  */
-export interface Category {
+export interface Arena {
   id: string;
   label: string;
   /** Emoji used as the arena glyph across cards and grids. */
   emoji: string;
-  /** Vivid accent for this arena's chrome (headers, category chips). */
+  /** Vivid accent for this arena's chrome (headers, arena chips). */
   accent: string;
-  /** One-liner shown on the categories grid and arena headers. */
+  /** One-liner shown on the arenas grid and arena headers. */
   tagline: string;
   /** The debate this arena settles, e.g. "Bradman or Tendulkar?". */
   debate: string;
@@ -20,7 +20,7 @@ export interface Category {
   active: boolean;
 }
 
-export const categories: Category[] = [
+export const arenas: Arena[] = [
   {
     id: 'football',
     label: 'Football',
@@ -63,16 +63,16 @@ export const categories: Category[] = [
   },
 ];
 
-export function getCategory(id: string): Category | undefined {
-  return categories.find((c) => c.id === id);
+export function getArena(id: string): Arena | undefined {
+  return arenas.find((c) => c.id === id);
 }
 
-/** Category label with a safe fallback so pages never render "undefined". */
-export function categoryLabel(id: string): string {
-  return getCategory(id)?.label ?? id;
+/** Arena label with a safe fallback so pages never render "undefined". */
+export function arenaLabel(id: string): string {
+  return getArena(id)?.label ?? id;
 }
 
-/** Category glyph with a neutral fallback. */
-export function categoryEmoji(id: string): string {
-  return getCategory(id)?.emoji ?? '🏆';
+/** Arena glyph with a neutral fallback. */
+export function arenaEmoji(id: string): string {
+  return getArena(id)?.emoji ?? '🏆';
 }

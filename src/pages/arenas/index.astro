@@ -1,13 +1,13 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import PageHeader from '../components/PageHeader.astro';
-import { categories } from '../data/categories';
-import { getEntitiesByCategory, battlePairsByCategory } from '../data';
+import Layout from '../../layouts/Layout.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import { arenas } from '../../data/arenas';
+import { getEntitiesByArena, battlePairsByArena } from '../../data';
 
-const cards = categories.map((c) => ({
+const cards = arenas.map((c) => ({
   ...c,
-  legends: getEntitiesByCategory(c.id).length,
-  battles: (battlePairsByCategory[c.id] ?? []).length,
+  legends: getEntitiesByArena(c.id).length,
+  battles: (battlePairsByArena[c.id] ?? []).length,
 }));
 
 const title = 'Arenas — Every GOAT Arena | GOATSBattle';
@@ -20,14 +20,14 @@ const description = 'Football, cricket, tennis, Formula 1 and more. Pick an aren
   <PageHeader
     title="Pick your"
     highlight="arena"
-    subtitle="Every sport has its eternal argument. Choose a category to see the community-voted rankings — and settle the debate yourself." />
+    subtitle="Every sport has its eternal argument. Choose an arena to see the community-voted rankings — and settle the debate yourself." />
 
-  <!-- Category grid -->
+  <!-- Arena grid -->
   <section>
     <div class="max-w-7xl mx-auto px-5 py-12 md:py-16">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         {cards.map((c) => (
-          <a href={`/rankings/${c.id}`}
+          <a href={`/arenas/${c.id}`}
             class="group relative flex flex-col justify-between overflow-hidden rounded-lg border border-hairline bg-canvas-soft p-7 md:p-9 min-h-[220px] transition-all duration-200 hover:-translate-y-1"
             style={`box-shadow: var(--shadow-card)`}
             onmouseover={`this.style.borderColor='${c.accent}'`}
@@ -56,7 +56,7 @@ const description = 'Football, cricket, tennis, Formula 1 and more. Pick an aren
                 <span><span class="text-ink font-bold">{c.battles}</span> battles</span>
               </div>
               <span class="font-headline font-black uppercase text-sm tracking-wider transition-transform group-hover:translate-x-1" style={`color:${c.accent}`}>
-                Rankings →
+                Enter →
               </span>
             </div>
           </a>

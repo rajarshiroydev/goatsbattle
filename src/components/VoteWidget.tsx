@@ -10,10 +10,10 @@ interface Props {
   /** Player-associated accent colours (hex). */
   accentA: string;
   accentB: string;
-  /** Category id (e.g. "football") — links the post-vote rankings CTA. */
-  category: string;
-  /** Human-readable category label (e.g. "Football"). */
-  categoryLabel: string;
+  /** Arena id (e.g. "football") — links the post-vote rankings CTA. */
+  arena: string;
+  /** Human-readable arena label (e.g. "Football"). */
+  arenaLabel: string;
 }
 
 /** Readable text colour (dark or light) for a solid accent background. */
@@ -26,7 +26,7 @@ function textOn(hex: string): string {
   return lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
 }
 
-export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB, category, categoryLabel }: Props) {
+export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB, arena, arenaLabel }: Props) {
   const [result, setResult] = useState<BattleResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -135,9 +135,9 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
             ✓ Voted — this head-to-head is separate from the vote rankings
           </p>
           <div class="flex justify-center mt-5">
-            <a href={`/rankings/${category}`}
+            <a href={`/rankings/${arena}`}
               class="font-headline font-black uppercase tracking-wider text-base border border-lime text-lime px-8 h-11 flex items-center rounded-sm hover:bg-lime hover:text-canvas transition-colors whitespace-nowrap">
-              View {categoryLabel} Rankings →
+              View {arenaLabel} Rankings →
             </a>
           </div>
         </div>

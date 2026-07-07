@@ -1,14 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import PageHeader from '../components/PageHeader.astro';
-import { categories } from '../data/categories';
+import { arenas } from '../data/arenas';
 import { getRoster } from '../data';
 import { flagEmoji } from '../lib/format';
 
 // Group every legend under its arena, active players first.
-const groups = categories
+const groups = arenas
   .map((c) => ({
-    category: c,
+    arena: c,
     entities: getRoster(c.id),
   }))
   .filter((g) => g.entities.length > 0);
@@ -28,7 +28,7 @@ const description = 'Meet the greatest of all time across football, cricket, ten
     subtitle="The greatest of all time, across every arena. Explore their careers, dive into the stats, and pit them against each other head-to-head." />
 
   <!-- Per-arena rosters -->
-  {groups.map(({ category: c, entities }) => (
+  {groups.map(({ arena: c, entities }) => (
     <section class="border-b border-hairline">
       <div class="max-w-7xl mx-auto px-5 py-12 md:py-14">
 
@@ -87,7 +87,7 @@ const description = 'Meet the greatest of all time across football, cricket, ten
         <h2 class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Missing a legend?</h2>
         <p class="mt-2 font-sans text-body font-medium text-base">We add new goats as the arenas grow. Explore the battles while you wait.</p>
       </div>
-      <a href="/categories"
+      <a href="/arenas"
         class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors whitespace-nowrap">
         Browse Arenas
       </a>

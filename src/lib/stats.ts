@@ -29,7 +29,7 @@ export interface EntityComparison {
 
 /**
  * Compare two entities across the stat sections they share. For each shared
- * stat we resolve a leader and the proportional split, and tally category wins.
+ * stat we resolve a leader and the proportional split, and tally arena wins.
  * Used by battle pages today; reusable by rankings and the data API as voting
  * wiring lands.
  */

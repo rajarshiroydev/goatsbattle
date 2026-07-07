@@ -2,18 +2,18 @@
 import Layout from '../../layouts/Layout.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import { getRankings } from '../../lib/queries';
-import { getCategory } from '../../data/categories';
+import { getArena } from '../../data/arenas';
 import { flagEmoji, compactNumber } from '../../lib/format';
 
 // Live leaderboard — recompute ranks on every request.
 export const prerender = false;
 
-const { category } = Astro.params;
-const cat = category ? getCategory(category) : undefined;
-if (!category || !cat) return new Response('Not found', { status: 404 });
+const { arena } = Astro.params;
+const cat = arena ? getArena(arena) : undefined;
+if (!arena || !cat) return new Response('Not found', { status: 404 });
 const label = cat.label;
 
-const rankings = await getRankings(category);
+const rankings = await getRankings(arena);
 const totalVotes = rankings.reduce((s, r) => s + r.votes, 0);
 const [top1, top2, top3] = rankings;
 

@@ -3,19 +3,19 @@ import Layout from '../../layouts/Layout.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import BattleCard from '../../components/BattleCard.astro';
 import { getRoster } from '../../data';
-import { getCategory } from '../../data/categories';
+import { getArena } from '../../data/arenas';
 import { getAllBattleSummaries } from '../../lib/queries';
 import { flagEmoji, compactNumber } from '../../lib/format';
 
 // Live catalog — ordering follows community votes.
 export const prerender = false;
 
-const { category } = Astro.params;
-const cat = category ? getCategory(category) : undefined;
-if (!category || !cat) return new Response('Not found', { status: 404 });
+const { arena } = Astro.params;
+const cat = arena ? getArena(arena) : undefined;
+if (!arena || !cat) return new Response('Not found', { status: 404 });
 
-const allBattles = await getAllBattleSummaries(category);
-const roster = getRoster(category);
+const allBattles = await getAllBattleSummaries(arena);
+const roster = getRoster(arena);
 const totalVotes = allBattles.reduce((s, b) => s + b.total, 0);
 const accent = cat.accent;
 
@@ -30,19 +30,19 @@ const description = `Every ${cat.label} GOAT battle and the legends behind them.
     accent={accent}
     breadcrumb={[
       { label: 'GOATSBattle', href: '/' },
-      { label: 'Arenas', href: '/categories' },
+      { label: 'Arenas', href: '/arenas' },
       { label: cat.label },
     ]}
     title={cat.label}
     highlight="Arena"
     subtitle={`${allBattles.length} battles · ${roster.length} legends · ${totalVotes > 0 ? `${compactNumber(totalVotes)} votes cast` : 'voting just opened'}.`}>
     <div class="mt-6 flex flex-wrap gap-3">
-      <a href={`/rankings/${category}`}
+      <a href={`/rankings/${arena}`}
         class="font-headline font-black uppercase tracking-wider text-sm px-6 h-11 flex items-center rounded-sm transition-opacity hover:opacity-90"
         style={`background:${accent}; color:#0d0d0f`}>
-        View Rankings →
+        View {cat.label} Rankings
       </a>
-      <a href="/categories"
+      <a href="/arenas"
         class="font-sans text-sm text-ink border border-hairline-strong px-6 h-11 flex items-center rounded-sm hover:border-ink transition-colors">
         All Arenas
       </a>

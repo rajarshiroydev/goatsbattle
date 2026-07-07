@@ -15,8 +15,8 @@ const json = (data: unknown, status = 200) =>
   });
 
 export const GET: APIRoute = async ({ url }) => {
-  const category = url.searchParams.get('category') ?? 'football';
-  const rankings = await getRankings(category);
-  if (rankings.length === 0) return json({ error: 'Unknown category' }, 404);
+  const arena = url.searchParams.get('arena') ?? 'football';
+  const rankings = await getRankings(arena);
+  if (rankings.length === 0) return json({ error: 'Unknown arena' }, 404);
   return json(rankings.map(toRankEntry));
 };

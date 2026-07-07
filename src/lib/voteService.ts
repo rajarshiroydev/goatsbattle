@@ -222,7 +222,7 @@ export async function getRankingVoteState(entityId: string, ipHash: string): Pro
  * Entity ids this fingerprint has crowned within the live window — excluded from
  * their next ranked Champion Mode run. Scoped to one arena.
  */
-export async function getLockedEntities(category: string, ipHash: string): Promise<string[]> {
+export async function getLockedEntities(arena: string, ipHash: string): Promise<string[]> {
   const rows = await db
     .select({ entityId: voteWindows.entityId })
     .from(voteWindows)
@@ -231,7 +231,7 @@ export async function getLockedEntities(category: string, ipHash: string): Promi
       and(
         eq(voteWindows.ipHash, ipHash),
         eq(voteWindows.championUsed, true),
-        eq(entities.category, category),
+        eq(entities.arena, arena),
         gt(voteWindows.windowStart, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
       ),
     );

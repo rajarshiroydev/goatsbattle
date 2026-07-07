@@ -15,7 +15,7 @@ export const entities = pgTable('entities', {
   id: text('id').primaryKey(), // slug, e.g. "messi"
   name: text('name').notNull(),
   shortName: text('short_name').notNull(),
-  category: text('category').notNull().default('football'),
+  arena: text('arena').notNull().default('football'),
   countryCode: text('country_code').notNull(),
   votes: integer('votes').notNull().default(0), // ranking total (profile +1, crown +5)
   votesFor: integer('votes_for').notNull().default(0), // head-to-head wins across battles
@@ -33,7 +33,7 @@ export const battles = pgTable('battles', {
   id: text('id').primaryKey(), // canonical slug, e.g. "messi-vs-ronaldo"
   entityA: text('entity_a').notNull().references(() => entities.id),
   entityB: text('entity_b').notNull().references(() => entities.id),
-  category: text('category').notNull().default('football'),
+  arena: text('arena').notNull().default('football'),
   votesA: integer('votes_a').notNull().default(0),
   votesB: integer('votes_b').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

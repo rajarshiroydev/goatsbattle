@@ -1,7 +1,7 @@
 import { sql, gt, eq, or, desc } from 'drizzle-orm';
 import { db } from './db';
 import { battles, votes, entities } from './db/schema';
-import { getEntityBySlug, categories } from '../data';
+import { getEntityBySlug, arenas } from '../data';
 import type { Entity } from './types';
 
 /**
@@ -12,7 +12,7 @@ import type { Entity } from './types';
 export interface BattleSummary {
   slug: string;
   /** Arena this battle belongs to, e.g. "football". */
-  category: string;
+  arena: string;
   a: Entity;
   b: Entity;
   votesA: number;
@@ -46,7 +46,7 @@ function toSummary(row: BattleRow): BattleSummary | null {
 
   return {
     slug: row.id,
-    category: a.category,
+    arena: a.arena,
     a,
     b,
     votesA: row.votesA,
@@ -81,7 +81,7 @@ export interface HomeBattleData {
   trending: BattleSummary[];
   mostVoted: BattleSummary[];
   closest: BattleSummary[];
-  /** One headline battle per arena, for the cross-category showcase. */
+  /** One headline battle per arena, for the cross-arena showcase. */
   spotlight: BattleSummary[];
   totalVotes: number;
 }
@@ -145,16 +145,16 @@ export async function getHomeBattleData(limit = 6): Promise<HomeBattleData> {
     .slice(0, limit);
 
   // One headline battle per arena — prefer the curated rivalry, else the arena's
-  // most-voted battle, so the cross-category showcase always fills.
+  // most-voted battle, so the cross-arena showcase always fills.
   const byId = new Map(summaries.map((s) => [s.slug, s]));
   const seenCat = new Set<string>();
   const spotlight: BattleSummary[] = [];
-  for (const { id: category, spotlightBattleSlug } of categories) {
+  for (const { id: arena, spotlightBattleSlug } of arenas) {
     const pick = byId.get(spotlightBattleSlug) ??
-      summaries.filter((s) => s.category === category).sort((a, b) => b.total - a.total)[0];
-    if (pick && !seenCat.has(pick.category)) {
+      summaries.filter((s) => s.arena === arena).sort((a, b) => b.total - a.total)[0];
+    if (pick && !seenCat.has(pick.arena)) {
       spotlight.push(pick);
-      seenCat.add(pick.category);
+      seenCat.add(pick.arena);
     }
   }
 
@@ -163,9 +163,9 @@ export async function getHomeBattleData(limit = 6): Promise<HomeBattleData> {
 
 /**
  * Every battle, enriched and sorted by total votes (then featured order).
- * Pass a `category` to restrict the catalog to a single arena.
+ * Pass a `arena` to restrict the catalog to a single arena.
  */
-export async function getAllBattleSummaries(category?: string): Promise<BattleSummary[]> {
+export async function getAllBattleSummaries(arena?: string): Promise<BattleSummary[]> {
   const rows = await db
     .select({
       id: battles.id,
@@ -175,7 +175,7 @@ export async function getAllBattleSummaries(category?: string): Promise<BattleSu
       votesB: battles.votesB,
     })
     .from(battles)
-    .where(category ? eq(battles.category, category) : undefined);
+    .where(arena ? eq(battles.arena, arena) : undefined);
 
   return rows
     .map(toSummary)
@@ -201,12 +201,12 @@ export interface RankingRow {
 }
 
 /**
- * The vote leaderboard for a category, most-voted first. Ranking votes and the
+ * The vote leaderboard for an arena, most-voted first. Ranking votes and the
  * head-to-head record come from the DB; display fields (name, flag) come from
  * the static dataset. Entities missing from the dataset are dropped so the board
  * never half-renders.
  */
-export async function getRankings(category = 'football'): Promise<RankingRow[]> {
+export async function getRankings(arena = 'football'): Promise<RankingRow[]> {
   const rows = await db
     .select({
       id: entities.id,
@@ -215,7 +215,7 @@ export async function getRankings(category = 'football'): Promise<RankingRow[]> 
       votesAgainst: entities.votesAgainst,
     })
     .from(entities)
-    .where(eq(entities.category, category))
+    .where(eq(entities.arena, arena))
     .orderBy(desc(entities.votes), desc(entities.votesFor));
 
   return rows
