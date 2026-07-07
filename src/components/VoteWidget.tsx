@@ -10,6 +10,10 @@ interface Props {
   /** Player-associated accent colours (hex). */
   accentA: string;
   accentB: string;
+  /** Category id (e.g. "football") — links the post-vote rankings CTA. */
+  category: string;
+  /** Human-readable category label (e.g. "Football"). */
+  categoryLabel: string;
 }
 
 /** Readable text colour (dark or light) for a solid accent background. */
@@ -22,7 +26,7 @@ function textOn(hex: string): string {
   return lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
 }
 
-export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB }: Props) {
+export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB, category, categoryLabel }: Props) {
   const [result, setResult] = useState<BattleResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -130,6 +134,12 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
           <p class="text-center font-mono text-[11px] uppercase tracking-widest text-lime mt-1.5">
             ✓ Voted today — come back tomorrow to vote again
           </p>
+          <div class="flex justify-center mt-5">
+            <a href={`/rankings/${category}`}
+              class="font-headline font-black uppercase tracking-wider text-base border border-lime text-lime px-8 h-11 flex items-center rounded-sm hover:bg-lime hover:text-canvas transition-colors whitespace-nowrap">
+              View {categoryLabel} Rankings →
+            </a>
+          </div>
         </div>
       )}
       {error && (

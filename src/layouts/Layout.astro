@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { categories } from '../data/categories';
 
 interface Props {
   title?: string;
@@ -81,6 +82,26 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
             class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink hover:bg-canvas-soft transition-colors">
             Champion Mode
           </a>
+
+          <!-- Rankings — hover to pick an arena -->
+          <div class="relative group">
+            <button type="button"
+              class="font-sans text-body text-sm px-3 py-1.5 rounded-md hover:text-ink group-hover:text-ink group-hover:bg-canvas-soft transition-colors">
+              Rankings
+            </button>
+            <div class="absolute right-0 top-full pt-2 min-w-[13rem] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+              <div class="rounded-md border border-hairline bg-canvas shadow-xl overflow-hidden py-1">
+                {categories.map((c) => (
+                  <a href={`/rankings/${c.id}`}
+                    class="flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-canvas-soft transition-colors group/item">
+                    <span class="text-base leading-none">{c.emoji}</span>
+                    <span class="font-sans text-sm text-body group-hover/item:text-ink transition-colors">{c.label}</span>
+                    <span class="ml-auto w-1 h-4 rounded-full" style={`background:${c.accent}`}></span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- CTA -->
