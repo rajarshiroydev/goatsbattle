@@ -1,0 +1,56 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BattlePicker from '../components/BattlePicker.tsx';
+import type { PickerEntity, PickerCategory } from '../components/BattlePicker.tsx';
+import { allEntities } from '../data';
+import { categories } from '../data/categories';
+
+// Everything the picker needs travels in the initial payload — no per-arena
+// fetch. Static shell; the island reads ?goat=<slug> for any pre-selection.
+const roster: PickerEntity[] = allEntities.map((e) => ({
+  slug: e.slug,
+  name: e.name,
+  shortName: e.shortName,
+  nationality: e.nationality,
+  accent: e.accent,
+  category: e.category,
+}));
+
+const pickerCategories: PickerCategory[] = categories
+  .filter((c) => c.active)
+  .map((c) => ({ id: c.id, label: c.label, emoji: c.emoji, accent: c.accent }));
+
+const title = 'Build a Battle — Pick Two GOATs | GOATSBattle';
+const description =
+  'Pick any two legends from the same arena and settle it with a vote. Choose your fighters and see who the world backs.';
+---
+
+<Layout title={title} description={description}>
+  <section class="border-b border-hairline relative">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
+      style="background: radial-gradient(ellipse 60% 60% at 50% 0%, #C6FF0018 0%, transparent 60%)"></div>
+    <div class="relative max-w-5xl mx-auto px-5 py-12 md:py-16">
+
+      <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-6">
+        <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
+        <span>/</span>
+        <span class="text-ink">Battles</span>
+      </div>
+
+      <h1 class="font-headline font-black uppercase leading-none tracking-tight text-ink"
+        style="font-size: clamp(2.5rem, 6vw, 4.5rem)">
+        Build a <span class="text-lime">Battle</span>
+      </h1>
+      <p class="mt-4 font-sans text-body text-lg md:text-xl leading-relaxed max-w-2xl">
+        Pick an arena, choose two legends, and settle the debate with a vote.
+        Only same-arena GOATs can face off.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="max-w-5xl mx-auto px-5 py-10 md:py-12">
+      <BattlePicker client:load roster={roster} categories={pickerCategories} />
+    </div>
+  </section>
+</Layout>

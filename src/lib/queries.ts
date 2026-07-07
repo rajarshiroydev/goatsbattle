@@ -1,4 +1,4 @@
-import { sql, gt, eq, desc } from 'drizzle-orm';
+import { sql, gt, eq, or, desc } from 'drizzle-orm';
 import { db } from './db';
 import { battles, votes, entities } from './db/schema';
 import { getEntityBySlug, categories } from '../data';
@@ -224,6 +224,35 @@ export async function getRankings(category = 'football'): Promise<RankingRow[]> 
     })
     .filter((r): r is Omit<RankingRow, 'rank'> => r !== null)
     .map((r, i) => ({ rank: i + 1, ...r }));
+}
+
+/**
+ * A single goat's most-contested battles: the tightest live matchups it's part
+ * of, votes-first. Mirrors the "closest" ordering used on the homepage. Only
+ * battles that have real votes are returned, so a fresh goat yields an empty
+ * list (the profile then shows an empty state).
+ */
+export async function getContestedBattlesForEntity(
+  slug: string,
+  limit = 6,
+): Promise<BattleSummary[]> {
+  const rows = await db
+    .select({
+      id: battles.id,
+      entityA: battles.entityA,
+      entityB: battles.entityB,
+      votesA: battles.votesA,
+      votesB: battles.votesB,
+    })
+    .from(battles)
+    .where(or(eq(battles.entityA, slug), eq(battles.entityB, slug)));
+
+  return rows
+    .map(toSummary)
+    .filter((s): s is BattleSummary => s !== null && s.total > 0)
+    // Tightest contest first, then bigger sample as the tie-breaker.
+    .sort((x, y) => x.margin - y.margin || y.total - x.total)
+    .slice(0, limit);
 }
 
 /** Live tally for a single battle, used by the results/vote API endpoints. */

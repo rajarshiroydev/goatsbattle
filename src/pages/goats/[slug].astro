@@ -1,7 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PlayerRank from '../../components/PlayerRank.tsx';
-import { allEntities, getEntityBySlug, getBattlesForEntity } from '../../data';
+import ContestedBattles from '../../components/ContestedBattles.tsx';
+import { allEntities, getEntityBySlug } from '../../data';
 import { categoryLabel } from '../../data/categories';
 
 export function getStaticPaths() {
@@ -14,8 +15,6 @@ const { slug } = Astro.params;
 const entity = getEntityBySlug(slug);
 
 if (!entity) return Astro.redirect('/');
-
-const entityBattles = getBattlesForEntity(slug);
 
 const age = new Date().getFullYear() - new Date(entity.born).getFullYear();
 const title = `${entity.name} | GOATSBattle`;
@@ -31,7 +30,7 @@ const onAccent = lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
 <Layout title={title} description={description}>
 
   <!-- Player Hero -->
-  <section class="border-b border-hairline relative overflow-hidden">
+  <section class="border-b border-hairline relative">
     <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
       style={`background: radial-gradient(ellipse 60% 70% at 12% 30%, ${accent}24 0%, transparent 60%)`}></div>
     <div class="relative max-w-7xl mx-auto px-5 py-12 md:py-16">
@@ -88,12 +87,13 @@ const onAccent = lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
             {entity.bio}
           </p>
 
-          <!-- Quick CTA -->
+          <!-- Quick CTA — head to the battle builder with this goat pre-picked -->
           <div class="mt-6 flex flex-wrap gap-3">
-            <a href={`/battle/${entityBattles[0]?.battleSlug}`}
-              class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center rounded-sm transition-opacity hover:opacity-90 whitespace-nowrap"
+            <a href={`/battles?goat=${entity.slug}`}
+              class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center gap-2 rounded-sm transition-opacity hover:opacity-90 whitespace-nowrap"
               style={`background:${accent}; color:${onAccent}`}>
-              Battle {entityBattles[0]?.opponent.shortName}
+              Battle with GOATs
+              <span class="text-base">→</span>
             </a>
           </div>
 
@@ -182,35 +182,19 @@ const onAccent = lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
     </section>
   ))}
 
-  <!-- Battles Involving This Player -->
+  <!-- Hottest Battles — this goat's most-contested live matchups -->
   <section class="border-b border-hairline">
     <div class="max-w-7xl mx-auto px-5 py-12">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
           <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
           <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">
-            {entity.shortName} vs The World
+            {entity.shortName}'s Hottest Battles
           </h2>
         </div>
-        <span class="font-mono text-[11px] uppercase tracking-widest text-mute">{entityBattles.length} battles</span>
+        <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Closest first</span>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {entityBattles.map(({ battleSlug, opponent }) => (
-          <a href={`/battle/${battleSlug}`}
-            class="group flex flex-col items-center gap-2 bg-canvas-soft border rounded-md px-4 py-6 text-center transition-all duration-200 hover:-translate-y-0.5"
-            style={`border-color:${opponent.accent}40`}
-            onmouseover={`this.style.borderColor='${opponent.accent}'`}
-            onmouseout={`this.style.borderColor='${opponent.accent}40'`}>
-            <span class="font-headline font-black text-3xl leading-none transition-colors" style={`color:${opponent.accent}`}>
-              {opponent.shortName}
-            </span>
-            <span class="font-mono text-xs uppercase tracking-wider text-mute">{opponent.nationality}</span>
-            <span class="font-mono text-xs uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity" style={`color:${opponent.accent}`}>
-              Vote →
-            </span>
-          </a>
-        ))}
-      </div>
+      <ContestedBattles client:load slug={entity.slug} accent={accent} />
     </div>
   </section>
 
