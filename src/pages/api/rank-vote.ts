@@ -45,7 +45,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const ipHash = hashIp(getClientIp(request.headers));
 
   // Per-user limit plus an IP-scoped ceiling, checked in sequence (see /api/vote).
-  const rl = rateLimit(locals.user.id);
+  // Namespaced key so ranking votes get their own bucket, not shared with the
+  // head-to-head vote endpoint (rateLimit uses one global map).
+  const rl = rateLimit(`rank:${locals.user.id}`);
   if (!rl.ok) {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
