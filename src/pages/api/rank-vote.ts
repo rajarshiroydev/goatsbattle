@@ -44,9 +44,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const ipHash = hashIp(getClientIp(request.headers));
 
+  // Per-user limit plus an IP-scoped ceiling (see /api/vote).
   const rl = rateLimit(locals.user.id);
-  if (!rl.ok) {
-    return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+  const rlIp = rateLimit(`ip:${ipHash}`);
+  if (!rl.ok || !rlIp.ok) {
+    const retryAfter = Math.max(rl.retryAfter, rlIp.retryAfter);
+    return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(retryAfter) });
   }
 
   const result = await recordRankingVote(entityId, channel as VoteChannel, locals.user.id, ipHash);

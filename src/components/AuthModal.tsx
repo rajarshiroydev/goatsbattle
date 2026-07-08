@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { authClient } from '../lib/authClient';
-import { onOpenAuthModal, emitSessionChanged } from '../lib/authModal';
+import { onOpenAuthModal, emitSessionChanged, consumePendingAuthModal } from '../lib/authModal';
 
 interface Props {
   /** Whether Google OAuth is configured server-side (hides the button if not). */
@@ -18,14 +18,20 @@ export default function AuthModal({ googleEnabled = false }: Props) {
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    return onOpenAuthModal((detail) => {
+    const apply = (detail: { reason?: string; mode?: 'signin' | 'signup' }) => {
       setReason(detail.reason ?? null);
       if (detail.mode) setMode(detail.mode);
       setError(null);
       setOpen(true);
-    });
+    };
+    const unsub = onOpenAuthModal(apply);
+    // Replay a request fired before this island hydrated (e.g. /login auto-open).
+    const pendingOpen = consumePendingAuthModal();
+    if (pendingOpen) apply(pendingOpen);
+    return unsub;
   }, []);
 
   // Close on Escape.
@@ -34,6 +40,40 @@ export default function AuthModal({ googleEnabled = false }: Props) {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  // Initial focus + trap Tab within the dialog while open.
+  useEffect(() => {
+    if (!open) return;
+    const node = dialogRef.current;
+    if (!node) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('disabled'));
+    (focusables()[0] ?? node).focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    node.addEventListener('keydown', onKey);
+    return () => {
+      node.removeEventListener('keydown', onKey);
+      prev?.focus?.();
+    };
   }, [open]);
 
   function close() {
@@ -79,7 +119,14 @@ export default function AuthModal({ googleEnabled = false }: Props) {
       class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && close()}
     >
-      <div class="w-full max-w-md bg-canvas-soft border border-hairline-strong rounded-lg p-7 relative">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        tabIndex={-1}
+        class="w-full max-w-md bg-canvas-soft border border-hairline-strong rounded-lg p-7 relative focus:outline-none"
+      >
         <button
           onClick={close}
           aria-label="Close"
@@ -88,7 +135,7 @@ export default function AuthModal({ googleEnabled = false }: Props) {
           ✕
         </button>
 
-        <h2 class="font-headline font-black uppercase tracking-tight text-3xl text-ink">
+        <h2 id="auth-modal-title" class="font-headline font-black uppercase tracking-tight text-3xl text-ink">
           {isSignup ? 'Join GOATSBattle' : 'Welcome back'}
         </h2>
         <p class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">

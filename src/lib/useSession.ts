@@ -16,7 +16,9 @@ let inflight: Promise<SessionUser | null> | null = null;
 
 function load(force = false): Promise<SessionUser | null> {
   if (!force && cachedUser !== undefined) return Promise.resolve(cachedUser);
-  if (!inflight) {
+  // On force (e.g. after a session-changed event) bypass any pending request so
+  // we never resolve from a stale in-flight getSession().
+  if (force || !inflight) {
     inflight = authClient
       .getSession()
       .then((res: { data?: { user?: SessionUser } | null }) => {

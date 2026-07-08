@@ -17,7 +17,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!context.request.headers.has('cookie')) return next();
 
   try {
-    const data = await auth.api.getSession({ headers: context.request.headers });
+    // Bound the lookup so a slow auth/DB backend can't stall every request;
+    // on timeout or error we fall through to the logged-out defaults above.
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('session lookup timed out')), 5000),
+    );
+    const data = await Promise.race([
+      auth.api.getSession({ headers: context.request.headers }),
+      timeout,
+    ]);
     context.locals.user = data?.user ?? null;
     context.locals.session = data?.session ?? null;
   } catch {

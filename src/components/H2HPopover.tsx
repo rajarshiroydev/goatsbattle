@@ -126,8 +126,8 @@ export default function H2HPopover({ slug, shortName, accent, label }: Props) {
 
             {state === 'loading' && (
               <div class="space-y-2.5">
-                {[0, 1, 2].map(() => (
-                  <div class="h-9 w-full bg-hairline rounded animate-pulse"></div>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} class="h-9 w-full bg-hairline rounded animate-pulse"></div>
                 ))}
               </div>
             )}
@@ -177,6 +177,7 @@ function PopGroup({
       <div class="space-y-2.5">
         {battles.map((b) => (
           <Matchup
+            key={b.battleSlug}
             goatName={goatName}
             accent={accent}
             opponent={b.opponentShortName}
@@ -219,9 +220,9 @@ function Matchup({
           {goatName}
         </span>
         <span class="text-center font-headline font-black text-lg leading-none tabular-nums">
-          <span style={`color:${accent}`}>{goatVotes}</span>
+          <span style={`color:${accent}`}>{goatVotes.toLocaleString()}</span>
           <span class="text-mute mx-1.5">–</span>
-          <span style={`color:${opponentAccent}`}>{opponentVotes}</span>
+          <span style={`color:${opponentAccent}`}>{opponentVotes.toLocaleString()}</span>
         </span>
         <span class="text-right font-headline font-black uppercase text-sm leading-none truncate" style={`color:${opponentAccent}`}>
           {opponent}

@@ -10,6 +10,7 @@ interface CommentNode {
   upvotes: number;
   deleted: boolean;
   createdAt: string;
+  authorId: string;
   author: { username: string | null; name: string; image: string | null };
   viewerUpvoted: boolean;
 }
@@ -147,7 +148,7 @@ export default function CommentThread({ battleId }: Props) {
                 key={node.id}
                 node={node}
                 depth={0}
-                viewerUsername={user?.username ?? null}
+                viewerId={user?.id ?? null}
                 onUpvote={upvote}
                 onReply={post}
                 onDelete={remove}
@@ -190,21 +191,21 @@ function buildTree(flat: CommentNode[]): TreeNode[] {
 function CommentItem({
   node,
   depth,
-  viewerUsername,
+  viewerId,
   onUpvote,
   onReply,
   onDelete,
 }: {
   node: TreeNode;
   depth: number;
-  viewerUsername: string | null;
+  viewerId: string | null;
   onUpvote: (n: CommentNode) => void;
   onReply: (parentId: number | null, body: string) => Promise<boolean>;
   onDelete: (n: CommentNode) => void;
 }) {
   const [replying, setReplying] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const isAuthor = !!viewerUsername && node.author.username === viewerUsername;
+  const isAuthor = !!viewerId && node.authorId === viewerId;
   const replyCount = countDescendants(node);
 
   return (
@@ -291,7 +292,7 @@ function CommentItem({
               key={child.id}
               node={child}
               depth={depth + 1}
-              viewerUsername={viewerUsername}
+              viewerId={viewerId}
               onUpvote={onUpvote}
               onReply={onReply}
               onDelete={onDelete}

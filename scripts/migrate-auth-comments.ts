@@ -107,6 +107,12 @@ async function main() {
   console.log('\n✓ Auth + comments migration applied.');
 }
 
+// neon-http has no interactive transactions, so statements run one-by-one and
+// this migration is NOT atomic — a mid-run failure can leave it partially
+// applied. Recovery is simply to re-run it: every statement is written to be
+// idempotent (CREATE/ADD ... IF [NOT] EXISTS, DROP CONSTRAINT IF EXISTS before
+// ADD, idempotent ALTER ... SET/DROP NOT NULL, TRUNCATE), so re-running from the
+// top safely converges to the target schema.
 main().catch((err) => {
   console.error(err);
   process.exit(1);

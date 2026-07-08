@@ -12,14 +12,34 @@ export interface AuthModalDetail {
   mode?: 'signin' | 'signup';
 }
 
+// Stored on `window` (not a module var) so it survives across separate island
+// bundles: a page (e.g. /login) can request an open before the AuthModal island
+// has hydrated, and the island replays it on mount via consumePendingAuthModal.
+declare global {
+  interface Window {
+    __authModalPending?: AuthModalDetail;
+  }
+}
+
 export function openAuthModal(detail: AuthModalDetail = {}): void {
+  window.__authModalPending = detail;
   window.dispatchEvent(new CustomEvent('open-auth-modal', { detail }));
 }
 
 export function onOpenAuthModal(cb: (detail: AuthModalDetail) => void): () => void {
-  const handler = (e: Event) => cb((e as CustomEvent<AuthModalDetail>).detail ?? {});
+  const handler = (e: Event) => {
+    window.__authModalPending = undefined; // consumed live; don't replay later
+    cb((e as CustomEvent<AuthModalDetail>).detail ?? {});
+  };
   window.addEventListener('open-auth-modal', handler);
   return () => window.removeEventListener('open-auth-modal', handler);
+}
+
+/** Read + clear a request made before the modal hydrated. Returns undefined if none. */
+export function consumePendingAuthModal(): AuthModalDetail | undefined {
+  const pending = window.__authModalPending;
+  window.__authModalPending = undefined;
+  return pending;
 }
 
 export function emitSessionChanged(): void {

@@ -41,8 +41,8 @@ export default function HeadToHeadRecord({ slug, goatShortName, accent }: Props)
   if (state === 'loading') {
     return (
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {[0, 1, 2].map(() => (
-          <div class="bg-canvas-soft border border-hairline rounded-md px-4 py-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} class="bg-canvas-soft border border-hairline rounded-md px-4 py-4">
             <div class="h-5 w-full bg-hairline rounded animate-pulse mb-3"></div>
             <div class="h-2 w-full bg-hairline rounded-full animate-pulse"></div>
           </div>
@@ -108,6 +108,7 @@ function RecordGroup({
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {battles.map((b) => (
           <a
+            key={b.battleSlug}
             href={`/battle/${b.battleSlug}`}
             class="group block bg-canvas-soft border border-hairline rounded-md px-4 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-hairline-strong"
           >

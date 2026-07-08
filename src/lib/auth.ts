@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { user, session, account, verification } from './db/schema';
 
@@ -19,16 +20,27 @@ const socialProviders =
     ? { google: { clientId: googleClientId, clientSecret: googleClientSecret } }
     : {};
 
-/** Auto-generate a unique-ish handle from the display name / email at signup. */
-function generateUsername(name: string, email: string): string {
+/**
+ * Auto-generate a unique handle from the display name / email at signup, checking
+ * availability against the unique `username` column and retrying with a fresh
+ * suffix a few times before falling back to a longer random one. Avoids raw DB
+ * unique-constraint errors surfacing to the user on a rare collision.
+ */
+async function generateUsername(name: string, email: string): Promise<string> {
   const base =
     (name || email.split('@')[0] || 'goat')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 20) || 'goat';
-  const suffix = Math.random().toString(36).slice(2, 6);
-  return `${base}-${suffix}`;
+
+  for (let i = 0; i < 5; i++) {
+    const candidate = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+    const [taken] = await db.select({ id: user.id }).from(user).where(eq(user.username, candidate)).limit(1);
+    if (!taken) return candidate;
+  }
+  // Extremely unlikely: fall back to a much larger suffix.
+  return `${base}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
 export const auth = betterAuth({
@@ -40,7 +52,9 @@ export const auth = betterAuth({
   }),
   secret,
   baseURL,
-  trustedOrigins: ['http://localhost:4321', 'https://goatsbattle.com'],
+  // Derive from the deployment origin (baseURL) so it never diverges from env;
+  // localhost is always allowed for local dev.
+  trustedOrigins: Array.from(new Set([baseURL, 'http://localhost:4321'].filter(Boolean))) as string[],
   emailAndPassword: { enabled: true },
   socialProviders,
   user: {
@@ -53,7 +67,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (u) => ({
-          data: { ...u, username: generateUsername(u.name, u.email) },
+          data: { ...u, username: await generateUsername(u.name, u.email) },
         }),
       },
     },

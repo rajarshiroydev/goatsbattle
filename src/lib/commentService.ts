@@ -10,6 +10,8 @@ export interface CommentNode {
   upvotes: number;
   deleted: boolean;
   createdAt: string; // ISO
+  /** Stable author id — the reliable owner check (usernames can be null/renamed). */
+  authorId: string;
   author: { username: string | null; name: string; image: string | null };
   /** Whether the requesting viewer has upvoted this comment. */
   viewerUpvoted: boolean;
@@ -36,6 +38,7 @@ export async function listComments(battleId: string, viewerId: string | null): P
       upvotes: comments.upvotes,
       deleted: comments.deleted,
       createdAt: comments.createdAt,
+      authorId: comments.userId,
       authorName: user.name,
       authorUsername: user.username,
       authorImage: user.image,
@@ -53,6 +56,7 @@ export async function listComments(battleId: string, viewerId: string | null): P
     upvotes: r.upvotes,
     deleted: r.deleted,
     createdAt: new Date(r.createdAt).toISOString(),
+    authorId: r.authorId,
     author: { username: r.authorUsername, name: r.authorName, image: r.authorImage },
     viewerUpvoted: !!r.viewerUpvoted,
   }));
@@ -113,6 +117,7 @@ export async function postComment(
       upvotes: 0,
       deleted: false,
       createdAt: new Date(inserted.createdAt).toISOString(),
+      authorId: userId,
       author: { username: author?.username ?? null, name: author?.name ?? 'Unknown', image: author?.image ?? null },
       viewerUpvoted: false,
     },
@@ -154,10 +159,11 @@ export async function toggleCommentUpvote(
   userId: string,
   remove: boolean,
 ): Promise<UpvoteResult> {
+  // A soft-deleted comment is treated as gone — no vote mutations allowed.
   const [exists] = await db
     .select({ id: comments.id })
     .from(comments)
-    .where(eq(comments.id, commentId))
+    .where(and(eq(comments.id, commentId), eq(comments.deleted, false)))
     .limit(1);
   if (!exists) return { status: 'not_found', upvotes: 0, viewerUpvoted: false };
 

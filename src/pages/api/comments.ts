@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { listComments, postComment, deleteComment } from '../../lib/commentService';
 import { rateLimit } from '../../lib/ratelimit';
+import { getClientIp, hashIp } from '../../lib/ip';
 
 export const prerender = false;
 
@@ -11,9 +12,16 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
   });
 
 /** GET ?battle=slug → flat list of the battle's comments (public read). */
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ url, request, locals }) => {
   const battleId = url.searchParams.get('battle');
   if (!battleId) return json({ error: 'battle query param required' }, 400);
+
+  // Lightweight anti-abuse ceiling for the public read (keyed by client IP).
+  const rl = rateLimit(`cget:${hashIp(getClientIp(request.headers))}`);
+  if (!rl.ok) {
+    return json({ error: 'Too many requests — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+  }
+
   const list = await listComments(battleId, locals.user?.id ?? null);
   return json({ comments: list });
 };
