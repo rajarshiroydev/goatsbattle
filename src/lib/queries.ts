@@ -231,14 +231,14 @@ export async function getRankings(arena = 'football'): Promise<RankingRow[]> {
 }
 
 /**
- * A single goat's most-contested battles: the tightest live matchups it's part
- * of, votes-first. Mirrors the "closest" ordering used on the homepage. Only
- * battles that have real votes are returned, so a fresh goat yields an empty
- * list (the profile then shows an empty state).
+ * A goat's complete head-to-head record: every 1v1 matchup it's part of that has
+ * real votes, most-contested (highest total) first. Unlike the leaderboard's
+ * aggregate win-rate, this preserves the per-opponent split so the profile and
+ * rankings popover can show who a goat beats and by how much. A fresh goat with
+ * no voted matchups yields an empty list (callers render an empty state).
  */
-export async function getContestedBattlesForEntity(
+export async function getHeadToHeadRecordForEntity(
   slug: string,
-  limit = 6,
 ): Promise<BattleSummary[]> {
   const rows = await db
     .select({
@@ -254,9 +254,8 @@ export async function getContestedBattlesForEntity(
   return rows
     .map(toSummary)
     .filter((s): s is BattleSummary => s !== null && s.total > 0)
-    // Tightest contest first, then bigger sample as the tie-breaker.
-    .sort((x, y) => x.margin - y.margin || y.total - x.total)
-    .slice(0, limit);
+    // Most-contested first, then tightest margin as the tie-breaker.
+    .sort((x, y) => y.total - x.total || x.margin - y.margin);
 }
 
 /** Live tally for a single battle, used by the results/vote API endpoints. */

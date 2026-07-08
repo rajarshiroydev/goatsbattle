@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getVoteState } from '../../lib/voteService';
-import { getClientIp, hashIp } from '../../lib/ip';
 import { toResult } from '../../lib/voteWire';
 
 export const prerender = false;
@@ -11,12 +10,11 @@ const json = (data: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-export const GET: APIRoute = async ({ url, request }) => {
+export const GET: APIRoute = async ({ url, locals }) => {
   const battleId = url.searchParams.get('battle');
   if (!battleId) return json({ error: 'battle query param required' }, 400);
 
-  const ipHash = hashIp(getClientIp(request.headers));
-  const state = await getVoteState(battleId, ipHash);
+  const state = await getVoteState(battleId, locals.user?.id ?? null);
   if (!state) return json({ error: 'Battle not found' }, 404);
 
   return json(

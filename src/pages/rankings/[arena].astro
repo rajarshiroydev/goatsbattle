@@ -4,6 +4,7 @@ import PageHeader from '../../components/PageHeader.astro';
 import { getRankings } from '../../lib/queries';
 import { getArena } from '../../data/arenas';
 import { flagEmoji, compactNumber } from '../../lib/format';
+import H2HPopover from '../../components/H2HPopover.tsx';
 
 // Live leaderboard — recompute ranks on every request.
 export const prerender = false;
@@ -97,10 +98,14 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
 
       <div class="space-y-1.5">
         {rankings.map((r) => (
-          <a href={`/goats/${r.entity.slug}`}
-            class={`group grid grid-cols-[2.5rem_1fr_auto] md:grid-cols-[3rem_1fr_5rem_6rem_9rem] items-center gap-3 md:gap-4 rounded-sm border px-4 py-3.5 transition-all duration-200 ${
+          <div
+            class={`group relative grid grid-cols-[2.5rem_1fr_auto] md:grid-cols-[3rem_1fr_5rem_6rem_9rem] items-center gap-3 md:gap-4 rounded-sm border px-4 py-3.5 transition-all duration-200 ${
               r.rank <= 3 ? 'border-hairline-strong bg-canvas-soft' : 'border-hairline bg-canvas-soft hover:border-hairline-strong'
             }`}>
+            <!-- Stretched link — whole row navigates to the profile; the H2H
+                 trigger sits above it (z-10) so it opens instead of navigating. -->
+            <a href={`/goats/${r.entity.slug}`} class="absolute inset-0 rounded-sm" aria-label={`${r.entity.shortName} profile`}></a>
+
             <!-- Rank -->
             <span class={`font-headline font-black text-2xl leading-none ${r.rank <= 3 ? 'text-lime' : 'text-mute'}`}>
               {r.rank}
@@ -124,10 +129,14 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
               <span class="md:hidden font-mono text-[13px] uppercase tracking-widest text-mute ml-1">Votes</span>
             </span>
 
-            <!-- Head-to-head votes -->
-            <span class="hidden md:block text-right font-mono text-sm text-body">
-              {r.headToHeadVotes > 0 ? compactNumber(r.headToHeadVotes) : '—'}
-            </span>
+            <!-- Head-to-head votes — hover the number for the full 1v1 record -->
+            <div class="hidden md:block text-right">
+              {r.headToHeadVotes > 0 ? (
+                <H2HPopover client:visible slug={r.entity.slug} shortName={r.entity.shortName} accent={r.entity.accent} label={compactNumber(r.headToHeadVotes)} />
+              ) : (
+                <span class="font-mono text-sm text-mute">—</span>
+              )}
+            </div>
 
             <!-- 1v1 win rate bar -->
             <div class="hidden md:flex items-center gap-2 justify-end">
@@ -136,7 +145,7 @@ const description = `The live ${label.toLowerCase()} GOAT leaderboard, ranked by
               </div>
               <span class="w-9 text-right font-mono text-sm text-body">{r.headToHeadVotes > 0 ? `${r.winRate}%` : '—'}</span>
             </div>
-          </a>
+          </div>
         ))}
       </div>
 

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getContestedBattlesForEntity } from '../../lib/queries';
+import { getHeadToHeadRecordForEntity } from '../../lib/queries';
 import { toContestedBattle } from '../../lib/battleWire';
 
 export const prerender = false;
@@ -18,10 +18,10 @@ export const GET: APIRoute = async ({ url }) => {
   const goat = url.searchParams.get('goat');
   if (!goat) return json({ error: 'goat query param required' }, 400);
 
-  // The "hottest battles" strip is non-critical: a transient neon-http hiccup
+  // The head-to-head record is non-critical: a transient neon-http hiccup
   // shouldn't 500 (and pop the dev error overlay). Degrade to an empty list.
   try {
-    const battles = await getContestedBattlesForEntity(goat, 6);
+    const battles = await getHeadToHeadRecordForEntity(goat);
     return json(battles.map((b) => toContestedBattle(b, goat)));
   } catch (err) {
     console.error('goat-battles query failed:', err);

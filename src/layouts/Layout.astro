@@ -1,5 +1,13 @@
 ---
 import '../styles/global.css';
+import AccountMenu from '../components/AccountMenu';
+import AuthModal from '../components/AuthModal';
+
+// Only offer the Google button when creds are configured server-side.
+const googleEnabled = !!(
+  (process.env.GOOGLE_CLIENT_ID ?? import.meta.env.GOOGLE_CLIENT_ID) &&
+  (process.env.GOOGLE_CLIENT_SECRET ?? import.meta.env.GOOGLE_CLIENT_SECRET)
+);
 
 interface Props {
   title?: string;
@@ -92,11 +100,12 @@ const isActive = (m: string[]) =>
         </div>
 
         <!-- CTA -->
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-2.5 shrink-0">
           <a href="/play"
             class="font-headline font-black uppercase text-base tracking-wider bg-lime text-canvas px-5 h-10 flex items-center rounded-sm hover:bg-lime-dark transition-colors">
             Play Now
           </a>
+          <AccountMenu client:load />
         </div>
 
       </nav>
@@ -106,6 +115,9 @@ const isActive = (m: string[]) =>
     <main class="flex-1">
       <slot />
     </main>
+
+    <!-- Shared auth modal (opened by any island via the authModal event bus) -->
+    <AuthModal client:idle googleEnabled={googleEnabled} />
 
     <!-- ── Site Footer ── -->
     <footer class="border-t border-hairline bg-canvas-soft mt-auto">

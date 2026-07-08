@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:migrate:auth": "tsx --env-file=.env scripts/migrate-auth-comments.ts",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "db:seed:votes": "tsx --env-file=.env scripts/seed-battle-votes.ts"
   },
@@ -23,6 +24,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.2",
     "astro": "^7.0.3",
+    "better-auth": "^1.6.23",
     "drizzle-orm": "^0.45.2",
     "preact": "^10.29.3",
     "satori": "^0.26.0",

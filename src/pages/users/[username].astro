@@ -1,0 +1,105 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { db } from '../../lib/db';
+import { user, comments } from '../../lib/db/schema';
+import { desc, eq } from 'drizzle-orm';
+import { relativeTime } from '../../lib/format';
+
+// User profiles aren't known at build time.
+export const prerender = false;
+
+const { username } = Astro.params;
+
+const [profile] = username
+  ? await db
+      .select({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        image: user.image,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .where(eq(user.username, username))
+      .limit(1)
+  : [];
+
+if (!profile) {
+  Astro.response.status = 404;
+}
+
+const recentComments = profile
+  ? await db
+      .select({
+        id: comments.id,
+        battleId: comments.battleId,
+        body: comments.body,
+        upvotes: comments.upvotes,
+        deleted: comments.deleted,
+        createdAt: comments.createdAt,
+      })
+      .from(comments)
+      .where(eq(comments.userId, profile.id))
+      .orderBy(desc(comments.createdAt))
+      .limit(20)
+  : [];
+
+const initial = (profile?.username ?? profile?.name ?? '?').charAt(0).toUpperCase();
+const joined = profile
+  ? new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  : '';
+---
+
+<Layout
+  title={profile ? `${profile.username} — GOATSBattle` : 'User not found — GOATSBattle'}
+  description={profile ? `${profile.username}'s profile, votes, and comments on GOATSBattle.` : 'This user could not be found.'}
+>
+  {profile ? (
+    <section class="max-w-4xl mx-auto px-5 py-12">
+      <!-- Hero -->
+      <div class="flex items-center gap-5">
+        <div class="w-20 h-20 rounded-full bg-lime text-canvas font-headline font-black text-4xl flex items-center justify-center overflow-hidden shrink-0">
+          {profile.image ? <img src={profile.image} alt="" class="w-full h-full object-cover" /> : initial}
+        </div>
+        <div>
+          <h1 class="font-headline font-black uppercase tracking-tight text-4xl md:text-5xl text-ink">
+            {profile.username}
+          </h1>
+          <p class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1">Member since {joined}</p>
+        </div>
+      </div>
+
+      <!-- Recent comments -->
+      <div class="mt-12">
+        <h2 class="font-headline font-black uppercase tracking-tight text-2xl text-ink mb-5">Recent comments</h2>
+        {recentComments.length === 0 ? (
+          <p class="font-sans text-body">No comments yet.</p>
+        ) : (
+          <ul class="space-y-3">
+            {recentComments.map((c) => (
+              <li class="bg-canvas-soft border border-hairline rounded-md p-4">
+                <div class="flex items-center justify-between mb-1.5">
+                  <a href={`/battle/${c.battleId}`} class="font-mono text-[12px] uppercase tracking-widest text-lime hover:underline">
+                    {c.battleId}
+                  </a>
+                  <span class="font-mono text-[12px] text-mute">
+                    ▲ {c.upvotes} · {relativeTime(c.createdAt)}
+                  </span>
+                </div>
+                <p class="font-sans text-body">{c.deleted ? '[deleted]' : c.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  ) : (
+    <section class="max-w-7xl mx-auto px-5 py-24 text-center">
+      <h1 class="font-headline font-black uppercase tracking-tight text-4xl text-ink">User not found</h1>
+      <p class="font-sans text-body text-lg mt-3">No GOATSBattle user with that handle.</p>
+      <a href="/" class="inline-block mt-8 font-headline font-black uppercase tracking-wider text-base border border-lime text-lime px-6 h-11 leading-[2.75rem] rounded-sm hover:bg-lime hover:text-canvas transition-colors">
+        Back home
+      </a>
+    </section>
+  )}
+</Layout>

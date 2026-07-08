@@ -12,7 +12,11 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
     headers: { 'Content-Type': 'application/json', ...headers },
   });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  if (!locals.user) {
+    return json({ error: 'Log in to vote', code: 'auth_required' }, 401);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -28,13 +32,20 @@ export const POST: APIRoute = async ({ request }) => {
 
   const ipHash = hashIp(getClientIp(request.headers));
 
-  const rl = rateLimit(ipHash);
+  // Per-user limit plus an IP-scoped ceiling (so churning accounts from one host
+  // can't bypass the per-user cap). Checked in sequence so a failing request
+  // doesn't also consume the other bucket's quota.
+  const rl = rateLimit(locals.user.id);
   if (!rl.ok) {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
+  const rlIp = rateLimit(`ip:${ipHash}`);
+  if (!rlIp.ok) {
+    return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rlIp.retryAfter) });
+  }
 
   const country = getCountry(request.headers);
-  const outcome = await recordHeadToHeadVote(battleId, choice, ipHash, country);
+  const outcome = await recordHeadToHeadVote(battleId, choice, locals.user.id, ipHash, country);
 
   if (outcome.status === 'not_found') return json({ error: 'Battle not found' }, 404);
   if (outcome.status === 'bad_choice') return json({ error: 'Invalid choice for this battle' }, 400);
