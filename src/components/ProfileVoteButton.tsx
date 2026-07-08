@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
+import { useSession } from '../lib/useSession';
+import { openAuthModal } from '../lib/authModal';
 
 interface Props {
   /** Entity id (slug) to vote for. */
@@ -38,6 +40,7 @@ function resetLabel(iso: string | null): string {
  * crown; see recordRankingVote). Hydrates its used/locked state on mount.
  */
 export default function ProfileVoteButton({ id, shortName, accent }: Props) {
+  const { user } = useSession();
   const [state, setState] = useState<RankState | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -58,6 +61,10 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
 
   async function vote() {
     if (pending || state?.profileUsed) return;
+    if (!user) {
+      openAuthModal({ reason: `Log in to vote ${shortName}` });
+      return;
+    }
     setError(null);
     setPending(true);
     try {
@@ -99,6 +106,20 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
         <span class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">
           {resetLabel(state?.windowResetsAt ?? null) || 'one vote per day'}
         </span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div class="inline-flex flex-col">
+        <button
+          type="button"
+          onClick={() => openAuthModal({ reason: `Log in to vote ${shortName}` })}
+          class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center gap-2 rounded-sm bg-lime text-canvas hover:bg-lime-dark transition-colors whitespace-nowrap"
+        >
+          Log in to vote
+        </button>
       </div>
     );
   }

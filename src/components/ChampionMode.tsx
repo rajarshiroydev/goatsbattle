@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { BattleResult } from "../lib/voteWire";
 import type { StatSection } from "../lib/types";
+import { useSession } from "../lib/useSession";
+import { openAuthModal } from "../lib/authModal";
 
 /** Minimal fighter shape passed from the static /play page. */
 export interface Fighter {
@@ -176,6 +178,7 @@ function FighterPanel({
 }
 
 export default function ChampionMode({ roster }: Props) {
+  const { user } = useSession();
   const presets = useMemo(() => countPresets(roster.length), [roster.length]);
   const arena = roster[0]?.arena ?? "football";
   const [mode, setMode] = useState<Mode>("ranked");
@@ -223,8 +226,14 @@ export default function ChampionMode({ roster }: Props) {
     clearTimer();
     setError(null);
 
-    // Ranked runs exclude GOATs this fingerprint has already crowned in the
-    // last 24h, so a favourite can't be farmed. Friendly runs use everyone.
+    // Ranked runs write votes, so they require login. Friendly runs are open.
+    if (mode === "ranked" && !user) {
+      openAuthModal({ reason: "Log in for Ranked mode" });
+      return;
+    }
+
+    // Ranked runs exclude GOATs this user has already crowned in the last 24h,
+    // so a favourite can't be farmed. Friendly runs use everyone.
     let eligible = roster;
     if (mode === "ranked") {
       try {

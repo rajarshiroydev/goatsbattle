@@ -1,0 +1,196 @@
+import { and, eq, sql } from 'drizzle-orm';
+import { db } from './db';
+import { comments, commentVotes, user, battles } from './db/schema';
+
+/** One comment as sent to the client. The island builds the tree from parentId. */
+export interface CommentNode {
+  id: number;
+  parentId: number | null;
+  body: string; // "[deleted]" when the comment is soft-deleted
+  upvotes: number;
+  deleted: boolean;
+  createdAt: string; // ISO
+  author: { username: string | null; name: string; image: string | null };
+  /** Whether the requesting viewer has upvoted this comment. */
+  viewerUpvoted: boolean;
+}
+
+export const MAX_COMMENT_LENGTH = 4000;
+
+/**
+ * Flat list of a battle's comments (adjacency list — the island nests them by
+ * `parentId`). Joins the author and computes `viewerUpvoted` for `viewerId`
+ * (null for logged-out readers → always false). Soft-deleted bodies are blanked
+ * server-side so the raw text never leaves the DB.
+ */
+export async function listComments(battleId: string, viewerId: string | null): Promise<CommentNode[]> {
+  const viewerUpvoted = viewerId
+    ? sql<boolean>`EXISTS (SELECT 1 FROM comment_votes cv WHERE cv.comment_id = ${comments.id} AND cv.user_id = ${viewerId})`
+    : sql<boolean>`false`;
+
+  const rows = await db
+    .select({
+      id: comments.id,
+      parentId: comments.parentId,
+      body: comments.body,
+      upvotes: comments.upvotes,
+      deleted: comments.deleted,
+      createdAt: comments.createdAt,
+      authorName: user.name,
+      authorUsername: user.username,
+      authorImage: user.image,
+      viewerUpvoted,
+    })
+    .from(comments)
+    .innerJoin(user, eq(user.id, comments.userId))
+    .where(eq(comments.battleId, battleId))
+    .orderBy(comments.createdAt);
+
+  return rows.map((r) => ({
+    id: r.id,
+    parentId: r.parentId,
+    body: r.deleted ? '[deleted]' : r.body,
+    upvotes: r.upvotes,
+    deleted: r.deleted,
+    createdAt: new Date(r.createdAt).toISOString(),
+    author: { username: r.authorUsername, name: r.authorName, image: r.authorImage },
+    viewerUpvoted: !!r.viewerUpvoted,
+  }));
+}
+
+export type PostCommentResult =
+  | { status: 'ok'; comment: CommentNode }
+  | { status: 'invalid'; error: string }
+  | { status: 'not_found' };
+
+/**
+ * Create a comment (or reply). Validates the body length and that any `parentId`
+ * belongs to the same battle. Returns the created node shaped like the list.
+ */
+export async function postComment(
+  battleId: string,
+  userId: string,
+  parentId: number | null,
+  rawBody: string,
+): Promise<PostCommentResult> {
+  const body = rawBody.trim();
+  if (body.length === 0) return { status: 'invalid', error: 'Comment cannot be empty' };
+  if (body.length > MAX_COMMENT_LENGTH) {
+    return { status: 'invalid', error: `Comment is too long (max ${MAX_COMMENT_LENGTH})` };
+  }
+
+  const [battle] = await db.select({ id: battles.id }).from(battles).where(eq(battles.id, battleId)).limit(1);
+  if (!battle) return { status: 'not_found' };
+
+  if (parentId !== null) {
+    const [parent] = await db
+      .select({ battleId: comments.battleId })
+      .from(comments)
+      .where(eq(comments.id, parentId))
+      .limit(1);
+    if (!parent || parent.battleId !== battleId) {
+      return { status: 'invalid', error: 'Invalid parent comment' };
+    }
+  }
+
+  const [inserted] = await db
+    .insert(comments)
+    .values({ battleId, userId, parentId, body })
+    .returning({ id: comments.id, createdAt: comments.createdAt });
+
+  const [author] = await db
+    .select({ name: user.name, username: user.username, image: user.image })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+
+  return {
+    status: 'ok',
+    comment: {
+      id: inserted.id,
+      parentId,
+      body,
+      upvotes: 0,
+      deleted: false,
+      createdAt: new Date(inserted.createdAt).toISOString(),
+      author: { username: author?.username ?? null, name: author?.name ?? 'Unknown', image: author?.image ?? null },
+      viewerUpvoted: false,
+    },
+  };
+}
+
+export type DeleteResult = { status: 'ok' } | { status: 'not_found' } | { status: 'forbidden' };
+
+/** Soft-delete a comment (author only). Keeps the row so replies stay threaded. */
+export async function deleteComment(commentId: number, userId: string): Promise<DeleteResult> {
+  const [row] = await db
+    .select({ userId: comments.userId })
+    .from(comments)
+    .where(eq(comments.id, commentId))
+    .limit(1);
+  if (!row) return { status: 'not_found' };
+  if (row.userId !== userId) return { status: 'forbidden' };
+
+  await db
+    .update(comments)
+    .set({ deleted: true, body: '', updatedAt: new Date() })
+    .where(eq(comments.id, commentId));
+  return { status: 'ok' };
+}
+
+export interface UpvoteResult {
+  status: 'ok' | 'not_found';
+  upvotes: number;
+  viewerUpvoted: boolean;
+}
+
+/**
+ * Toggle an upvote for (comment, user). The composite PK makes the add
+ * idempotent (`onConflictDoNothing`); the count only moves when a row is
+ * actually inserted/deleted, so double-taps can't inflate it.
+ */
+export async function toggleCommentUpvote(
+  commentId: number,
+  userId: string,
+  remove: boolean,
+): Promise<UpvoteResult> {
+  const [exists] = await db
+    .select({ id: comments.id })
+    .from(comments)
+    .where(eq(comments.id, commentId))
+    .limit(1);
+  if (!exists) return { status: 'not_found', upvotes: 0, viewerUpvoted: false };
+
+  if (remove) {
+    const deleted = await db
+      .delete(commentVotes)
+      .where(and(eq(commentVotes.commentId, commentId), eq(commentVotes.userId, userId)))
+      .returning({ commentId: commentVotes.commentId });
+    if (deleted.length > 0) {
+      await db
+        .update(comments)
+        .set({ upvotes: sql`GREATEST(${comments.upvotes} - 1, 0)` })
+        .where(eq(comments.id, commentId));
+    }
+  } else {
+    const added = await db
+      .insert(commentVotes)
+      .values({ commentId, userId })
+      .onConflictDoNothing()
+      .returning({ commentId: commentVotes.commentId });
+    if (added.length > 0) {
+      await db
+        .update(comments)
+        .set({ upvotes: sql`${comments.upvotes} + 1` })
+        .where(eq(comments.id, commentId));
+    }
+  }
+
+  const [fresh] = await db
+    .select({ upvotes: comments.upvotes })
+    .from(comments)
+    .where(eq(comments.id, commentId))
+    .limit(1);
+
+  return { status: 'ok', upvotes: fresh?.upvotes ?? 0, viewerUpvoted: !remove };
+}

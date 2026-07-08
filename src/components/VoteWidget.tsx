@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { BattleResult } from '../lib/voteWire';
+import { useSession } from '../lib/useSession';
+import { openAuthModal } from '../lib/authModal';
 
 interface Props {
   battleId: string;
@@ -27,6 +29,7 @@ function textOn(hex: string): string {
 }
 
 export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB, arena, arenaLabel }: Props) {
+  const { user } = useSession();
   const [result, setResult] = useState<BattleResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -47,6 +50,10 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
 
   async function vote(choice: string) {
     if (pending || result?.voted) return;
+    if (!user) {
+      openAuthModal({ reason: 'Log in to vote' });
+      return;
+    }
     setError(null);
     setPending(true);
 
@@ -93,7 +100,21 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
 
   return (
     <div class="mt-6">
-      {!voted ? (
+      {!voted && !user ? (
+        <>
+          <div class="flex justify-center">
+            <button
+              onClick={() => openAuthModal({ reason: 'Log in to vote' })}
+              class="font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-10 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
+            >
+              Log in to vote
+            </button>
+          </div>
+          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
+            Head-to-head vote · one per matchup every 24h · results after you vote
+          </p>
+        </>
+      ) : !voted ? (
         <>
           <div class="flex flex-col sm:flex-row items-center gap-4 justify-center">
             <button

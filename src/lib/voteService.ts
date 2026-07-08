@@ -13,16 +13,18 @@ export type VoteOutcome =
 
 /**
  * Record a head-to-head vote and bump the matchup tally. Feeds the head-to-head
- * plane only — it never touches a GOAT's ranking `votes`. Dedup is a rolling
- * {@link WINDOW_HOURS} window per (ipHash, battleId): if this fingerprint voted
- * this pairing within the window, the counts are left untouched.
+ * plane only — it never touches a GOAT's ranking `votes`. Voting requires login,
+ * so dedup is a rolling {@link WINDOW_HOURS} window per (userId, battleId): if
+ * this user voted this pairing within the window, the counts are left untouched.
+ * `ipHash` is still stored as a secondary anti-abuse signal.
  *
  * neon-http has no transactions, so this is a check-then-write; the small race
- * (two simultaneous votes from one fingerprint) is acceptable at this scale.
+ * (two simultaneous votes from one user) is acceptable at this scale.
  */
 export async function recordHeadToHeadVote(
   battleId: string,
   choice: string,
+  userId: string,
   ipHash: string,
   country: string | null,
 ): Promise<VoteOutcome> {
@@ -33,7 +35,7 @@ export async function recordHeadToHeadVote(
   const isB = choice === summary.b.id;
   if (!isA && !isB) return { status: 'bad_choice' };
 
-  const alreadyVoted = await hasRecentHeadToHeadVote(battleId, ipHash);
+  const alreadyVoted = await hasRecentHeadToHeadVote(battleId, userId);
 
   if (!alreadyVoted) {
     const loser = isA ? summary.b.id : summary.a.id;
@@ -41,7 +43,7 @@ export async function recordHeadToHeadVote(
 
     // Record the ledger row, bump the matchup tally, and update the two
     // head-to-head aggregates (wins/losses) used for the win-rate display.
-    await db.insert(votes).values({ battleId, choice, ipHash, country });
+    await db.insert(votes).values({ battleId, choice, userId, ipHash, country });
     await db.execute(sql`
       WITH ub AS (
         UPDATE battles SET ${battleBump} WHERE id = ${battleId}
@@ -57,15 +59,15 @@ export async function recordHeadToHeadVote(
   return { status: 'ok', alreadyVoted, summary: fresh, votedChoice: choice };
 }
 
-/** Whether this fingerprint voted this pairing within the rolling window. */
-async function hasRecentHeadToHeadVote(battleId: string, ipHash: string): Promise<boolean> {
+/** Whether this user voted this pairing within the rolling window. */
+async function hasRecentHeadToHeadVote(battleId: string, userId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: votes.id })
     .from(votes)
     .where(
       and(
         eq(votes.battleId, battleId),
-        eq(votes.ipHash, ipHash),
+        eq(votes.userId, userId),
         gt(votes.createdAt, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
       ),
     )
@@ -75,14 +77,21 @@ async function hasRecentHeadToHeadVote(battleId: string, ipHash: string): Promis
 
 export interface VoteState {
   summary: BattleSummary;
-  /** The entity this fingerprint voted for in this matchup's window, or null. */
+  /** The entity this user voted for in this matchup's window, or null. */
   votedChoice: string | null;
 }
 
-/** Current tallies for a battle plus this fingerprint's recent vote (if any). */
-export async function getVoteState(battleId: string, ipHash: string): Promise<VoteState | null> {
+/**
+ * Current tallies for a battle plus this user's recent vote (if any). `userId`
+ * is null for logged-out viewers → `votedChoice` is null (nothing voted).
+ */
+export async function getVoteState(
+  battleId: string,
+  userId: string | null,
+): Promise<VoteState | null> {
   const summary = await getBattleSummary(battleId);
   if (!summary) return null;
+  if (!userId) return { summary, votedChoice: null };
 
   const [row] = await db
     .select({ choice: votes.choice })
@@ -90,7 +99,7 @@ export async function getVoteState(battleId: string, ipHash: string): Promise<Vo
     .where(
       and(
         eq(votes.battleId, battleId),
-        eq(votes.ipHash, ipHash),
+        eq(votes.userId, userId),
         gt(votes.createdAt, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
       ),
     )
@@ -123,14 +132,16 @@ export interface RankingVoteResult extends RankingVoteState {
 
 /**
  * Cast a ranking vote for a GOAT through one channel. Enforces a shared rolling
- * window per (ipHash, entity): the window opens on the user's first ranking vote
+ * window per (userId, entity): the window opens on the user's first ranking vote
  * for that GOAT and each channel may fire once inside it. `profile` adds +1,
  * `champion` adds +5. Both channels reset together when the window expires.
+ * `ipHash` is stored as a secondary anti-abuse signal.
  */
 export async function recordRankingVote(
   entityId: string,
   channel: VoteChannel,
-  ipHash: string,
+  userId: string,
+  ipHash: string | null = null,
 ): Promise<RankingVoteResult> {
   const [entity] = await db
     .select({ votes: entities.votes })
@@ -149,7 +160,7 @@ export async function recordRankingVote(
       active: sql<boolean>`${voteWindows.windowStart} > now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`,
     })
     .from(voteWindows)
-    .where(and(eq(voteWindows.ipHash, ipHash), eq(voteWindows.entityId, entityId)))
+    .where(and(eq(voteWindows.userId, userId), eq(voteWindows.entityId, entityId)))
     .limit(1);
 
   const active = !!win?.active;
@@ -175,10 +186,10 @@ export async function recordRankingVote(
 
   await db
     .insert(voteWindows)
-    .values({ ipHash, entityId, windowStart, profileUsed, championUsed })
+    .values({ userId, entityId, ipHash, windowStart, profileUsed, championUsed })
     .onConflictDoUpdate({
-      target: [voteWindows.ipHash, voteWindows.entityId],
-      set: { windowStart, profileUsed, championUsed },
+      target: [voteWindows.userId, voteWindows.entityId],
+      set: { windowStart, profileUsed, championUsed, ipHash },
     });
 
   const [updated] = await db
@@ -197,8 +208,16 @@ export async function recordRankingVote(
   };
 }
 
-/** Read the ranking-vote window state for one GOAT (for button hydration). */
-export async function getRankingVoteState(entityId: string, ipHash: string): Promise<RankingVoteState> {
+/**
+ * Read the ranking-vote window state for one GOAT (for button hydration).
+ * `userId` is null for logged-out viewers → a neutral (nothing used) state.
+ */
+export async function getRankingVoteState(
+  entityId: string,
+  userId: string | null,
+): Promise<RankingVoteState> {
+  if (!userId) return { profileUsed: false, championUsed: false, windowResetsAt: null };
+
   const [win] = await db
     .select({
       profileUsed: voteWindows.profileUsed,
@@ -207,7 +226,7 @@ export async function getRankingVoteState(entityId: string, ipHash: string): Pro
       active: sql<boolean>`${voteWindows.windowStart} > now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`,
     })
     .from(voteWindows)
-    .where(and(eq(voteWindows.ipHash, ipHash), eq(voteWindows.entityId, entityId)))
+    .where(and(eq(voteWindows.userId, userId), eq(voteWindows.entityId, entityId)))
     .limit(1);
 
   if (!win?.active) return { profileUsed: false, championUsed: false, windowResetsAt: null };
@@ -219,17 +238,18 @@ export async function getRankingVoteState(entityId: string, ipHash: string): Pro
 }
 
 /**
- * Entity ids this fingerprint has crowned within the live window — excluded from
- * their next ranked Champion Mode run. Scoped to one arena.
+ * Entity ids this user has crowned within the live window — excluded from their
+ * next ranked Champion Mode run. Scoped to one arena. Empty for logged-out users.
  */
-export async function getLockedEntities(arena: string, ipHash: string): Promise<string[]> {
+export async function getLockedEntities(arena: string, userId: string | null): Promise<string[]> {
+  if (!userId) return [];
   const rows = await db
     .select({ entityId: voteWindows.entityId })
     .from(voteWindows)
     .innerJoin(entities, eq(entities.id, voteWindows.entityId))
     .where(
       and(
-        eq(voteWindows.ipHash, ipHash),
+        eq(voteWindows.userId, userId),
         eq(voteWindows.championUsed, true),
         eq(entities.arena, arena),
         gt(voteWindows.windowStart, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),

@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Sign up — GOATSBattle" description="Create your GOATSBattle account to vote, comment, and earn your place among the defenders.">
+  <section class="max-w-7xl mx-auto px-5 py-24 text-center">
+    <h1 class="font-headline font-black uppercase tracking-tight text-4xl md:text-5xl text-ink">
+      Join <span class="text-lime">GOATSBattle</span>
+    </h1>
+    <p class="font-sans text-body text-lg mt-3">The greatness debate needs your voice. Create an account to vote & defend.</p>
+    <button
+      id="open-signup"
+      class="mt-8 font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-8 h-12 rounded-sm hover:bg-lime-dark transition-colors"
+    >
+      Create account
+    </button>
+  </section>
+</Layout>
+
+<script>
+  import { openAuthModal } from '../lib/authModal';
+  const go = () => openAuthModal({ mode: 'signup' });
+  go();
+  document.getElementById('open-signup')?.addEventListener('click', go);
+</script>
