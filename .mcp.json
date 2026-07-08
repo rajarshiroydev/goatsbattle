@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "astro-docs": {
+      "command": "builtin",
+      "args": ["mcp__astro-docs__search_astro_docs"]
+    }
+  }
+}
