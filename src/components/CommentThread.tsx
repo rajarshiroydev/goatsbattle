@@ -201,8 +201,8 @@ export default function CommentThread({ battleId, accentA = '#a3e635', accentB =
       >
         {loading ? (
           <div class="space-y-6">
-            {[0, 1, 2].map(() => (
-              <div class="flex gap-3 animate-pulse">
+            {[0, 1, 2].map((i) => (
+              <div key={i} class="flex gap-3 animate-pulse">
                 <div class="h-10 w-10 rounded-full bg-canvas-soft shrink-0" />
                 <div class="flex-1 space-y-2 pt-1">
                   <div class="h-3 w-32 rounded bg-canvas-soft" />
