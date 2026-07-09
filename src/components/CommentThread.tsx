@@ -27,7 +27,7 @@ type SortMode = 'top' | 'new';
 const MAX_DEPTH = 6;
 
 export default function CommentThread({ battleId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
-  const { user } = useSession();
+  const { user, loading: sessionLoading } = useSession();
   const [comments, setComments] = useState<CommentNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +173,14 @@ export default function CommentThread({ battleId, accentA = '#a3e635', accentB =
       </div>
 
       {/* Composer */}
-      {user ? (
+      {sessionLoading ? (
+        // Hold a neutral placeholder until the session resolves so logged-in
+        // users don't flash the "Log in to join" prompt.
+        <div class="flex gap-3">
+          <Avatar src={null} name="?" />
+          <div class="flex-1 min-w-0 border-b border-hairline pb-2 h-6 animate-pulse" />
+        </div>
+      ) : user ? (
         <Composer
           placeholder="Add to the debate…"
           avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}

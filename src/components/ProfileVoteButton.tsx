@@ -40,7 +40,7 @@ function resetLabel(iso: string | null): string {
  * crown; see recordRankingVote). Hydrates its used/locked state on mount.
  */
 export default function ProfileVoteButton({ id, shortName, accent }: Props) {
-  const { user } = useSession();
+  const { user, loading: sessionLoading } = useSession();
   const [state, setState] = useState<RankState | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -60,13 +60,24 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
   }, [id]);
 
   async function vote() {
-    if (pending || state?.profileUsed) return;
+    if (pending || sessionLoading || state?.profileUsed) return;
     if (!user) {
       openAuthModal({ reason: `Log in to vote ${shortName}` });
       return;
     }
     setError(null);
     setPending(true);
+
+    // Optimistic flip — show the voted state immediately, reconcile/roll back
+    // once the server responds so the button never feels a round-trip behind.
+    const prev = state;
+    setState({
+      profileUsed: true,
+      championUsed: prev?.championUsed ?? false,
+      windowResetsAt: prev?.windowResetsAt ?? null,
+    });
+    setJustVoted(true);
+
     try {
       const res = await fetch('/api/rank-vote', {
         method: 'POST',
@@ -76,9 +87,10 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Vote failed');
       setState({ profileUsed: data.profileUsed, championUsed: data.championUsed, windowResetsAt: data.windowResetsAt });
-      if (data.status === 'awarded') setJustVoted(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Vote failed');
+      setState(prev); // roll back the optimistic flip
+      setJustVoted(false);
     } finally {
       setPending(false);
     }
@@ -86,7 +98,11 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
 
   const voted = state?.profileUsed ?? false;
 
-  if (loading) {
+  // Always wait for the session first — otherwise a logged-in user briefly
+  // sees "Log in to vote" when the rank fetch resolves before the session.
+  // Only a logged-in user can have a prior vote, so anonymous viewers don't
+  // need to block on the rank fetch and get their button sooner.
+  if (sessionLoading || (user && loading)) {
     return (
       <div class="h-12 flex items-center px-8 rounded-sm border border-hairline">
         <span class="font-mono text-xs uppercase tracking-widest text-mute animate-pulse">Loading…</span>

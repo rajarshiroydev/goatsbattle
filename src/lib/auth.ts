@@ -55,6 +55,15 @@ export const auth = betterAuth({
   // Derive from the deployment origin (baseURL) so it never diverges from env;
   // localhost is always allowed for local dev.
   trustedOrigins: Array.from(new Set([baseURL, 'http://localhost:4321'].filter(Boolean))) as string[],
+  session: {
+    // Validate the session from a short-lived signed cookie instead of hitting
+    // the DB on every request. The middleware runs getSession on EVERY request
+    // that carries a cookie (so every API call a logged-in user makes), and the
+    // neon-http driver pays a full network round-trip per query — that DB hop
+    // was what made the vote button + rankings feel laggy only when logged in.
+    // maxAge keeps revocation reasonably fresh; logout clears the cookie locally.
+    cookieCache: { enabled: true, maxAge: 5 * 60 },
+  },
   emailAndPassword: { enabled: true },
   socialProviders,
   user: {

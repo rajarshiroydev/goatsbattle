@@ -29,7 +29,7 @@ function textOn(hex: string): string {
 }
 
 export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB, arena, arenaLabel }: Props) {
-  const { user } = useSession();
+  const { user, loading: sessionLoading } = useSession();
   const [result, setResult] = useState<BattleResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -49,7 +49,7 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
   }, [battleId]);
 
   async function vote(choice: string) {
-    if (pending || result?.voted) return;
+    if (pending || sessionLoading || result?.voted) return;
     if (!user) {
       openAuthModal({ reason: 'Log in to vote' });
       return;
@@ -86,7 +86,9 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
     }
   }
 
-  if (loading) {
+  // Wait for the session too — otherwise a logged-in user can flash the
+  // "Log in to vote" button when the tally resolves before the session does.
+  if (loading || sessionLoading) {
     return (
       <div class="mt-6 flex items-center justify-center h-12">
         <span class="font-mono text-xs uppercase tracking-widest text-mute animate-pulse">Loading votes…</span>
