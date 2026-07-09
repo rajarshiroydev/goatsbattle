@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ params }) => {
   if (!a || !b) return new Response('Not found', { status: 404 });
 
   const png = await renderBattleOg(a, b);
-  return new Response(png, {
+  return new Response(new Uint8Array(png), {
     headers: {
       'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=31536000, immutable',

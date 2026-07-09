@@ -1,6 +1,9 @@
 # build output
 dist/
 
+# playwright screenshot output (scripts/shot.mjs)
+screenshots/
+
 # generated types
 .astro/
 
