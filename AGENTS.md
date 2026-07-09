@@ -1,5 +1,22 @@
-## Development
+## Tech Stack / Framework Conventions
+This is an Astro project using Preact islands. Never use string-based inline event handlers; use proper Preact event handlers (onClick, etc.) so island hydration works.
 
+## Environment / Config section
+Access environment variables (e.g. DATABASE_URL) directly via import.meta.env.VAR and never through optional chaining or dynamic access, since Vite's static replacement won't apply and the value will be undefined at runtime.
+
+## Database section
+After running any DB seed or cleanup script, verify the actual DB state (row counts, no leftover test users/comments/aggregates) before reporting success; inline cleanup scripts have silently errored before.
+
+## Domain / Naming Conventions section
+The canonical domain terms are 'arena' (not 'category') and 'goats' with URLs /goats/<slug> and /rankings/<arena>; use these consistently across routes, links, and data.
+
+## UI / Styling Conventions section
+Pages should use consistent width max-w-7xl and share the common PageHeader component for navbar active-tab highlighting; keep sibling pages visually consistent.
+
+## Shell / Scripting section
+When writing shell rename/loop scripts in zsh, always quote variables and use explicit loops — unquoted variables do not word-split as in bash and sed renames can fail silently.
+
+## Development
 When starting the dev server, use background mode:
 
 ```
