@@ -469,9 +469,10 @@ export default function ChampionMode({ roster }: Props) {
 
           <button
             onClick={() => start(count)}
-            class="mt-12 font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-12 h-14 inline-flex items-center rounded-sm hover:bg-lime-dark transition-colors"
+            disabled={mode === "ranked" && sessionLoading}
+            class="mt-12 font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-12 h-14 inline-flex items-center rounded-sm hover:bg-lime-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Enter the Arena →
+            {mode === "ranked" && sessionLoading ? "Checking session…" : "Enter the Arena →"}
           </button>
           {error && (
             <p class="mt-4 font-sans text-base text-red max-w-md mx-auto">
