@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useSession } from '../lib/useSession';
 import { openAuthModal } from '../lib/authModal';
 import { relativeTime } from '../lib/format';
@@ -17,15 +18,27 @@ interface CommentNode {
 
 interface Props {
   battleId: string;
+  accentA?: string;
+  accentB?: string;
 }
+
+type SortMode = 'top' | 'new';
 
 const MAX_DEPTH = 6;
 
-export default function CommentThread({ battleId }: Props) {
+export default function CommentThread({ battleId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
   const { user } = useSession();
   const [comments, setComments] = useState<CommentNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortMode>('top');
+  // Guards against overlapping vote requests on the same comment, which would
+  // otherwise let a stale optimistic flip race the server reply (0→1→0→1 flicker).
+  const votingRef = useRef<Set<number>>(new Set());
+  // Frozen top-level ordering. Like Reddit, the order is computed on load and on
+  // sort change, then held stable as scores change so a vote never makes a
+  // comment jump out from under the reader.
+  const orderRef = useRef<{ sort: SortMode; ids: number[] }>({ sort, ids: [] });
 
   useEffect(() => {
     let active = true;
@@ -39,8 +52,9 @@ export default function CommentThread({ battleId }: Props) {
     };
   }, [battleId]);
 
-  // Adjacency list → nested tree, built once per comments change.
-  const tree = useMemo(() => buildTree(comments), [comments]);
+  // Adjacency list → nested tree. Replies stay chronological; the top-level order
+  // is frozen (see orderRef) so upvoting doesn't reshuffle the list live.
+  const tree = useMemo(() => buildTree(comments, sort, orderRef), [comments, sort]);
 
   function addComment(node: CommentNode) {
     setComments((prev) => [...prev, node]);
@@ -76,12 +90,20 @@ export default function CommentThread({ battleId }: Props) {
       openAuthModal({ reason: 'Log in to upvote' });
       return;
     }
+    // Ignore repeat clicks while a request for this comment is still in flight.
+    if (votingRef.current.has(node.id)) return;
+    votingRef.current.add(node.id);
+
     const remove = node.viewerUpvoted;
-    // Optimistic flip.
-    updateComment(node.id, {
-      viewerUpvoted: !remove,
-      upvotes: node.upvotes + (remove ? -1 : 1),
-    });
+    const bump = (delta: number) => (c: CommentNode) =>
+      c.id === node.id ? { ...c, upvotes: Math.max(0, c.upvotes + delta) } : c;
+
+    // Optimistic flip — computed from the live state, never the captured node.
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === node.id ? { ...c, viewerUpvoted: !remove, upvotes: Math.max(0, c.upvotes + (remove ? -1 : 1)) } : c,
+      ),
+    );
     try {
       const res = await fetch('/api/comment-vote', {
         method: 'POST',
@@ -90,10 +112,17 @@ export default function CommentThread({ battleId }: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error();
-      updateComment(node.id, { upvotes: data.upvotes, viewerUpvoted: data.viewerUpvoted });
+      // Reconcile the exact count without re-toggling the optimistic state.
+      setComments((prev) =>
+        prev.map((c) => (c.id === node.id ? { ...c, upvotes: data.upvotes, viewerUpvoted: data.viewerUpvoted } : c)),
+      );
     } catch {
-      // Roll back.
-      updateComment(node.id, { viewerUpvoted: remove, upvotes: node.upvotes });
+      // Roll back by reversing the optimistic delta.
+      setComments((prev) =>
+        prev.map((c) => (c.id === node.id ? { ...bump(remove ? 1 : -1)(c), viewerUpvoted: remove } : c)),
+      );
+    } finally {
+      votingRef.current.delete(node.id);
     }
   }
 
@@ -115,34 +144,79 @@ export default function CommentThread({ battleId }: Props) {
 
   return (
     <div>
+      {/* Header — count title with sort toggle sitting beside it */}
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-6">
+        <div class="flex items-center gap-3 min-w-0">
+          <span
+            class="w-1 h-6 inline-block rounded-full shrink-0"
+            style={`background:linear-gradient(${accentA}, ${accentB})`}
+          />
+          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">
+            <span class="tabular-nums">{count}</span> {count === 1 ? 'Comment' : 'Comments'}
+          </h2>
+        </div>
+
+        <div class="inline-flex rounded-md border border-hairline overflow-hidden">
+          {(['top', 'new'] as SortMode[]).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setSort(mode)}
+              aria-pressed={sort === mode}
+              class={`font-mono font-black uppercase text-lg md:text-base tracking-tight px-3 py-1 transition-colors ${
+                sort === mode ? 'bg-canvas-soft-2 text-ink' : 'text-mute hover:text-ink'
+              }`}
+            >
+              {mode === 'top' ? 'Top' : 'Newest'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Composer */}
       {user ? (
-        <Composer placeholder="Add to the debate…" onSubmit={(body) => post(null, body)} />
+        <Composer
+          placeholder="Add to the debate…"
+          avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}
+          onSubmit={(body) => post(null, body)}
+        />
       ) : (
-        <button
-          onClick={() => openAuthModal({ reason: 'Log in to join the discussion' })}
-          class="w-full bg-canvas-soft-2 border border-hairline rounded-md px-4 py-4 text-left font-sans text-body hover:border-hairline-strong transition-colors"
-        >
-          <span class="text-lime font-semibold">Log in</span> to join the discussion
-        </button>
+        <div class="flex gap-3">
+          <Avatar src={null} name="?" />
+          <button
+            onClick={() => openAuthModal({ reason: 'Log in to join the discussion' })}
+            class="flex-1 min-w-0 text-left border-b border-hairline pb-2 font-sans text-[15px] text-mute hover:border-hairline-strong transition-colors"
+          >
+            <span class="text-lime font-semibold">Log in</span> to join the discussion
+          </button>
+        </div>
       )}
 
       {error && <p class="font-mono text-[13px] text-red mt-3">{error}</p>}
 
-      {/* Thread */}
-      <div class="mt-6">
+      {/* Thread — contained scroll so opening a reply never shifts the sections below */}
+      <div
+        class={`mt-6 overflow-y-auto overflow-x-hidden pr-2 ${
+          !loading && count > 0 ? 'h-[32rem] md:h-[36rem]' : ''
+        }`}
+      >
         {loading ? (
-          <div class="space-y-3">
-            {[0, 1, 2].map(() => (
-              <div class="h-16 bg-canvas-soft border border-hairline rounded-md animate-pulse" />
+          <div class="space-y-6">
+            {[0, 1, 2].map((i) => (
+              <div key={i} class="flex gap-3 animate-pulse">
+                <div class="h-10 w-10 rounded-full bg-canvas-soft shrink-0" />
+                <div class="flex-1 space-y-2 pt-1">
+                  <div class="h-3 w-32 rounded bg-canvas-soft" />
+                  <div class="h-3 w-3/4 rounded bg-canvas-soft" />
+                </div>
+              </div>
             ))}
           </div>
         ) : count === 0 ? (
-          <p class="font-mono text-[13px] uppercase tracking-widest text-mute py-6 text-center">
+          <p class="font-mono text-[13px] uppercase tracking-widest text-mute py-6">
             Be the first to weigh in
           </p>
         ) : (
-          <ul class="space-y-3">
+          <div class="space-y-7">
             {tree.map((node) => (
               <CommentItem
                 key={node.id}
@@ -154,9 +228,29 @@ export default function CommentThread({ battleId }: Props) {
                 onDelete={remove}
               />
             ))}
-          </ul>
+          </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Avatar ─────────────────────────────────────────────────────────────────
+
+function Avatar({ src, name, small = false }: { src: string | null; name: string; small?: boolean }) {
+  const size = small ? 'h-8 w-8' : 'h-10 w-10';
+  if (src) {
+    return <img src={src} alt="" class={`${size} rounded-full object-cover shrink-0`} />;
+  }
+  const initial = (name.trim()[0] ?? '?').toUpperCase();
+  return (
+    <div
+      class={`${size} shrink-0 rounded-full bg-canvas-soft-2 border border-hairline grid place-items-center font-headline font-black uppercase ${
+        small ? 'text-sm' : 'text-lg'
+      } text-ink`}
+      aria-hidden="true"
+    >
+      {initial}
     </div>
   );
 }
@@ -167,7 +261,11 @@ interface TreeNode extends CommentNode {
   children: TreeNode[];
 }
 
-function buildTree(flat: CommentNode[]): TreeNode[] {
+function buildTree(
+  flat: CommentNode[],
+  sort: SortMode,
+  orderRef: { current: { sort: SortMode; ids: number[] } },
+): TreeNode[] {
   const byId = new Map<number, TreeNode>();
   flat.forEach((c) => byId.set(c.id, { ...c, children: [] }));
   const roots: TreeNode[] = [];
@@ -178,14 +276,39 @@ function buildTree(flat: CommentNode[]): TreeNode[] {
       roots.push(node);
     }
   });
-  // Top-level: highest upvotes first, then newest. Replies: chronological.
-  roots.sort((a, b) => b.upvotes - a.upvotes || +new Date(b.createdAt) - +new Date(a.createdAt));
+
+  // Replies always stay chronological — they never reorder on a vote.
   const sortReplies = (n: TreeNode) => {
     n.children.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
     n.children.forEach(sortReplies);
   };
   roots.forEach(sortReplies);
-  return roots;
+
+  // Top-level order is frozen. We only compute a fresh sort on the first build
+  // or when the sort mode changes; otherwise we preserve the established order,
+  // dropping removed comments and surfacing brand-new ones at the top. This is
+  // how Reddit keeps a comment from jumping when its score changes.
+  const rootById = new Map(roots.map((r) => [r.id, r]));
+  const freshSort = () =>
+    [...roots].sort((a, b) =>
+      sort === 'new'
+        ? +new Date(b.createdAt) - +new Date(a.createdAt)
+        : b.upvotes - a.upvotes || +new Date(b.createdAt) - +new Date(a.createdAt),
+    );
+
+  const prev = orderRef.current;
+  let orderedIds: number[];
+  if (prev.sort !== sort || prev.ids.length === 0) {
+    orderedIds = freshSort().map((r) => r.id);
+  } else {
+    const kept = prev.ids.filter((id) => rootById.has(id));
+    const keptSet = new Set(kept);
+    const added = roots.filter((r) => !keptSet.has(r.id)).map((r) => r.id);
+    orderedIds = [...added, ...kept];
+  }
+  orderRef.current = { sort, ids: orderedIds };
+
+  return orderedIds.map((id) => rootById.get(id)).filter((n): n is TreeNode => !!n);
 }
 
 function CommentItem({
@@ -207,100 +330,147 @@ function CommentItem({
   const [collapsed, setCollapsed] = useState(false);
   const isAuthor = !!viewerId && node.authorId === viewerId;
   const replyCount = countDescendants(node);
+  const displayName = node.author.username ?? node.author.name;
+  const isReply = depth > 0;
+
+  // Geometry for the Reddit-style bent connectors drawn between this comment and its replies.
+  const avatarSize = isReply ? 32 : 40; // px — matches Avatar's h-8 / h-10
+  const avatarCenter = avatarSize / 2;
+  const gutter = avatarCenter + 18; // horizontal reach of each elbow = per-level indent
+  const REPLY_AVATAR_CENTER = 16; // replies always render the small (h-8) avatar
+  const hasKids = !collapsed && node.children.length > 0;
 
   return (
-    <li>
-      <div class="bg-canvas-soft border border-hairline rounded-md px-4 py-3">
-        {/* Meta */}
-        <div class="flex items-center gap-2 mb-1.5">
-          {node.author.username ? (
-            <a
-              href={`/users/${node.author.username}`}
-              class="font-headline font-black uppercase text-sm text-ink hover:text-lime transition-colors"
-            >
-              {node.author.username}
-            </a>
-          ) : (
-            <span class="font-headline font-black uppercase text-sm text-mute">{node.author.name}</span>
-          )}
-          <span class="font-mono text-[12px] text-mute">· {relativeTime(node.createdAt)}</span>
+    <div>
+      <article class="flex gap-3">
+        {/* Avatar column — the trunk line drops from here down to the first reply */}
+        <div class="flex flex-col items-center shrink-0" style={{ width: `${avatarSize}px` }}>
+          <Avatar src={node.author.image} name={displayName} small={isReply} />
+          {hasKids && <div class="w-0.5 flex-1 bg-hairline mt-2" />}
         </div>
 
-        {/* Body */}
-        <p class={`font-sans text-[15px] leading-relaxed whitespace-pre-wrap break-words ${node.deleted ? 'text-mute italic' : 'text-body'}`}>
-          {node.body}
-        </p>
+        <div class={`flex-1 min-w-0 ${hasKids ? 'pb-3' : ''}`}>
+          {/* Meta */}
+          <div class="flex items-center gap-2 mb-1">
+            {node.author.username ? (
+              <a
+                href={`/users/${node.author.username}`}
+                class="font-headline font-black uppercase text-[15px] text-ink hover:text-lime transition-colors"
+              >
+                {node.author.username}
+              </a>
+            ) : (
+              <span class="font-headline font-black uppercase text-[15px] text-mute">{node.author.name}</span>
+            )}
+            <span class="font-mono text-[13px] text-mute">· {relativeTime(node.createdAt)}</span>
+          </div>
 
-        {/* Actions */}
-        <div class="flex items-center gap-4 mt-2">
-          <button
-            onClick={() => onUpvote(node)}
-            disabled={node.deleted}
-            class={`flex items-center gap-1 font-mono text-[12px] transition-colors disabled:opacity-40 ${
-              node.viewerUpvoted ? 'text-lime' : 'text-mute hover:text-ink'
+          {/* Body */}
+          <p
+            class={`font-sans text-[16px] leading-relaxed whitespace-pre-wrap break-words ${
+              node.deleted ? 'text-mute italic' : 'text-body'
             }`}
           >
-            ▲ {node.upvotes}
-          </button>
-          {!node.deleted && depth < MAX_DEPTH && (
-            <button
-              onClick={() => setReplying((r) => !r)}
-              class="font-mono text-[12px] text-mute hover:text-ink transition-colors"
-            >
-              Reply
-            </button>
-          )}
-          {isAuthor && !node.deleted && (
-            <button
-              onClick={() => onDelete(node)}
-              class="font-mono text-[12px] text-mute hover:text-red transition-colors"
-            >
-              Delete
-            </button>
-          )}
-          {replyCount > 0 && (
-            <button
-              onClick={() => setCollapsed((c) => !c)}
-              class="font-mono text-[12px] text-mute hover:text-ink transition-colors ml-auto"
-            >
-              {collapsed ? `[+] ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : '[–] collapse'}
-            </button>
-          )}
-        </div>
+            {node.body}
+          </p>
 
-        {replying && (
-          <div class="mt-3">
-            <Composer
-              placeholder={`Reply to ${node.author.username ?? node.author.name}…`}
-              compact
-              autoFocus
-              onSubmit={async (body) => {
-                const ok = await onReply(node.id, body);
-                if (ok) setReplying(false);
-                return ok;
-              }}
-            />
+          {/* Actions */}
+          <div class="flex items-center gap-5 mt-2">
+            <button
+              onClick={() => onUpvote(node)}
+              disabled={node.deleted}
+              class={`flex items-center gap-1.5 font-mono text-[13px] transition-colors disabled:opacity-40 ${
+                node.viewerUpvoted ? 'text-lime' : 'text-mute hover:text-ink'
+              }`}
+            >
+              ▲ {node.upvotes}
+            </button>
+            {!node.deleted && depth < MAX_DEPTH && (
+              <button
+                onClick={() => setReplying((r) => !r)}
+                class="font-mono text-[13px] text-mute hover:text-ink transition-colors"
+              >
+                Reply
+              </button>
+            )}
+            {isAuthor && !node.deleted && (
+              <button
+                onClick={() => onDelete(node)}
+                class="font-mono text-[13px] text-mute hover:text-red transition-colors"
+              >
+                Delete
+              </button>
+            )}
+            {replyCount > 0 && (
+              <button
+                onClick={() => setCollapsed((c) => !c)}
+                class="font-mono text-[13px] text-lime hover:text-lime-dark transition-colors"
+              >
+                {collapsed ? `▾ ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}` : '▴ Hide'}
+              </button>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Children */}
-      {!collapsed && node.children.length > 0 && (
-        <ul class="mt-3 space-y-3 border-l border-hairline pl-4 ml-2">
-          {node.children.map((child) => (
-            <CommentItem
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              viewerId={viewerId}
-              onUpvote={onUpvote}
-              onReply={onReply}
-              onDelete={onDelete}
-            />
-          ))}
-        </ul>
+          {replying && (
+            <div class="mt-3">
+              <Composer
+                placeholder={`Reply to ${displayName}…`}
+                compact
+                autoFocus
+                onCancel={() => setReplying(false)}
+                onSubmit={async (body) => {
+                  const ok = await onReply(node.id, body);
+                  if (ok) setReplying(false);
+                  return ok;
+                }}
+              />
+            </div>
+          )}
+
+        </div>
+      </article>
+
+      {/* Replies — Reddit-style bent (elbow) connectors */}
+      {hasKids && (
+        <div class="flex flex-col">
+          {node.children.map((child, i) => {
+            const last = i === node.children.length - 1;
+            return (
+              <div class={`relative flex ${last ? '' : 'pb-6'}`} key={child.id}>
+                {/* Straight trunk to the next sibling — spans the full row incl. the pb gap */}
+                {!last && (
+                  <span
+                    class="absolute bg-hairline pointer-events-none"
+                    style={{ left: `${avatarCenter - 1}px`, top: 0, bottom: 0, width: '2px' }}
+                  />
+                )}
+                {/* Elbow: drops from the trunk, then bends right into the reply's avatar */}
+                <span
+                  class="absolute border-l-2 border-b-2 border-hairline rounded-bl-[12px] pointer-events-none"
+                  style={{
+                    left: `${avatarCenter - 1}px`,
+                    top: 0,
+                    width: `${gutter - avatarCenter + 1}px`,
+                    height: `${REPLY_AVATAR_CENTER + 1}px`,
+                  }}
+                />
+                <div class="shrink-0" style={{ width: `${gutter}px` }} />
+                <div class="flex-1 min-w-0">
+                  <CommentItem
+                    node={child}
+                    depth={depth + 1}
+                    viewerId={viewerId}
+                    onUpvote={onUpvote}
+                    onReply={onReply}
+                    onDelete={onDelete}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
-    </li>
+    </div>
   );
 }
 
@@ -313,16 +483,34 @@ function countDescendants(node: TreeNode): number {
 function Composer({
   placeholder,
   onSubmit,
+  onCancel,
+  avatar,
   compact = false,
   autoFocus = false,
 }: {
   placeholder: string;
   onSubmit: (body: string) => Promise<boolean>;
+  onCancel?: () => void;
+  avatar?: ComponentChildren;
   compact?: boolean;
   autoFocus?: boolean;
 }) {
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow to fit the content, capped so it never runs away.
+  const MAX_HEIGHT = 220;
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT)}px`;
+    el.style.overflowY = el.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden';
+  }
+
+  useEffect(() => {
+    autoGrow(textareaRef.current);
+  }, [value]);
 
   async function submit() {
     const body = value.trim();
@@ -333,27 +521,50 @@ function Composer({
     if (ok) setValue('');
   }
 
+  function cancel() {
+    setValue('');
+    textareaRef.current?.blur();
+    onCancel?.();
+  }
+
+  // Show Cancel on replies (to close them) and on the main composer once typing has started.
+  const showCancel = !!onCancel || value.length > 0;
+
   return (
-    <div>
-      <textarea
-        value={value}
-        placeholder={placeholder}
-        rows={compact ? 2 : 3}
-        autoFocus={autoFocus}
-        onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
-        }}
-        class="w-full bg-canvas-soft-2 border border-hairline rounded-md px-3 py-2.5 text-ink font-sans text-[15px] resize-y focus:outline-none focus:border-lime"
-      />
-      <div class="flex justify-end mt-2">
-        <button
-          onClick={submit}
-          disabled={pending || value.trim().length === 0}
-          class="font-headline font-black uppercase tracking-wider text-sm bg-lime text-canvas px-5 h-9 rounded-sm hover:bg-lime-dark transition-colors disabled:opacity-40"
-        >
-          {pending ? '…' : compact ? 'Reply' : 'Post'}
-        </button>
+    <div class="flex gap-3">
+      {avatar}
+      <div class="flex-1 min-w-0">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          placeholder={placeholder}
+          rows={1}
+          autoFocus={autoFocus}
+          onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
+            if (e.key === 'Escape') cancel();
+          }}
+          class="w-full bg-transparent border-0 border-b border-hairline rounded-none px-0 py-2 text-ink font-sans text-[16px] leading-relaxed resize-none placeholder:text-mute focus:outline-none focus:border-lime transition-colors"
+        />
+        <div class="flex justify-end items-center gap-2 mt-2">
+          {showCancel && (
+            <button
+              onClick={cancel}
+              disabled={pending}
+              class="font-headline font-black uppercase tracking-wider text-sm text-mute hover:text-ink px-4 h-9 rounded-sm transition-colors disabled:opacity-40"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={submit}
+            disabled={pending || value.trim().length === 0}
+            class="font-headline font-black uppercase tracking-wider text-sm bg-lime text-canvas px-5 h-9 rounded-sm hover:bg-lime-dark transition-colors disabled:opacity-40"
+          >
+            {pending ? '…' : compact ? 'Reply' : 'Post'}
+          </button>
+        </div>
       </div>
     </div>
   );
