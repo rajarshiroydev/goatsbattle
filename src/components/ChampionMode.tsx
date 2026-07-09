@@ -178,7 +178,7 @@ function FighterPanel({
 }
 
 export default function ChampionMode({ roster }: Props) {
-  const { user } = useSession();
+  const { user, loading: sessionLoading } = useSession();
   const presets = useMemo(() => countPresets(roster.length), [roster.length]);
   const arena = roster[0]?.arena ?? "football";
   const [mode, setMode] = useState<Mode>("ranked");
@@ -227,6 +227,9 @@ export default function ChampionMode({ roster }: Props) {
     setError(null);
 
     // Ranked runs write votes, so they require login. Friendly runs are open.
+    // Wait for the session to resolve before deciding, so a logged-in user
+    // isn't wrongly bounced to the auth modal on a slow session lookup.
+    if (mode === "ranked" && sessionLoading) return;
     if (mode === "ranked" && !user) {
       openAuthModal({ reason: "Log in for Ranked mode" });
       return;
