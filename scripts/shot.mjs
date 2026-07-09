@@ -41,14 +41,16 @@ const slug = (r) => (r === '/' ? 'home' : r.replace(/^\//, '').replace(/\//g, '-
 
 await mkdir(outDir, { recursive: true });
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport });
+try {
+  const page = await browser.newPage({ viewport });
 
-for (const route of routes) {
-  const url = `${base}${route.startsWith('/') ? route : `/${route}`}`;
-  const out = resolve(outDir, `${slug(route)}${mobile ? '-mobile' : ''}.png`);
-  await page.goto(url, { waitUntil: 'networkidle' });
-  await page.screenshot({ path: out, fullPage: true });
-  console.log(`✓ ${url} -> ${out}`);
+  for (const route of routes) {
+    const url = `${base}${route.startsWith('/') ? route : `/${route}`}`;
+    const out = resolve(outDir, `${slug(route)}${mobile ? '-mobile' : ''}.png`);
+    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.screenshot({ path: out, fullPage: true });
+    console.log(`✓ ${url} -> ${out}`);
+  }
+} finally {
+  await browser.close();
 }
-
-await browser.close();
