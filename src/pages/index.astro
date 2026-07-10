@@ -33,6 +33,16 @@ const floorChips = [
   { label: 'Live matches', active: false },
   { label: 'My goats', active: false },
 ];
+
+// Scoreboard ticker between the hero and the floor — live scorelines woven
+// with a few evergreen call-outs. Duplicated in the track for a seamless loop.
+const ticker: string[] = [
+  ...marquee.map((b) => `${b.arenaEmoji} ${b.leftName} ${b.leftPct}% ▸ ${b.rightName}`),
+  totalVotes > 0 ? `${compactNumber(totalVotes)} votes counted` : 'Voting is live',
+  'Settle the debate',
+  "Who's your GOAT?",
+  'The floor is open',
+];
 ---
 
 <Layout>
@@ -40,7 +50,7 @@ const floorChips = [
   <!-- ══════════════════════════════════════════
        SLIM HERO + "HAPPENING NOW" CAROUSEL (3h)
   ══════════════════════════════════════════ -->
-  <section class="border-b border-hairline"
+  <section class="border-b border-hairline overflow-x-clip"
     style="background: radial-gradient(ellipse 80% 60% at 20% 120%, rgba(200,255,0,0.08), transparent 60%)">
     <div class="page-container py-11">
       <div class="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-10 items-center">
@@ -59,11 +69,29 @@ const floorChips = [
           </div>
         </div>
 
-        <div class="flex justify-center lg:justify-end">
+        <div class="w-full max-w-[440px] mx-auto lg:mr-0 lg:ml-auto">
           <MarqueeCarousel client:load battles={marquee} />
         </div>
 
       </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCOREBOARD TICKER — live scorelines marquee
+  ══════════════════════════════════════════ -->
+  <section class="marquee border-b border-hairline bg-canvas-soft overflow-hidden">
+    <div class="marquee-track flex items-center whitespace-nowrap py-2.5">
+      {[0, 1].map((dup) => (
+        <div class="marquee-group flex items-center shrink-0" aria-hidden={dup === 1 ? 'true' : undefined}>
+          {ticker.map((item) => (
+            <span class="flex items-center">
+              <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-body px-6">{item}</span>
+              <span class="w-1 h-1 rounded-full bg-lime shrink-0"></span>
+            </span>
+          ))}
+        </div>
+      ))}
     </div>
   </section>
 
@@ -108,5 +136,24 @@ const floorChips = [
 
     </div>
   </section>
+
+  <style>
+    /* Seamless scoreboard scroll — two identical groups slide left by half the
+       track width, so the loop point is invisible. */
+    .marquee-track {
+      width: max-content;
+      animation: gb-marquee 45s linear infinite;
+    }
+    .marquee:hover .marquee-track {
+      animation-play-state: paused;
+    }
+    @keyframes gb-marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-track { animation: none; }
+    }
+  </style>
 
 </Layout>

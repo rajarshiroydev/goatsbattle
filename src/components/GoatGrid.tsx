@@ -72,34 +72,41 @@ export default function GoatGrid({ goats, arenas }: Props) {
 
       {/* Grid */}
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {shown.map((g) => {
+        {shown.map((g, idx) => {
           const c = arenaById[g.arena];
           const n = splitName(g.name);
-          const ghost = g.rank <= 3 ? `${g.accent}1f` : 'rgba(240,240,242,0.05)';
+          // Rank reflects position within the current view: global on "All",
+          // re-numbered 1..N per arena when a filter is active.
+          const displayRank = idx + 1;
+          const ghost = displayRank <= 3 ? `${g.accent}1f` : 'rgba(240,240,242,0.05)';
           return (
             <a
               key={g.slug}
               href={`/goats/${g.slug}`}
-              class="group relative block bg-canvas-soft border border-hairline rounded-md p-[18px] overflow-hidden transition-colors"
-              onMouseOver={(e) => (e.currentTarget.style.borderColor = g.accent)}
-              onMouseOut={(e) => (e.currentTarget.style.borderColor = '')}
+              class="group relative flex flex-col bg-canvas-soft border border-hairline rounded-md p-[18px] overflow-hidden transition-colors"
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = g.accent)}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
             >
               <span class="absolute -top-[18px] -right-1.5 font-headline font-black leading-none select-none pointer-events-none"
                 style={`font-size:96px; color:${ghost}`} aria-hidden="true">
-                {String(g.rank).padStart(2, '0')}
+                {String(displayRank).padStart(2, '0')}
               </span>
 
-              <span class="team-tag relative" style={c ? `--tag:${c.accent}; --tag-fg:${onAccent(c.accent)}` : ''}>
+              <span class="team-tag relative self-start" style={c ? `--tag:${c.accent}; --tag-fg:${onAccent(c.accent)}` : ''}>
                 {c?.emoji} {c?.label ?? g.arena}
               </span>
 
-              <div class="relative font-headline font-black uppercase text-[32px] leading-[0.95] tracking-tight text-ink mt-3">
-                {n.first && <>{n.first}<br /></>}{n.last}
+              {/* Fixed two-line box keeps the meta + footer aligned across cards
+                  regardless of one- vs two-word names. */}
+              <div class="relative flex flex-col justify-end min-h-[3.8rem] mt-3">
+                <div class="font-headline font-black uppercase text-[32px] leading-[0.95] tracking-tight text-ink">
+                  {n.first && <>{n.first}<br /></>}{n.last}
+                </div>
               </div>
 
               <div class="relative font-sans text-[12px] text-mute mt-2">{g.nationality}{g.honour ? ` · ${g.honour}` : ''}</div>
 
-              <div class="relative flex justify-between mt-4 pt-3 border-t border-hairline">
+              <div class="relative flex justify-between mt-auto pt-4 border-t border-hairline">
                 <span class="font-mono text-[10px] text-mute">{g.votes.toLocaleString()} votes</span>
                 <span class="font-mono text-[10px] text-lime">{g.winRate > 0 ? `${g.winRate}% win rate` : '—'}</span>
               </div>
