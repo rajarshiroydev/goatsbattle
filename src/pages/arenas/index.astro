@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import PageHero from '../../components/PageHero.astro';
 import { arenas } from '../../data/arenas';
-import { getEntitiesByArena, allEntities } from '../../data';
+import { getEntitiesByArena } from '../../data';
 import { getAllBattleSummaries } from '../../lib/queries';
 import { compactNumber } from '../../lib/format';
 
@@ -10,7 +10,6 @@ import { compactNumber } from '../../lib/format';
 export const prerender = false;
 
 const allSummaries = await getAllBattleSummaries();
-const totalVotes = allSummaries.reduce((s, b) => s + b.total, 0);
 
 const cards = arenas.map((c) => {
   const inArena = allSummaries.filter((b) => b.arena === c.id);
@@ -25,7 +24,6 @@ const cards = arenas.map((c) => {
 
 const title = 'Arenas — Every GOAT Arena | GOATSBattle';
 const description = 'Football, cricket, tennis, Formula 1 and more. Pick an arena and see the live GOAT rankings decided by the world.';
-const statLine = `${arenas.length} arenas · ${allEntities.length} goats · ${totalVotes > 0 ? `${compactNumber(totalVotes)} votes` : 'voting open'}`;
 ---
 
 <Layout title={title} description={description}>
@@ -33,9 +31,7 @@ const statLine = `${arenas.length} arenas · ${allEntities.length} goats · ${to
   <PageHero
     title="Pick your"
     highlight="arena"
-    description="Every sport has its eternal argument. Choose an arena to see the community-voted rankings — and settle the debate yourself."
-    stat={statLine}
-    live={totalVotes > 0} />
+    description="Every sport has its eternal argument. Choose an arena to see the community-voted rankings — and settle the debate yourself." />
 
   <section class="pt-8 pb-12">
     <div class="page-container">
