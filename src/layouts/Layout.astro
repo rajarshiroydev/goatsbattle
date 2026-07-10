@@ -77,15 +77,15 @@ const isActive = (m: string[]) =>
 
     <!-- ── Site Header ── -->
     <header class="sticky top-0 z-50 border-b border-hairline bg-canvas/90 backdrop-blur-md">
-      <nav class="page-container h-[60px] flex items-center justify-between gap-4">
+      <nav class="page-container relative h-[60px] flex items-center justify-between gap-4">
 
         <!-- Logo -->
         <a href="/" class="shrink-0 font-headline font-black text-[21px] uppercase tracking-tight leading-none">
           GOATS<span class="text-lime">BATTLE</span>
         </a>
 
-        <!-- Nav links (desktop) -->
-        <div class="hidden md:flex items-center gap-1">
+        <!-- Nav links (desktop) — absolutely centred in the bar, independent of the side widths -->
+        <div class="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {navLinks.map((link) => (
             <a href={link.href}
               class:list={[
