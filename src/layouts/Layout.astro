@@ -27,7 +27,6 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 
 // Primary nav — `match` marks the active tab (highlighted) via path prefix.
-// Champion Mode lives behind the Play Now button, so it's off the centre nav.
 const pathname = Astro.url.pathname;
 const navLinks = [
   { href: '/floor', label: 'The Floor', match: ['/floor'] },
@@ -35,6 +34,7 @@ const navLinks = [
   { href: '/arenas', label: 'Arenas', match: ['/arenas'] },
   { href: '/rankings', label: 'Rankings', match: ['/rankings'] },
   { href: '/faceoff', label: 'Face Off', match: ['/faceoff'] },
+  { href: '/play', label: 'Champion Mode', match: ['/play'] },
 ];
 const isActive = (m: string[]) =>
   m.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -102,9 +102,6 @@ const isActive = (m: string[]) =>
 
         <!-- CTA -->
         <div class="flex items-center gap-2.5 shrink-0">
-          <a href="/play" class="btn btn-primary text-sm px-[18px] py-2">
-            Play Now
-          </a>
           <AccountMenu client:load />
         </div>
 

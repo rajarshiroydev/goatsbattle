@@ -417,7 +417,7 @@ export default function ChampionMode({ roster }: Props) {
         </section>
 
         {/* Setup controls — centred column */}
-        <div class="max-w-2xl mx-auto px-5 pt-8 pb-12 md:pt-10 md:pb-16 text-center">
+        <div class="page-container max-w-2xl pt-8 pb-12 md:pt-10 md:pb-16 text-center">
           {/* Mode — Ranked counts toward the rankings, Friendly is just for fun. */}
           <div>
             <p class="font-mono text-sm uppercase tracking-widest text-mute mb-4">
@@ -429,8 +429,9 @@ export default function ChampionMode({ roster }: Props) {
                 { id: "friendly", label: "Friendly", note: "Nothing counts" },
               ] as const).map((m) => (
                 <button
+                  type="button"
                   onClick={() => setMode(m.id)}
-                  class={`flex flex-col items-center text-center px-6 py-4 rounded-sm border transition-all ${
+                  class={`flex flex-col items-center text-center px-6 py-4 rounded-md border transition-colors ${
                     mode === m.id
                       ? "bg-lime text-canvas border-lime"
                       : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
@@ -461,8 +462,9 @@ export default function ChampionMode({ roster }: Props) {
             <div class="flex flex-wrap gap-3 justify-center">
               {presets.map((n) => (
                 <button
+                  type="button"
                   onClick={() => setCount(n)}
-                  class={`font-headline font-black uppercase text-xl tracking-wide px-7 h-12 flex items-center rounded-sm border transition-all ${
+                  class={`font-headline font-black uppercase text-lg tracking-wide px-6 h-11 inline-flex items-center rounded-md border transition-colors ${
                     count === n
                       ? "bg-lime text-canvas border-lime"
                       : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
@@ -485,9 +487,10 @@ export default function ChampionMode({ roster }: Props) {
           </div>
 
           <button
+            type="button"
             onClick={() => start(count)}
             disabled={mode === "ranked" && sessionLoading}
-            class="mt-12 font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-12 h-14 inline-flex items-center rounded-sm hover:bg-lime-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn btn-primary text-lg px-12 py-4 mt-12 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {mode === "ranked" && sessionLoading ? "Loading…" : "Enter the Arena →"}
           </button>
@@ -514,7 +517,7 @@ export default function ChampionMode({ roster }: Props) {
           : `You're a contrarian: the crowd disagreed with most of your calls (${inSync}% aligned).`;
 
     return (
-      <div class="max-w-3xl mx-auto px-5 py-14 md:py-20 text-center anim-arena">
+      <div class="page-container max-w-3xl py-14 md:py-20 text-center anim-arena">
         <p class="font-mono text-[13px] uppercase tracking-widest text-lime mb-4">
           Your GOAT
         </p>
@@ -602,21 +605,16 @@ export default function ChampionMode({ roster }: Props) {
         </div>
 
         <div class="mt-10 flex flex-wrap gap-3 justify-center">
-          <a
-            href={`/goats/${champion.slug}`}
-            class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
-          >
+          <a href={`/goats/${champion.slug}`} class="btn btn-primary text-base px-8 py-3">
             {champion.shortName}'s Profile
           </a>
-          <a
-            href={`/rankings/${arena}`}
-            class="font-sans font-medium text-sm text-ink border border-hairline-strong px-6 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors"
-          >
+          <a href={`/rankings/${arena}`} class="btn btn-secondary text-sm px-6 py-3">
             See the Rankings
           </a>
           <button
+            type="button"
             onClick={reset}
-            class="font-sans font-medium text-sm text-body px-6 h-12 flex items-center rounded-sm hover:text-ink transition-colors"
+            class="font-sans font-medium text-sm text-body px-6 py-3 inline-flex items-center rounded-sm hover:text-ink transition-colors"
           >
             Play again
           </button>
@@ -683,7 +681,7 @@ export default function ChampionMode({ roster }: Props) {
           >
             <div class="flex items-center gap-3">
               <span class="font-mono text-[13px] uppercase tracking-widest text-mute">
-                Stat Scoreline
+                Tale of the Tape
               </span>
               <span class="font-headline font-black uppercase text-sm">
                 <span class={cmp.winsChamp >= cmp.winsOpp ? "text-lime" : "text-ink"}>
@@ -820,8 +818,9 @@ export default function ChampionMode({ roster }: Props) {
 
           <div class="mt-6 flex flex-col items-center gap-2">
             <button
+              type="button"
               onClick={() => next()}
-              class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-10 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
+              class="btn btn-primary text-base px-10 py-3"
             >
               {boutNo >= totalBouts ? "Crown Your GOAT →" : "Next Challenger →"}
             </button>
