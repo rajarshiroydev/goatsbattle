@@ -1,7 +1,8 @@
 import { sql, gt, eq, or, desc } from 'drizzle-orm';
 import { db } from './db';
-import { battles, votes, entities } from './db/schema';
+import { battles, votes, entities, comments, user } from './db/schema';
 import { getEntityBySlug, arenas } from '../data';
+import { parseBattleSlug } from './battle';
 import type { Entity } from './types';
 
 /**
@@ -231,6 +232,34 @@ export async function getRankings(arena = 'football'): Promise<RankingRow[]> {
 }
 
 /**
+ * Every goat across all arenas, ranked by ranking votes (global rank) — powers
+ * the filterable Goats directory (design §8 / 3c). Same vote/win-rate semantics
+ * as {@link getRankings}, just without the per-arena filter.
+ */
+export async function getAllGoatsRanked(): Promise<RankingRow[]> {
+  const rows = await db
+    .select({
+      id: entities.id,
+      votes: entities.votes,
+      votesFor: entities.votesFor,
+      votesAgainst: entities.votesAgainst,
+    })
+    .from(entities)
+    .orderBy(desc(entities.votes), desc(entities.votesFor));
+
+  return rows
+    .map((r) => {
+      const entity = getEntityBySlug(r.id);
+      if (!entity) return null;
+      const headToHeadVotes = r.votesFor + r.votesAgainst;
+      const winRate = headToHeadVotes > 0 ? Math.round((r.votesFor / headToHeadVotes) * 100) : 0;
+      return { entity, votes: r.votes, votesFor: r.votesFor, votesAgainst: r.votesAgainst, headToHeadVotes, winRate };
+    })
+    .filter((r): r is Omit<RankingRow, 'rank'> => r !== null)
+    .map((r, i) => ({ rank: i + 1, ...r }));
+}
+
+/**
  * A goat's complete head-to-head record: every 1v1 matchup it's part of that has
  * real votes, most-contested (highest total) first. Unlike the leaderboard's
  * aggregate win-rate, this preserves the per-opponent split so the profile and
@@ -256,6 +285,58 @@ export async function getHeadToHeadRecordForEntity(
     .filter((s): s is BattleSummary => s !== null && s.total > 0)
     // Most-contested first, then tightest margin as the tie-breaker.
     .sort((x, y) => y.total - x.total || x.margin - y.margin);
+}
+
+/**
+ * A single "take" for The Floor — a battle comment enriched with its author and
+ * the two combatants it's arguing over. The Floor is a read-only aggregation of
+ * existing battle comments across every matchup (design §5 / 3a). The Team/side
+ * tag and official match threads arrive later with the matches API; for now each
+ * take carries its arena and the two sides so the UI can render the design.
+ */
+export interface FloorTake {
+  id: number;
+  battleId: string;
+  body: string;
+  upvotes: number;
+  username: string | null;
+  createdAt: Date;
+  arena: string;
+  a: Entity;
+  b: Entity;
+}
+
+/**
+ * Recent non-deleted takes across every battle, newest first — the global floor
+ * stream. Enriches each row with its author handle and both combatants (parsed
+ * from the canonical battle slug); rows whose slug can't resolve are dropped.
+ */
+export async function getRecentTakes(limit = 20): Promise<FloorTake[]> {
+  const rows = await db
+    .select({
+      id: comments.id,
+      battleId: comments.battleId,
+      body: comments.body,
+      upvotes: comments.upvotes,
+      createdAt: comments.createdAt,
+      username: user.username,
+    })
+    .from(comments)
+    .innerJoin(user, eq(comments.userId, user.id))
+    .where(eq(comments.deleted, false))
+    .orderBy(desc(comments.createdAt))
+    .limit(limit);
+
+  return rows
+    .map((row): FloorTake | null => {
+      const parsed = parseBattleSlug(row.battleId);
+      if (!parsed) return null;
+      const a = getEntityBySlug(parsed[0]);
+      const b = getEntityBySlug(parsed[1]);
+      if (!a || !b) return null;
+      return { ...row, arena: a.arena, a, b };
+    })
+    .filter((t): t is FloorTake => t !== null);
 }
 
 /** Live tally for a single battle, used by the results/vote API endpoints. */

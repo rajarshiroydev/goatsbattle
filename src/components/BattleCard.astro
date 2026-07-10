@@ -1,86 +1,67 @@
 ---
 import type { BattleSummary } from '../lib/queries';
-import { flagEmoji, compactNumber } from '../lib/format';
+import { compactNumber } from '../lib/format';
 import { arenaLabel, arenaEmoji } from '../data/arenas';
 
 interface Props {
   battle: BattleSummary;
-  /** Small label shown top-right, e.g. "🔥 Hot" or "52% – 48%". */
+  /** Small mono label shown top-right, e.g. "Marquee" or "214K votes". */
   badge?: string;
 }
 
 const { battle, badge } = Astro.props;
-const { a, b, slug, pctA, pctB, total, leader, arena } = battle;
+const { a, b, slug, pctA, pctB, total, arena } = battle;
 const hasVotes = total > 0;
 
-// Each side is themed with the athlete's own accent so cards read at a glance;
-// the losing/lower side is dimmed to a neutral bar.
-const dim = '#3a3a3e';
-
-// Each name shares a half-width column that varies with the grid (4-up on the
-// homepage, 3-up elsewhere). Size it to the card's own width via container
-// units, tightening the coefficient for longer names (Schumacher, Beckenbauer)
-// so they fit on one line without clipping. `break-words` is the safety net.
+// Marquee card (design §5 / screenshot 2): white names, lime champion (left) /
+// red challenger (right), always. Name size scales with the card via container
+// units so it stays on one line across the 3-up / 2-up grids.
 function nameFont(name: string): string {
-  const k = (52 / Math.max(name.length, 3)).toFixed(1);
-  return `font-size: clamp(0.95rem, ${k}cqi, 2.5rem)`;
+  const k = (46 / Math.max(name.length, 3)).toFixed(1);
+  return `font-size: clamp(1.05rem, ${k}cqi, 1.7rem)`;
 }
 ---
 
 <a
   href={`/battle/${slug}`}
-  class="group relative block bg-canvas-soft border border-hairline rounded-md overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
-  style="box-shadow: var(--shadow-card)"
-  onmouseover={`this.style.borderColor='${a.accent}88'`}
-  onmouseout={`this.style.borderColor=''`}
+  class="@container group block bg-canvas-soft border border-hairline rounded-lg overflow-hidden hover:border-hairline-strong transition-colors"
 >
-  <!-- Per-side colour wash -->
-  <div class="absolute inset-0 pointer-events-none opacity-70" aria-hidden="true"
-    style={`background: linear-gradient(90deg, ${a.accent}14 0%, transparent 34%, transparent 66%, ${b.accent}14 100%)`}></div>
+  <!-- Header -->
+  <div class="flex items-center justify-between px-4 py-3 border-b border-hairline">
+    <span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-mute">{arenaEmoji(arena)} {arenaLabel(arena)}</span>
+    <span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-mute">{badge ?? 'Marquee'}</span>
+  </div>
 
-  <!-- Card header -->
-  <div class="relative px-5 py-3 border-b border-hairline flex items-center justify-between">
-    <span class="font-mono text-[13px] uppercase tracking-widest text-body">{arenaEmoji(arena)} {arenaLabel(arena)}</span>
-    {badge && (
-      <span class="font-mono text-[13px] uppercase tracking-wider text-lime">{badge}</span>
+  <!-- Body -->
+  <div class="px-4 pt-4 pb-4">
+    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <div class="text-center min-w-0">
+        <div class="font-headline font-black uppercase leading-none text-ink truncate" style={nameFont(a.shortName)}>{a.shortName}</div>
+        {hasVotes && <div class="font-headline font-black text-[30px] leading-none text-lime mt-1.5">{pctA}%</div>}
+      </div>
+      <span class="font-headline font-black italic text-lg text-mute">VS</span>
+      <div class="text-center min-w-0">
+        <div class="font-headline font-black uppercase leading-none text-ink truncate" style={nameFont(b.shortName)}>{b.shortName}</div>
+        {hasVotes && <div class="font-headline font-black text-[30px] leading-none text-red mt-1.5">{pctB}%</div>}
+      </div>
+    </div>
+
+    {hasVotes ? (
+      <>
+        <div class="vote-bar mt-3.5" style={`--seg:${pctA}%`}>
+          <div class="vote-seg-a"></div>
+          <div class="vote-seg-b"></div>
+        </div>
+        <div class="flex justify-between mt-2.5">
+          <span class="font-mono text-[11px] text-mute">{compactNumber(total)} votes</span>
+          <span class="font-mono text-[11px] text-lime group-hover:text-ink transition-colors">Cast yours →</span>
+        </div>
+      </>
+    ) : (
+      <div class="flex justify-between items-center mt-4 pt-3.5 border-t border-hairline">
+        <span class="font-mono text-[11px] uppercase tracking-wider text-mute">Be the first to vote</span>
+        <span class="font-mono text-[11px] text-lime group-hover:text-ink transition-colors">Vote →</span>
+      </div>
     )}
   </div>
-
-  <!-- Players — the "/" split -->
-  <div class="@container relative flex items-stretch min-h-[140px]">
-    <div class="flex-1 min-w-0 flex flex-col justify-center px-5 py-6 gap-1">
-      <span class="font-headline font-black uppercase leading-none tracking-tight break-words" style={`color:${a.accent}; ${nameFont(a.shortName)}`}>{a.shortName}</span>
-      <span class="font-sans text-sm text-body">{a.nationality} {flagEmoji(a.countryCode)}</span>
-    </div>
-
-    <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
-      <span class="font-headline font-black text-7xl leading-none select-none"
-        style={`background:linear-gradient(150deg, ${a.accent}, ${b.accent}); -webkit-background-clip:text; background-clip:text; color:transparent`}>/</span>
-    </div>
-
-    <div class="flex-1 min-w-0 flex flex-col justify-center items-end px-5 py-6 gap-1 text-right">
-      <span class="font-headline font-black uppercase leading-none tracking-tight break-words" style={`color:${b.accent}; ${nameFont(b.shortName)}`}>{b.shortName}</span>
-      <span class="font-sans text-sm text-body">{flagEmoji(b.countryCode)} {b.nationality}</span>
-    </div>
-  </div>
-
-  <!-- Card footer: live result bar, or a vote nudge while unvoted -->
-  {hasVotes ? (
-    <div class="relative px-5 py-3 border-t border-hairline">
-      <div class="flex items-center justify-between font-mono text-[13px] mb-2">
-        <span style={`color:${leader === 'a' ? a.accent : '#8b8b95'}`}>{pctA}%</span>
-        <span class="text-mute uppercase tracking-widest text-[13px]">{compactNumber(total)} votes</span>
-        <span style={`color:${leader === 'b' ? b.accent : '#8b8b95'}`}>{pctB}%</span>
-      </div>
-      <div class="flex h-1.5 gap-0.5 rounded-full overflow-hidden">
-        <div style={`width:${pctA}%; background:${leader === 'b' ? dim : a.accent}`}></div>
-        <div style={`width:${pctB}%; background:${leader === 'a' ? dim : b.accent}`}></div>
-      </div>
-    </div>
-  ) : (
-    <div class="relative px-5 py-3 border-t border-hairline flex items-center justify-between">
-      <span class="font-sans text-sm text-body">Be the first to vote</span>
-      <span class="font-sans text-sm font-medium group-hover:translate-x-0.5 transition-transform" style={`color:${a.accent}`}>Vote →</span>
-    </div>
-  )}
 </a>
