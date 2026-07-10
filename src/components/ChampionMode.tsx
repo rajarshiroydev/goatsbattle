@@ -555,71 +555,79 @@ export default function ChampionMode({ roster }: Props) {
           </p>
         )}
 
-        <div class="mt-10 grid grid-cols-3 gap-3 max-w-sm mx-auto">
-          {[
-            { n: backedGoat, l: "Times backed", c: "text-lime" },
-            { n: agreed, l: "Crowd agreed", c: "text-ink" },
-            { n: `${inSync}%`, l: "In sync", c: "text-ink" },
-          ].map(({ n, l, c }) => (
-            <div class="bg-canvas-soft border border-hairline rounded-md py-4">
-              <p class={`font-headline font-black text-3xl leading-none ${c}`}>{n}</p>
-              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">
-                {l}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <p class="mt-6 font-sans text-body text-sm leading-relaxed max-w-md mx-auto">
-          {alignedLine}
-        </p>
-
-        {/* Path recap */}
-        <div class="mt-10 text-left max-w-md mx-auto">
-          <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">
-            Your path
-          </p>
-          <div class="space-y-1.5">
-            {rounds.map((r) => (
-              <div class="flex items-center gap-3 bg-canvas-soft border border-hairline rounded-sm px-4 py-2.5">
-                <span class="font-headline font-black uppercase text-sm text-ink flex-1 truncate">
-                  {r.champion.shortName} <span class="text-mute">vs</span>{" "}
-                  {r.challenger.shortName}
-                </span>
-                <span class="font-mono text-[13px] uppercase tracking-wider text-lime">
-                  ▸ {r.picked.shortName}
-                </span>
-                <span
-                  class="text-xs"
-                  title={
-                    r.crowd === "agree"
-                      ? "Crowd agreed"
-                      : r.crowd === "disagree"
-                        ? "Crowd disagreed"
-                        : "Split"
-                  }
-                >
-                  {r.crowd === "agree" ? "🟢" : r.crowd === "disagree" ? "🔴" : "⚪"}
-                </span>
+        {/* One consistent report column: stats → takeaway → path → actions,
+            each block separated by the same mt-12 and sharing max-w-md. */}
+        <div class="max-w-md mx-auto">
+          <div class="mt-12 grid grid-cols-3 gap-3">
+            {[
+              { n: backedGoat, l: "Times backed", c: "text-lime" },
+              { n: agreed, l: "Crowd agreed", c: "text-ink" },
+              { n: `${inSync}%`, l: "In sync", c: "text-ink" },
+            ].map(({ n, l, c }) => (
+              <div class="bg-canvas-soft border border-hairline rounded-md py-5">
+                <p class={`font-headline font-black text-3xl leading-none ${c}`}>{n}</p>
+                <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute mt-2">
+                  {l}
+                </p>
               </div>
             ))}
           </div>
-        </div>
 
-        <div class="mt-10 flex flex-wrap gap-3 justify-center">
-          <a href={`/goats/${champion.slug}`} class="btn btn-primary text-base px-8 py-3">
-            {champion.shortName}'s Profile
-          </a>
-          <a href={`/rankings/${arena}`} class="btn btn-secondary text-sm px-6 py-3">
-            See the Rankings
-          </a>
-          <button
-            type="button"
-            onClick={reset}
-            class="font-sans font-medium text-sm text-body px-6 py-3 inline-flex items-center rounded-sm hover:text-ink transition-colors"
-          >
-            Play again
-          </button>
+          <p class="mt-6 font-sans text-body text-sm leading-relaxed">
+            {alignedLine}
+          </p>
+
+          {/* Path recap — each bout shows your pick and how the crowd landed,
+              worded so the verdict is legible without a legend. */}
+          <div class="mt-12 text-left">
+            <div class="flex items-baseline justify-between mb-3">
+              <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">Your path</p>
+              <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">Pick · crowd</p>
+            </div>
+            <div class="flex flex-col gap-2">
+              {rounds.map((r) => {
+                const verdict =
+                  r.crowd === "agree"
+                    ? { label: "Crowd agreed", color: "var(--color-lime)" }
+                    : r.crowd === "disagree"
+                      ? { label: "Crowd differed", color: "var(--color-red)" }
+                      : { label: "Too close", color: "var(--color-mute)" };
+                return (
+                  <div class="flex items-center gap-3 bg-canvas-soft border border-hairline rounded-md px-4 py-3">
+                    <span class="font-headline font-black uppercase text-sm text-ink flex-1 min-w-0 truncate">
+                      {r.champion.shortName} <span class="text-mute">vs</span> {r.challenger.shortName}
+                    </span>
+                    <span class="font-mono text-[11px] uppercase tracking-wider text-lime shrink-0 text-right whitespace-nowrap">
+                      ▸ {r.picked.shortName}
+                    </span>
+                    <span
+                      class="font-mono text-[10px] uppercase tracking-[0.12em] shrink-0 w-[104px] flex items-center justify-end gap-1.5 whitespace-nowrap"
+                      style={`color:${verdict.color}`}
+                    >
+                      <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={`background:${verdict.color}`}></span>
+                      {verdict.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div class="mt-12 flex flex-wrap gap-3 justify-center">
+            <a href={`/goats/${champion.slug}`} class="btn btn-primary text-base px-8 py-3">
+              {champion.shortName}'s Profile
+            </a>
+            <a href={`/rankings/${arena}`} class="btn btn-secondary text-sm px-6 py-3">
+              See the Rankings
+            </a>
+            <button
+              type="button"
+              onClick={reset}
+              class="font-sans font-medium text-sm text-body px-6 py-3 inline-flex items-center rounded-sm hover:text-ink transition-colors"
+            >
+              Play again
+            </button>
+          </div>
         </div>
       </div>
     );
