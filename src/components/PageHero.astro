@@ -1,0 +1,56 @@
+---
+/**
+ * Tall page hero — the full-height header band for top-level index pages
+ * (Goats, Arenas, Rankings). A big Barlow Condensed headline (lead + a
+ * highlighted tail), a supporting description, and an optional mono stat
+ * eyebrow with a live dot. Sits in a bordered band with a soft accent wash.
+ *
+ * This is the roomy counterpart to SectionHeader.astro (the compact header
+ * row used on detail pages): pages whose first-fold content is short lean on
+ * this so the fold reads as a real landing, not a stub above the footer.
+ */
+interface Props {
+  /** Headline lead, rendered in ink. */
+  title: string;
+  /** Optional highlighted tail, appended after a space in the accent colour. */
+  highlight?: string;
+  /** Supporting copy under the headline (max ~2 lines). */
+  description?: string;
+  /** Optional mono eyebrow stat, e.g. "4 arenas · 28 goats · 138K votes". */
+  stat?: string;
+  /** Show a pulsing lime dot before the stat (live data). */
+  live?: boolean;
+  /** Accent for the highlight + wash. Defaults to lime. */
+  accent?: string;
+}
+
+const { title, highlight, description, stat, live = false, accent } = Astro.props;
+const accentColor = accent ?? 'var(--color-lime)';
+const wash = accent
+  ? `radial-gradient(ellipse 70% 60% at 50% -20%, ${accent}12 0%, transparent 62%)`
+  : 'radial-gradient(ellipse 70% 60% at 50% -20%, rgba(200,255,0,0.07) 0%, transparent 62%)';
+---
+
+<section class="border-b border-hairline relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none" aria-hidden="true" style={`background:${wash}`}></div>
+  <div class="page-container relative py-14 md:py-[4.5rem]">
+
+    {(stat || live) && (
+      <p class="flex items-center gap-2 font-mono text-[11px] md:text-xs uppercase tracking-[0.18em] text-mute mb-5">
+        {live && <span class="live-dot"></span>}
+        {stat}
+      </p>
+    )}
+
+    <h1 class="font-headline font-black uppercase leading-[0.92] tracking-tight text-ink"
+      style="font-size: clamp(3rem, 7vw, 5.25rem)">
+      {title}{highlight && <> <span style={`color:${accentColor}`}>{highlight}</span></>}
+    </h1>
+
+    {description && (
+      <p class="mt-5 font-sans text-body font-medium text-lg md:text-xl leading-relaxed max-w-2xl">{description}</p>
+    )}
+
+    <slot />
+  </div>
+</section>

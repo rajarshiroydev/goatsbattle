@@ -11,7 +11,7 @@ After running any DB seed or cleanup script, verify the actual DB state (row cou
 The canonical domain terms are 'arena' (not 'category') and 'goats' with URLs /goats/<slug> and /rankings/<arena>; use these consistently across routes, links, and data.
 
 ## UI / Styling Conventions section
-Pages should use consistent width max-w-7xl and share the common PageHeader component for navbar active-tab highlighting; keep sibling pages visually consistent.
+The design system is "Stadium Gate" — see DESIGN-GUIDE.md for the full spec (colours, type, spacing, components). Every top-level page shares the `.page-container` width standard (max-width 1120px, 32px gutter / 20px on phones) defined in src/styles/global.css — use it instead of ad-hoc `max-w-*` + `px-*` wrappers. Reuse the design-system primitive classes (`.btn-*`, `.chip`, `.team-tag`, `.vote-bar`, `.live-dot`) and the shared page-header component rather than re-implementing them; keep sibling pages visually consistent.
 
 ## Shell / Scripting section
 When writing shell rename/loop scripts in zsh, always quote variables and use explicit loops — unquoted variables do not word-split as in bash and sed renames can fail silently.

@@ -42,96 +42,42 @@ const relatedB = getBattlesForEntity(slugB, { exclude: slugA, limit: 4 });
 const ogImage = `/og/battle/${canonical}.png`;
 const arena = entityA.arena;
 const catLabel = arenaLabel(arena);
+
+// One-line career tagline: nationality + top honours (design §6).
+function tagline(e: typeof entityA): string {
+  const honours = e.achievements
+    .slice(0, 2)
+    .map((h) => (h.count > 1 ? `${h.count}× ${h.title}` : h.title));
+  return [e.nationality, ...honours].join(' · ');
+}
 ---
 
 <Layout title={title} description={description} image={ogImage}>
 
-  <!-- Battle Hero — the main slash split -->
-  <section class="border-b border-hairline relative overflow-hidden">
+  <h1 class="sr-only">{entityA.name} vs {entityB.name} — who's the greater GOAT?</h1>
 
-    <!-- Atmospheric glows — each side tinted with the player's own colour -->
-    <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
-      style={`background: radial-gradient(ellipse 40% 60% at 20% 50%, ${entityA.accent}26 0%, transparent 70%), radial-gradient(ellipse 40% 60% at 80% 50%, ${entityB.accent}26 0%, transparent 70%)`}>
-    </div>
-
-    <div class="relative max-w-7xl mx-auto px-5 py-8">
-
-      <!-- Breadcrumb -->
-      <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-6">
-        <a href="/" class="hover:text-body transition-colors">GOATSBattle</a>
-        <span>/</span>
-        <a href={`/arenas/${arena}`} class="hover:text-body transition-colors">{catLabel}</a>
-        <span>/</span>
-        <span class="text-ink">{entityA.shortName} vs {entityB.shortName}</span>
-      </div>
-
-      <h1 class="sr-only">{entityA.name} vs {entityB.name} — who's the greater GOAT?</h1>
-
-      <!-- Split card -->
-      <div class="relative flex items-stretch min-h-[240px] md:min-h-[300px] bg-canvas-soft border border-hairline rounded-md overflow-hidden">
-        <!-- Faint per-side colour wash -->
-        <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
-          style={`background: linear-gradient(90deg, ${entityA.accent}1a 0%, transparent 38%, transparent 62%, ${entityB.accent}1a 100%)`}></div>
-
-        <!-- Player A -->
-        <div class="relative flex-1 flex flex-col justify-between px-6 py-8 md:px-10 md:py-10">
-          <div>
-            <p class="font-mono text-sm uppercase tracking-widest mb-3" style={`color:${entityA.accent}`}>{entityA.nationality}</p>
-            <h2 class="font-headline font-black uppercase leading-[0.95] tracking-tight text-ink"
-              style="font-size: clamp(1.75rem, 4vw, 3.25rem)">
-              {entityA.name}
-            </h2>
-            <span class="block h-1.5 w-16 mt-4 rounded-full" style={`background:${entityA.accent}`}></span>
-          </div>
-          <div class="mt-4">
-            <span class="font-sans text-lg text-body">{entityA.position}</span>
-          </div>
-        </div>
-
-        <!-- The "/" slash — battle divider, blended from both team colours -->
-        <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
-          <span class="font-headline font-black text-[8rem] md:text-[12rem] leading-none select-none"
-            style={`background:linear-gradient(150deg, ${entityA.accent}, ${entityB.accent}); -webkit-background-clip:text; background-clip:text; color:transparent`}>/</span>
-        </div>
-
-        <!-- Player B -->
-        <div class="relative flex-1 flex flex-col justify-between px-6 py-8 md:px-10 md:py-10 items-end text-right">
-          <div class="flex flex-col items-end">
-            <p class="font-mono text-sm uppercase tracking-widest mb-3" style={`color:${entityB.accent}`}>{entityB.nationality}</p>
-            <h2 class="font-headline font-black uppercase leading-[0.95] tracking-tight text-ink"
-              style="font-size: clamp(1.75rem, 4vw, 3.25rem)">
-              {entityB.name}
-            </h2>
-            <span class="block h-1.5 w-16 mt-4 rounded-full" style={`background:${entityB.accent}`}></span>
-          </div>
-          <div class="mt-4">
-            <span class="font-sans text-lg text-body">{entityB.position}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Vote widget — Preact island, fetches live results & casts votes -->
-      <VoteWidget
-        client:load
-        battleId={canonical}
-        entityAId={entityA.id}
-        entityBId={entityB.id}
-        shortA={entityA.shortName}
-        shortB={entityB.shortName}
-        accentA={entityA.accent}
-        accentB={entityB.accent}
-        arena={arena}
-        arenaLabel={catLabel}
-      />
-    </div>
-  </section>
+  <!-- Battle Hero — full-bleed split arena (island: live tallies + voting) -->
+  <VoteWidget
+    client:load
+    battleId={canonical}
+    entityAId={entityA.id}
+    entityBId={entityB.id}
+    nameA={entityA.name}
+    nameB={entityB.name}
+    shortA={entityA.shortName}
+    shortB={entityB.shortName}
+    taglineA={tagline(entityA)}
+    taglineB={tagline(entityB)}
+    arena={arena}
+    arenaLabel={catLabel}
+  />
 
   <!-- Stat Scoreline — who leads on the raw numbers -->
   <section class="border-b border-hairline bg-canvas-soft">
-    <div class="max-w-7xl mx-auto px-5 py-8">
+    <div class="page-container py-8">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
-        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Stat Scoreline</h2>
+        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Tale of the Tape</h2>
         <span class="font-mono text-xs uppercase tracking-widest text-mute hidden sm:inline">Arenas led</span>
       </div>
 
@@ -166,7 +112,7 @@ const catLabel = arenaLabel(arena);
   <!-- Stat Comparison Sections — mixed-data cards -->
   {sharedSections.map(section => (
     <section class="border-b border-hairline">
-      <div class="max-w-7xl mx-auto px-5 py-10">
+      <div class="page-container py-10">
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
@@ -218,14 +164,14 @@ const catLabel = arenaLabel(arena);
 
   <!-- Community Discussion -->
   <section class="border-b border-hairline">
-    <div class="max-w-7xl mx-auto px-5 py-10">
+    <div class="page-container py-10">
       <CommentThread client:visible battleId={canonical} accentA={entityA.accent} accentB={entityB.accent} />
     </div>
   </section>
 
   <!-- Achievements Comparison -->
   <section class="border-b border-hairline bg-canvas-soft">
-    <div class="max-w-7xl mx-auto px-5 py-10">
+    <div class="page-container py-10">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
         <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Honours</h2>
@@ -254,7 +200,7 @@ const catLabel = arenaLabel(arena);
 
   <!-- More Battles -->
   <section class="border-b border-hairline">
-    <div class="max-w-7xl mx-auto px-5 py-10">
+    <div class="page-container py-10">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-1 h-6 inline-block rounded-full" style={`background:linear-gradient(${entityA.accent}, ${entityB.accent})`}></span>
         <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">More Battles</h2>
@@ -285,7 +231,7 @@ const catLabel = arenaLabel(arena);
 
   <!-- Player profile links -->
   <section class="border-b border-hairline">
-    <div class="max-w-7xl mx-auto px-5 py-8">
+    <div class="page-container py-8">
       <div class="flex flex-wrap gap-4">
         {[entityA, entityB].map(entity => (
           <a href={`/goats/${entity.slug}`}

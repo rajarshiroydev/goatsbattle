@@ -104,7 +104,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
   // need to block on the rank fetch and get their button sooner.
   if (sessionLoading || (user && loading)) {
     return (
-      <div class="h-12 flex items-center px-8 rounded-sm border border-hairline">
+      <div class="h-11 flex items-center px-6 rounded-sm border border-hairline">
         <span class="font-mono text-xs uppercase tracking-widest text-mute animate-pulse">Loading…</span>
       </div>
     );
@@ -114,7 +114,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
     return (
       <div class="inline-flex flex-col justify-center">
         <div
-          class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center gap-2 rounded-sm border"
+          class="font-headline font-black uppercase text-base tracking-wider px-6 h-11 flex items-center gap-2 rounded-sm border"
           style={`color:${accent}; border-color:${accent}`}
         >
           ✓ {justVoted ? `Voted ${shortName}` : `${shortName} Voted`}
@@ -132,7 +132,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
         <button
           type="button"
           onClick={() => openAuthModal({ reason: `Log in to vote ${shortName}` })}
-          class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center gap-2 rounded-sm bg-lime text-canvas hover:bg-lime-dark transition-colors whitespace-nowrap"
+          class="font-headline font-black uppercase text-base tracking-wider px-6 h-11 flex items-center gap-2 rounded-sm bg-lime text-canvas hover:bg-lime-dark transition-colors whitespace-nowrap"
         >
           Log in to vote
         </button>
@@ -146,11 +146,11 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
         type="button"
         onClick={vote}
         disabled={pending}
-        class="font-headline font-black uppercase text-lg tracking-wider px-8 h-12 flex items-center gap-2 rounded-sm transition-opacity hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+        class="font-headline font-black uppercase text-base tracking-wider px-6 h-11 flex items-center gap-2 rounded-sm transition-opacity hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
         style={`background:${accent}; color:${textOn(accent)}`}
       >
         Vote {shortName}
-        <span class="text-base">✦</span>
+        <span class="text-sm">✦</span>
       </button>
       {error && (
         <span class="font-mono text-[13px] uppercase tracking-widest text-red mt-1.5">{error}</span>

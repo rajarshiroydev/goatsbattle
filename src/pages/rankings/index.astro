@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import PageHeader from '../../components/PageHeader.astro';
+import PageHero from '../../components/PageHero.astro';
 import { arenas } from '../../data/arenas';
 import { getEntitiesByArena } from '../../data';
 
@@ -15,47 +15,29 @@ const description = 'Pick an arena and see its live, community-voted GOAT rankin
 
 <Layout title={title} description={description}>
 
-  <!-- Header -->
-  <PageHeader
+  <PageHero
     title="GOAT"
     highlight="Rankings"
-    subtitle="Pick an arena to see its live, community-voted leaderboard — the greatest of all time, ranked by the world right now." />
+    description="Pick an arena to see its live, community-voted leaderboard — the greatest of all time, ranked by the world right now." />
 
-  <!-- Arena grid → each opens that arena's rankings -->
-  <section>
-    <div class="max-w-7xl mx-auto px-5 py-12 md:py-16">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <section class="pt-8 pb-12">
+    <div class="page-container">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cards.map((c) => (
           <a href={`/rankings/${c.id}`}
-            class="group relative flex flex-col justify-between overflow-hidden rounded-lg border border-hairline bg-canvas-soft p-7 md:p-9 min-h-[220px] transition-all duration-200 hover:-translate-y-1"
-            style={`box-shadow: var(--shadow-card)`}
-            onmouseover={`this.style.borderColor='${c.accent}'`}
-            onmouseout={`this.style.borderColor=''`}>
-
-            <!-- Colour wash -->
-            <div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              aria-hidden="true"
-              style={`background: radial-gradient(ellipse 70% 90% at 100% 0%, ${c.accent}20 0%, transparent 60%)`}></div>
-
-            <div class="relative flex items-start justify-between">
-              <div>
-                <span class="font-mono text-[13px] uppercase tracking-widest" style={`color:${c.accent}`}>{c.debate}</span>
-                <h2 class="mt-3 font-headline font-black uppercase leading-none tracking-tight text-ink group-hover:opacity-95"
-                  style="font-size: clamp(2.5rem, 6vw, 4rem)">
-                  {c.label}
-                </h2>
-                <p class="mt-3 font-sans text-body text-base max-w-sm">{c.tagline}</p>
-              </div>
-              <span class="text-5xl md:text-6xl leading-none shrink-0" style={`filter: drop-shadow(0 0 20px ${c.accent}55)`}>{c.emoji}</span>
-            </div>
-
-            <div class="relative mt-6 flex items-center justify-between">
-              <div class="flex items-center gap-5 font-mono text-[13px] uppercase tracking-wider text-mute">
-                <span><span class="text-ink font-bold">{c.legends}</span> legends ranked</span>
-              </div>
-              <span class="font-headline font-black uppercase text-sm tracking-wider transition-transform group-hover:translate-x-1" style={`color:${c.accent}`}>
-                View Rankings →
+            class="ranking-card group block bg-canvas-soft border border-hairline rounded-md p-[22px] transition-colors"
+            style={`--accent:${c.accent}; background-image: linear-gradient(140deg, ${c.accent}12, transparent 55%)`}>
+            <div class="flex items-baseline gap-2.5">
+              <span class="font-headline font-black uppercase text-3xl md:text-[34px] leading-none text-ink">{c.label}</span>
+              <span class="text-[22px] leading-none">{c.emoji}</span>
+              <span class="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] flex items-center gap-1.5" style={`color:${c.accent}`}>
+                <span class="w-1.5 h-1.5 rounded-full inline-block" style={`background:${c.accent}`}></span>
+                {c.legends} goats ranked
               </span>
+            </div>
+            <div class="flex items-center mt-5">
+              <span class="font-sans text-[13px] text-mute">{c.debate}</span>
+              <span class="ml-auto font-mono text-[11px] uppercase tracking-[0.12em] transition-transform group-hover:translate-x-0.5" style={`color:${c.accent}`}>View rankings →</span>
             </div>
           </a>
         ))}
@@ -66,5 +48,10 @@ const description = 'Pick an arena and see its live, community-voted GOAT rankin
       </p>
     </div>
   </section>
+
+  <style>
+    /* Hover brightens the card border to its arena accent (from the inline --accent var). */
+    .ranking-card:hover { border-color: var(--accent); }
+  </style>
 
 </Layout>

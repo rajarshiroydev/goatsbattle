@@ -31,7 +31,7 @@ const accent = entity.accent;
   <section class="border-b border-hairline relative">
     <div class="absolute inset-0 pointer-events-none" aria-hidden="true"
       style={`background: radial-gradient(ellipse 60% 70% at 12% 30%, ${accent}24 0%, transparent 60%)`}></div>
-    <div class="relative max-w-7xl mx-auto px-5 py-12 md:py-16">
+    <div class="relative page-container py-12 md:py-16">
 
       <!-- Breadcrumb -->
       <div class="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-mute mb-8">
@@ -45,9 +45,9 @@ const accent = entity.accent;
       <div class="flex flex-col lg:flex-row items-start gap-10">
 
         <!-- Avatar placeholder — tinted with the player's colour -->
-        <div class="shrink-0 w-32 h-32 md:w-48 md:h-48 rounded-md border flex items-center justify-center overflow-hidden"
+        <div class="shrink-0 w-28 h-28 md:w-40 md:h-40 rounded-md border flex items-center justify-center overflow-hidden"
           style={`background:${accent}1a; border-color:${accent}`}>
-          <span class="font-headline font-black text-6xl md:text-8xl leading-none select-none" style={`color:${accent}`}>
+          <span class="font-headline font-black text-5xl md:text-7xl leading-none select-none" style={`color:${accent}`}>
             {entity.shortName.charAt(0)}
           </span>
         </div>
@@ -69,11 +69,11 @@ const accent = entity.accent;
           </div>
 
           <h1 class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-            style="font-size: clamp(2.5rem, 6vw, 5rem)">
+            style="font-size: clamp(2.25rem, 5.5vw, 4rem)">
             {entity.name}
           </h1>
 
-          <div class="flex flex-wrap items-center gap-4 mt-4 font-sans text-base text-body">
+          <div class="flex flex-wrap items-center gap-4 mt-4 font-sans text-sm text-body">
             <span>{entity.position}</span>
             <span class="text-hairline-strong">·</span>
             <span>Born {new Date(entity.born).getFullYear()}</span>
@@ -81,7 +81,7 @@ const accent = entity.accent;
             <span>{entity.active ? `Age ${age}` : `${new Date(entity.born).getFullYear()}–${entity.active ? 'present' : 'retired'}`}</span>
           </div>
 
-          <p class="mt-6 font-sans text-body text-xl leading-relaxed max-w-2xl">
+          <p class="mt-6 font-sans text-body text-lg leading-relaxed max-w-2xl">
             {entity.bio}
           </p>
 
@@ -89,12 +89,10 @@ const accent = entity.accent;
           <div class="mt-6 flex flex-wrap items-start gap-3">
             <ProfileVoteButton client:load id={entity.id} shortName={entity.shortName} accent={accent} />
             <a href={`/faceoff?goat=${entity.slug}`}
-              class="font-sans text-lg border rounded-sm px-8 h-12 flex items-center gap-2 transition-colors whitespace-nowrap"
-              style={`color:${accent}; border-color:${accent}40`}
-              onmouseover={`this.style.borderColor='${accent}'`}
-              onmouseout={`this.style.borderColor='${accent}40'`}>
+              class="faceoff-cta font-sans text-base border rounded-sm px-6 h-11 flex items-center gap-2 transition-colors whitespace-nowrap"
+              style={`--accent:${accent}`}>
               Face Off
-              <span class="text-base">→</span>
+              <span class="text-sm">→</span>
             </a>
           </div>
 
@@ -105,11 +103,11 @@ const accent = entity.accent;
 
   <!-- Global Standing — live score/rank/votes (hydrated client-side) -->
   <section class="border-b border-hairline bg-canvas-soft">
-    <div class="max-w-7xl mx-auto px-5 py-10">
+    <div class="page-container py-10">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
           <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
-          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Global Standing</h2>
+          <h2 class="font-headline font-black uppercase text-xl md:text-2xl tracking-tight text-ink">Global Standing</h2>
         </div>
         <a href={`/rankings/${entity.arena}`}
           class="font-mono text-xs uppercase tracking-widest text-mute hover:text-ink transition-colors">
@@ -122,18 +120,18 @@ const accent = entity.accent;
 
   <!-- Achievements -->
   <section class="border-b border-hairline">
-    <div class="max-w-7xl mx-auto px-5 py-12">
+    <div class="page-container py-12">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
-        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Honours</h2>
+        <h2 class="font-headline font-black uppercase text-xl md:text-2xl tracking-tight text-ink">Honours</h2>
       </div>
       <div class="flex flex-wrap gap-3">
         {entity.achievements.map(a => (
           <div class="flex items-center gap-2 bg-canvas-soft border border-hairline rounded-sm px-4 py-2.5" style={`border-color:${accent}33`}>
             {a.count > 1 && (
-              <span class="font-headline font-black text-xl leading-none" style={`color:${accent}`}>{a.count}×</span>
+              <span class="font-headline font-black text-lg leading-none" style={`color:${accent}`}>{a.count}×</span>
             )}
-            <span class="font-sans text-lg text-ink">{a.title}</span>
+            <span class="font-sans text-base text-ink">{a.title}</span>
             {a.years && a.years.length > 0 && (
               <span class="font-mono text-xs text-mute">
                 ({a.years.join(', ')})
@@ -147,16 +145,16 @@ const accent = entity.accent;
 
   <!-- Career Highlights -->
   <section class="border-b border-hairline bg-canvas-soft">
-    <div class="max-w-7xl mx-auto px-5 py-12">
+    <div class="page-container py-12">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
-        <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">Career Highlights</h2>
+        <h2 class="font-headline font-black uppercase text-xl md:text-2xl tracking-tight text-ink">Career Highlights</h2>
       </div>
       <ul class="space-y-4">
         {entity.careerHighlights.map(highlight => (
           <li class="flex items-start gap-3">
-            <span class="font-headline font-black text-2xl leading-none mt-0.5 shrink-0" style={`color:${accent}`}>/</span>
-            <span class="font-sans text-lg text-body leading-relaxed">{highlight}</span>
+            <span class="font-headline font-black text-xl leading-none mt-0.5 shrink-0" style={`color:${accent}`}>/</span>
+            <span class="font-sans text-base text-body leading-relaxed">{highlight}</span>
           </li>
         ))}
       </ul>
@@ -166,16 +164,16 @@ const accent = entity.accent;
   <!-- Stats Sections -->
   {entity.statSections.map(section => (
     <section class="border-b border-hairline">
-      <div class="max-w-7xl mx-auto px-5 py-10">
+      <div class="page-container py-10">
         <div class="flex items-center gap-3 mb-6">
           <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
-          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">{section.heading}</h2>
+          <h2 class="font-headline font-black uppercase text-xl md:text-2xl tracking-tight text-ink">{section.heading}</h2>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {section.stats.map(stat => (
             <div class="bg-canvas-soft border border-hairline rounded-md px-4 py-5 border-l-4" style={`border-left-color:${accent}`}>
-              <p class="font-headline font-black text-4xl leading-none" style={`color:${accent}`}>{stat.value}{stat.unit}</p>
-              <p class="font-sans text-base text-body mt-2 leading-snug">{stat.label}</p>
+              <p class="font-headline font-black text-3xl leading-none" style={`color:${accent}`}>{stat.value}{stat.unit}</p>
+              <p class="font-sans text-sm text-body mt-2 leading-snug">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -183,13 +181,23 @@ const accent = entity.accent;
     </section>
   ))}
 
+  <style>
+    /* Accent-tinted Face Off CTA — hover brightens the border to the full accent.
+       Colour comes from the inline --accent var so it stays per-GOAT. */
+    .faceoff-cta {
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+    .faceoff-cta:hover { border-color: var(--accent); }
+  </style>
+
   <!-- Head-to-Head Record — every voted 1v1, split into wins and losses -->
   <section class="border-b border-hairline">
-    <div class="max-w-7xl mx-auto px-5 py-12">
+    <div class="page-container py-12">
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
           <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
-          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">
+          <h2 class="font-headline font-black uppercase text-xl md:text-2xl tracking-tight text-ink">
             {entity.shortName}'s Head-to-Head Record
           </h2>
         </div>

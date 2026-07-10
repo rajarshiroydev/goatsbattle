@@ -1,19 +1,34 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PageHeader from '../components/PageHeader.astro';
+import PageHero from '../components/PageHero.astro';
+import GoatGrid from '../components/GoatGrid.tsx';
+import type { GoatCardData, GridArena } from '../components/GoatGrid.tsx';
 import { arenas } from '../data/arenas';
-import { getRoster } from '../data';
-import { flagEmoji } from '../lib/format';
+import { getAllGoatsRanked } from '../lib/queries';
 
-// Group every legend under its arena, active players first.
-const groups = arenas
-  .map((c) => ({
-    arena: c,
-    entities: getRoster(c.id),
-  }))
-  .filter((g) => g.entities.length > 0);
+// Live directory — ordered by ranking votes.
+export const prerender = false;
 
-const totalGoats = groups.reduce((s, g) => s + g.entities.length, 0);
+const ranked = await getAllGoatsRanked();
+
+const goats: GoatCardData[] = ranked.map((r) => {
+  const top = r.entity.achievements[0];
+  const honour = top ? (top.count > 1 ? `${top.count}× ${top.title}` : top.title) : '';
+  return {
+    slug: r.entity.slug,
+    rank: r.rank,
+    arena: r.entity.arena,
+    accent: r.entity.accent,
+    name: r.entity.name,
+    shortName: r.entity.shortName,
+    nationality: r.entity.nationality,
+    honour,
+    votes: r.votes,
+    winRate: r.winRate,
+  };
+});
+
+const gridArenas: GridArena[] = arenas.map((c) => ({ id: c.id, label: c.label, emoji: c.emoji, accent: c.accent }));
 
 const title = 'The Goats — Every Legend on GOATSBattle';
 const description = 'Meet the greatest of all time across football, cricket, tennis and Formula 1. Explore profiles, career stats, and head-to-head battles.';
@@ -21,76 +36,14 @@ const description = 'Meet the greatest of all time across football, cricket, ten
 
 <Layout title={title} description={description}>
 
-  <!-- Header -->
-  <PageHeader
+  <PageHero
     title="The"
     highlight="Goats"
-    subtitle="The greatest of all time, across every arena. Explore their careers, dive into the stats, and pit them against each other head-to-head." />
+    description="The greatest of all time, across every arena. Explore their careers, dive into the stats, and pit them against each other head-to-head." />
 
-  <!-- Per-arena rosters -->
-  {groups.map(({ arena: c, entities }) => (
-    <section class="border-b border-hairline">
-      <div class="max-w-7xl mx-auto px-5 py-12 md:py-14">
-
-        <div class="flex items-center justify-between mb-7">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl leading-none">{c.emoji}</span>
-            <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">{c.label}</h2>
-            <span class="w-8 h-px" style={`background:${c.accent}`}></span>
-            <span class="font-mono text-[13px] uppercase tracking-widest text-mute hidden sm:inline">{entities.length} goats</span>
-          </div>
-          <a href={`/rankings/${c.id}`}
-            class="font-mono text-[13px] uppercase tracking-widest text-mute hover:text-ink transition-colors">
-            Rankings →
-          </a>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {entities.map((e) => (
-            <a href={`/goats/${e.slug}`}
-              class="group relative flex flex-col justify-between overflow-hidden rounded-md border bg-canvas-soft p-4 min-h-[150px] transition-all duration-200 hover:-translate-y-1"
-              style={`border-color:${e.accent}33`}
-              onmouseover={`this.style.borderColor='${e.accent}'`}
-              onmouseout={`this.style.borderColor='${e.accent}33'`}>
-
-              <div class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-hidden="true"
-                style={`background: radial-gradient(ellipse 90% 70% at 50% 120%, ${e.accent}22 0%, transparent 65%)`}></div>
-
-              <div class="relative flex items-start justify-between">
-                <span class="font-headline font-black text-4xl leading-none select-none" style={`color:${e.accent}`}>
-                  {e.shortName.charAt(0)}
-                </span>
-                <span class="text-lg leading-none">{flagEmoji(e.countryCode)}</span>
-              </div>
-
-              <div class="relative mt-4">
-                <span class="block font-headline font-black uppercase text-xl leading-none tracking-tight text-ink truncate">{e.shortName}</span>
-                <div class="flex items-center gap-1.5 mt-1.5">
-                  <span class="font-mono text-[13px] uppercase tracking-wider text-mute truncate">{e.position}</span>
-                  {e.active && (
-                    <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={`background:${e.accent}`}></span>
-                  )}
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-    </section>
-  ))}
-
-  <!-- Suggest CTA -->
-  <section class="bg-canvas-soft">
-    <div class="max-w-7xl mx-auto px-5 py-12 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-      <div>
-        <h2 class="font-headline font-black uppercase text-2xl tracking-tight text-ink">Missing a legend?</h2>
-        <p class="mt-2 font-sans text-body font-medium text-base">We add new goats as the arenas grow. Explore the battles while you wait.</p>
-      </div>
-      <a href="/arenas"
-        class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors whitespace-nowrap">
-        Browse Arenas
-      </a>
+  <section class="pt-8 pb-12">
+    <div class="page-container">
+      <GoatGrid client:load goats={goats} arenas={gridArenas} />
     </div>
   </section>
 

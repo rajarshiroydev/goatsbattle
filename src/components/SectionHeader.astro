@@ -1,0 +1,55 @@
+---
+/**
+ * Compact page header — the "Stadium Gate" header-row pattern (design §4):
+ * a big Barlow Condensed title, an optional inline chip row, and a
+ * right-aligned mono live stat (optionally preceded by a pulsing lime dot).
+ *
+ * Replaces the older tall hero band (PageHeader.astro). Pages render their own
+ * chips into the `chips` slot (so links / active state stay page-owned); extra
+ * rows (CTAs, stat tickers) go in the default slot, below the header row.
+ */
+interface Props {
+  /** Headline lead, rendered in ink. */
+  title: string;
+  /** Optional highlighted tail, appended after a space in the accent colour. */
+  highlight?: string;
+  /** Right-aligned mono stat line, e.g. "64 goats · sorted by votes". */
+  stat?: string;
+  /** Show a pulsing lime dot before the stat (live data). */
+  live?: boolean;
+  /** Accent for the highlight tail. Defaults to lime. */
+  accent?: string;
+  /** Vertical alignment of the row items. Arenas uses baseline. */
+  align?: 'center' | 'baseline';
+}
+
+const { title, highlight, stat, live = false, accent, align = 'center' } = Astro.props;
+const accentColor = accent ?? 'var(--color-lime)';
+const hasChips = Astro.slots.has('chips');
+---
+
+<section class="pt-7">
+  <div class="page-container">
+    <div class:list={['flex flex-wrap gap-x-4 gap-y-3', align === 'baseline' ? 'items-baseline' : 'items-center']}>
+
+      <h1 class="font-headline font-black uppercase leading-none tracking-tight text-ink text-4xl md:text-[2.75rem]">
+        {title}{highlight && <> <span style={`color:${accentColor}`}>{highlight}</span></>}
+      </h1>
+
+      {hasChips && (
+        <div class="flex flex-wrap items-center gap-1.5">
+          <slot name="chips" />
+        </div>
+      )}
+
+      {(stat || live) && (
+        <div class="ml-auto flex items-center gap-2">
+          {live && <span class="live-dot"></span>}
+          {stat && <span class="font-mono text-[11px] uppercase tracking-widest text-mute whitespace-nowrap">{stat}</span>}
+        </div>
+      )}
+    </div>
+
+    <slot />
+  </div>
+</section>

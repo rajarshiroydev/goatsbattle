@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PageHeader from '../components/PageHeader.astro';
 import BattlePicker from '../components/BattlePicker.tsx';
 import type { PickerEntity, PickerArena } from '../components/BattlePicker.tsx';
 import { allEntities } from '../data';
@@ -27,13 +26,17 @@ const description =
 ---
 
 <Layout title={title} description={description}>
-  <PageHeader
-    title="Face"
-    highlight="Off"
-    subtitle="Pick an arena, choose two legends, and settle the debate with a vote. Only same-arena GOATs can face off." />
+  <section class="pt-9 pb-2 text-center">
+    <div class="page-container">
+      <h1 class="font-headline font-black uppercase leading-[0.95] tracking-tight text-ink text-5xl md:text-[52px]">
+        Face <span class="text-lime">Off</span>
+      </h1>
+      <p class="mt-2 font-sans text-body">Pick any two from an arena. Settle it in the arena.</p>
+    </div>
+  </section>
 
-  <section>
-    <div class="max-w-7xl mx-auto px-5 py-10 md:py-12">
+  <section class="pt-5 pb-12">
+    <div class="page-container">
       <BattlePicker client:load roster={roster} arenas={pickerArenas} />
     </div>
   </section>

@@ -1,0 +1,81 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import TakeRow from '../components/TakeRow.astro';
+import { getRecentTakes } from '../lib/queries';
+
+// Live stream — read the latest takes on every request.
+export const prerender = false;
+
+// The Floor aggregates existing battle comments across every matchup. "Hot"
+// ranks by upvotes, "New" by recency. Official match threads + posting a take
+// straight to the floor arrive with the matches API — see [[social-features]].
+const sort = Astro.url.searchParams.get('sort') === 'hot' ? 'hot' : 'new';
+const TAKE_LIMIT = 30;
+const takes = await getRecentTakes(TAKE_LIMIT, sort);
+
+const chips = [
+  { label: 'Hot', href: '/floor?sort=hot', active: sort === 'hot' },
+  { label: 'New', href: '/floor?sort=new', active: sort === 'new' },
+  { label: 'Live matches', href: '/floor', active: false, soon: true },
+  { label: 'My goats', href: '/floor', active: false, soon: true },
+];
+
+const title = 'The Floor — Every GOAT Take | GOATSBattle';
+const description = 'The floor is open. Every take from every battle, in one live stream. Defend your GOAT, counter the hot takes, and settle the greatness debate.';
+---
+
+<Layout title={title} description={description}>
+
+  <SectionHeader title="The Floor" live stat={`${takes.length} takes on the floor`}>
+    <div slot="chips">
+      {chips.map((c) => (
+        <a href={c.href} class:list={['chip', c.active && 'chip-active', c.soon && 'opacity-50']}
+          title={c.soon ? 'Coming with match threads' : undefined}>{c.label}</a>
+      ))}
+    </div>
+  </SectionHeader>
+
+  <section class="pt-[18px] pb-10">
+    <div class="page-container flex flex-col gap-2.5">
+
+      <!-- Composer — posting a take routes through a battle until the matches API
+           lands a floor-native composer. -->
+      <a href="/arenas" class="flex items-center gap-3 bg-canvas-soft border border-hairline rounded-md px-4 py-3 hover:border-hairline-strong transition-colors">
+        <span class="team-tag shrink-0">You</span>
+        <span class="flex-1 font-sans text-sm text-mute">Defend your GOAT — pick a battle to drop your take…</span>
+        <span class="btn btn-primary text-[13px] px-4 py-1.5">Post</span>
+      </a>
+
+      <!-- Live match thread — official events only, arriving with the matches API. -->
+      <div class="flex items-center gap-3.5 bg-canvas-soft border border-hairline rounded-md px-[18px] py-3.5 opacity-60"
+        style="border-left: 2px solid rgba(255,45,85,0.5)">
+        <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-red shrink-0 flex items-center gap-1.5">
+          <span class="live-dot gb-pulse-fast" style="--dot: var(--color-red)"></span> Live
+        </span>
+        <span class="flex-1 font-sans text-sm text-body">Official match threads are coming — jump into live events as they happen.</span>
+        <span class="font-mono text-[11px] uppercase tracking-wider text-mute shrink-0">Soon</span>
+      </div>
+
+      <!-- Take stream -->
+      {takes.length > 0 ? (
+        <>
+          {takes.map((take) => <TakeRow take={take} />)}
+          <span class="self-center mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute">
+            {takes.length < TAKE_LIMIT
+              ? "That's every take so far"
+              : `Showing the ${sort === 'hot' ? 'top' : 'latest'} ${TAKE_LIMIT} takes`}
+          </span>
+        </>
+      ) : (
+        <div class="bg-canvas-soft border border-hairline rounded-md px-6 py-12 text-center">
+          <p class="font-headline font-black uppercase text-2xl text-ink">The floor is open</p>
+          <p class="mt-2 font-sans text-body">No takes yet — be the first to defend your GOAT.</p>
+          <a href="/arenas" class="btn btn-primary text-sm px-6 py-2.5 mt-5">Browse battles</a>
+        </div>
+      )}
+
+    </div>
+  </section>
+
+</Layout>

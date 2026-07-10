@@ -29,6 +29,7 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 // Primary nav — `match` marks the active tab (highlighted) via path prefix.
 const pathname = Astro.url.pathname;
 const navLinks = [
+  { href: '/floor', label: 'The Floor', match: ['/floor'] },
   { href: '/goats', label: 'Goats', match: ['/goats'] },
   { href: '/arenas', label: 'Arenas', match: ['/arenas'] },
   { href: '/rankings', label: 'Rankings', match: ['/rankings'] },
@@ -68,7 +69,7 @@ const isActive = (m: string[]) =>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,800&family=DM+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -76,22 +77,23 @@ const isActive = (m: string[]) =>
 
     <!-- ── Site Header ── -->
     <header class="sticky top-0 z-50 border-b border-hairline bg-canvas/90 backdrop-blur-md">
-      <nav class="relative max-w-7xl mx-auto px-5 h-[72px] flex items-center justify-between gap-4">
+      <nav class="page-container relative h-[60px] flex items-center justify-between gap-4">
 
         <!-- Logo -->
-        <a href="/" class="shrink-0 font-headline font-black text-2xl uppercase tracking-tight leading-none">
+        <a href="/" class="shrink-0 font-headline font-black text-[21px] uppercase tracking-tight leading-none">
           GOATS<span class="text-lime">BATTLE</span>
         </a>
 
-        <!-- Nav links (desktop) — absolutely centred in the bar -->
-        <div class="hidden md:flex items-center gap-1.5 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <!-- Nav links (desktop) — absolutely centred in the bar, independent of the
+             side widths. Gated to lg: at md the six links would overlap the logo. -->
+        <div class="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {navLinks.map((link) => (
             <a href={link.href}
               class:list={[
-                'font-sans text-base px-4 py-2 rounded-md transition-colors',
+                'font-sans text-sm font-medium px-[13px] py-[7px] rounded-md transition-colors',
                 isActive(link.match)
-                  ? 'text-lime bg-lime/12 font-semibold ring-1 ring-lime/40'
-                  : 'text-body font-medium hover:text-ink hover:bg-canvas-soft',
+                  ? 'text-lime bg-canvas-soft'
+                  : 'text-body hover:text-ink hover:bg-canvas-soft',
               ]}
               aria-current={isActive(link.match) ? 'page' : undefined}>
               {link.label}
@@ -101,10 +103,6 @@ const isActive = (m: string[]) =>
 
         <!-- CTA -->
         <div class="flex items-center gap-2.5 shrink-0">
-          <a href="/play"
-            class="font-headline font-black uppercase text-base tracking-wider bg-lime text-canvas px-5 h-10 flex items-center rounded-sm hover:bg-lime-dark transition-colors">
-            Play Now
-          </a>
           <AccountMenu client:load />
         </div>
 
@@ -121,7 +119,7 @@ const isActive = (m: string[]) =>
 
     <!-- ── Site Footer ── -->
     <footer class="border-t border-hairline bg-canvas-soft mt-auto">
-      <div class="max-w-7xl mx-auto px-5 py-12">
+      <div class="page-container py-12">
         <div class="flex flex-col md:flex-row items-start justify-between gap-8">
 
           <!-- Brand -->
@@ -137,6 +135,7 @@ const isActive = (m: string[]) =>
             <div>
               <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Platform</p>
               <ul class="space-y-2.5">
+                <li><a href="/floor" class="text-body hover:text-ink transition-colors">The Floor</a></li>
                 <li><a href="/goats" class="text-body hover:text-ink transition-colors">The Goats</a></li>
                 <li><a href="/arenas" class="text-body hover:text-ink transition-colors">Arenas</a></li>
                 <li><a href="/faceoff" class="text-body hover:text-ink transition-colors">Face Off</a></li>

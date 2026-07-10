@@ -7,35 +7,42 @@ interface Props {
   battleId: string;
   entityAId: string;
   entityBId: string;
+  /** Full names, split into first line + surname for the split-arena display. */
+  nameA: string;
+  nameB: string;
   shortA: string;
   shortB: string;
-  /** Player-associated accent colours (hex). */
-  accentA: string;
-  accentB: string;
+  /** One-line career tagline under each name. */
+  taglineA: string;
+  taglineB: string;
   /** Arena id (e.g. "football") — links the post-vote rankings CTA. */
   arena: string;
   /** Human-readable arena label (e.g. "Football"). */
   arenaLabel: string;
 }
 
-/** Readable text colour (dark or light) for a solid accent background. */
-function textOn(hex: string): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.6 ? '#0d0d0f' : '#f0f0f2';
+/** Split a full name into a leading part and its surname (last word). */
+function splitName(name: string): { first: string; last: string } {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return { first: '', last: parts[0] };
+  return { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] };
 }
 
-export default function VoteWidget({ battleId, entityAId, entityBId, shortA, shortB, accentA, accentB, arena, arenaLabel }: Props) {
+/**
+ * The Battle split-arena (design §6 / 3f). A full-bleed 50/50 hero — left is the
+ * lime champion, right is the red challenger, always. Kickers, the bottom vote
+ * bar, and the percentages are live; the two Vote buttons cast against the same
+ * /api/vote + /api/results contract as before.
+ */
+export default function VoteWidget({
+  battleId, entityAId, entityBId, nameA, nameB, shortA, shortB, taglineA, taglineB, arena, arenaLabel,
+}: Props) {
   const { user, loading: sessionLoading } = useSession();
   const [result, setResult] = useState<BattleResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load current tally + whether this fingerprint already voted today.
   useEffect(() => {
     let active = true;
     fetch(`/api/results?battle=${encodeURIComponent(battleId)}`)
@@ -86,88 +93,104 @@ export default function VoteWidget({ battleId, entityAId, entityBId, shortA, sho
     }
   }
 
-  // Wait for the session too — otherwise a logged-in user can flash the
-  // "Log in to vote" button when the tally resolves before the session does.
-  if (loading || sessionLoading) {
-    return (
-      <div class="mt-6 flex items-center justify-center h-12">
-        <span class="font-mono text-xs uppercase tracking-widest text-mute animate-pulse">Loading votes…</span>
-      </div>
-    );
-  }
-
+  const ready = !loading && !sessionLoading;
   const voted = result?.voted ?? false;
   const votedA = result?.votedChoice === entityAId;
   const votedB = result?.votedChoice === entityBId;
+  const pctA = result?.total ? result.pctA : null;
+  const pctB = result?.total ? result.pctB : null;
+  const total = result?.total ?? 0;
+
+  const a = splitName(nameA);
+  const b = splitName(nameB);
+  const pctLabel = (p: number | null) => (p === null ? '··' : `${p}%`);
 
   return (
-    <div class="mt-6">
-      {!voted && !user ? (
-        <>
-          <div class="flex justify-center">
-            <button
-              onClick={() => openAuthModal({ reason: 'Log in to vote' })}
-              class="font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-10 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
-            >
-              Log in to vote
-            </button>
-          </div>
-          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
-            Head-to-head vote · one per matchup every 24h · results after you vote
-          </p>
-        </>
-      ) : !voted ? (
-        <>
-          <div class="flex flex-col sm:flex-row items-center gap-4 justify-center">
+    <section class="relative bg-canvas-deep border-b border-hairline">
+      <div class="relative grid grid-cols-1 md:grid-cols-2 min-h-[440px]">
+
+        {/* Champion (left / lime) */}
+        <div
+          class="relative flex flex-col justify-end px-8 py-9 md:border-r border-hairline overflow-hidden"
+          style="background: linear-gradient(160deg, #141608 0%, #0a0a0c 70%)"
+        >
+          <span class="absolute top-8 left-8 font-mono text-[11px] uppercase tracking-[0.2em] text-lime">
+            The Champion · {pctLabel(pctA)}
+          </span>
+          <span class="absolute -top-6 right-0 font-headline font-black leading-none select-none pointer-events-none"
+            style="font-size: 220px; color: rgba(200,255,0,0.06)" aria-hidden="true">{a.last.charAt(0)}</span>
+
+          <div class="relative">
+            <h2 class="font-headline font-black uppercase leading-[0.85] tracking-tight"
+              style="font-size: clamp(2.75rem, 7vw, 88px)">
+              {a.first && <span class="text-ink">{a.first}<br /></span>}<span class="text-lime">{a.last}</span>
+            </h2>
+            <p class="mt-3.5 font-sans text-sm text-body">{taglineA}</p>
             <button
               onClick={() => vote(entityAId)}
-              disabled={pending}
-              style={{ background: accentA, color: textOn(accentA) }}
-              class="font-headline font-black uppercase tracking-wider text-lg px-10 h-12 flex items-center rounded-sm whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
+              disabled={pending || voted || !ready}
+              class={`btn btn-primary text-base px-[26px] py-3 mt-5.5 self-start disabled:opacity-60${votedA ? ' ring-2 ring-lime' : ''}`}
             >
-              Vote {shortA}
+              {votedA ? `✓ ${shortA}` : `Vote ${shortA}`}
             </button>
-            <span class="font-mono text-xs uppercase tracking-widest text-mute">VS</span>
-            <button
-              onClick={() => vote(entityBId)}
-              disabled={pending}
-              style={{ background: accentB, color: textOn(accentB) }}
-              class="font-headline font-black uppercase tracking-wider text-lg px-10 h-12 flex items-center rounded-sm whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              Vote {shortB}
-            </button>
-          </div>
-          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
-            Head-to-head vote · one per matchup every 24h · results after you vote
-          </p>
-        </>
-      ) : (
-        <div>
-          <div class="flex items-center justify-between font-headline font-black uppercase mb-2">
-            <span class="text-3xl" style={{ color: accentA }}>{shortA} {result!.pctA}%</span>
-            <span class="text-3xl" style={{ color: accentB }}>{result!.pctB}% {shortB}</span>
-          </div>
-          <div class="flex h-3.5 gap-0.5 rounded-full overflow-hidden">
-            <div style={{ width: `${result!.pctA}%`, background: accentA }}></div>
-            <div style={{ width: `${result!.pctB}%`, background: accentB }}></div>
-          </div>
-          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
-            {result!.total.toLocaleString()} total votes · you backed {votedA ? shortA : votedB ? shortB : '—'}
-          </p>
-          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-lime mt-1.5">
-            ✓ Voted — this head-to-head is separate from the vote rankings
-          </p>
-          <div class="flex justify-center mt-5">
-            <a href={`/rankings/${arena}`}
-              class="font-headline font-black uppercase tracking-wider text-base border border-lime text-lime px-8 h-11 flex items-center rounded-sm hover:bg-lime hover:text-canvas transition-colors whitespace-nowrap">
-              View {arenaLabel} Rankings →
-            </a>
           </div>
         </div>
-      )}
-      {error && (
-        <p class="text-center font-mono text-[13px] uppercase tracking-widest text-red mt-3">{error}</p>
-      )}
-    </div>
+
+        {/* Challenger (right / red) */}
+        <div
+          class="relative flex flex-col justify-end items-end text-right px-8 py-9 overflow-hidden"
+          style="background: linear-gradient(200deg, #170a0e 0%, #0a0a0c 70%)"
+        >
+          <span class="absolute top-8 right-8 font-mono text-[11px] uppercase tracking-[0.2em] text-red">
+            The Challenger · {pctLabel(pctB)}
+          </span>
+          <span class="absolute -top-6 left-0 font-headline font-black leading-none select-none pointer-events-none"
+            style="font-size: 220px; color: rgba(255,45,85,0.06)" aria-hidden="true">{b.last.charAt(0)}</span>
+
+          <div class="relative flex flex-col items-end">
+            <h2 class="font-headline font-black uppercase leading-[0.85] tracking-tight"
+              style="font-size: clamp(2.75rem, 7vw, 88px)">
+              {b.first && <span class="text-ink">{b.first}<br /></span>}<span class="text-red">{b.last}</span>
+            </h2>
+            <p class="mt-3.5 font-sans text-sm text-body">{taglineB}</p>
+            <button
+              onClick={() => vote(entityBId)}
+              disabled={pending || voted || !ready}
+              class={`btn btn-danger text-base px-[26px] py-3 mt-5.5 disabled:opacity-60${votedB ? ' ring-2 ring-red' : ''}`}
+            >
+              {votedB ? `✓ ${shortB}` : `Vote ${shortB}`}
+            </button>
+          </div>
+        </div>
+
+        {/* VS badge */}
+        <div class="absolute left-1/2 top-1/2 md:top-[44%] -translate-x-1/2 -translate-y-1/2 w-[76px] h-[76px] rounded-full bg-canvas-deep border border-hairline-strong flex items-center justify-center"
+          style="box-shadow: 0 0 40px rgba(0,0,0,0.8)">
+          <span class="font-headline font-black italic text-3xl text-ink">VS</span>
+        </div>
+
+        {/* Bottom shared vote bar */}
+        <div class="absolute left-0 right-0 bottom-0 h-1 flex">
+          <div style={`width:${pctA ?? 50}%; background: var(--color-lime); transition: width 400ms ease`}></div>
+          <div style={`width:${pctB ?? 50}%; background: var(--color-red); transition: width 400ms ease`}></div>
+        </div>
+      </div>
+
+      {/* Live strip */}
+      <div class="flex items-center gap-4 py-3.5 px-8 border-t border-hairline" style="background:#0e0e11">
+        <span class="live-dot shrink-0"></span>
+        <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-mute">
+          {total > 0 ? `${total.toLocaleString()} votes` : 'Be the first to vote'}
+          {voted ? ` · you backed ${votedA ? shortA : shortB}` : ' · cast yours above'}
+        </span>
+        {voted && (
+          <a href={`/rankings/${arena}`}
+            class="ml-auto font-mono text-[11px] uppercase tracking-[0.14em] text-lime hover:text-ink transition-colors whitespace-nowrap">
+            {arenaLabel} rankings →
+          </a>
+        )}
+        {error && <span class="ml-auto font-mono text-[11px] uppercase tracking-widest text-red">{error}</span>}
+      </div>
+    </section>
   );
 }

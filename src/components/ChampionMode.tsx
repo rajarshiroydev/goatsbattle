@@ -3,6 +3,7 @@ import type { BattleResult } from "../lib/voteWire";
 import type { StatSection } from "../lib/types";
 import { useSession } from "../lib/useSession";
 import { openAuthModal } from "../lib/authModal";
+import { arenaLabel, arenaEmoji } from "../data/arenas";
 
 /** Minimal fighter shape passed from the static /play page. */
 export interface Fighter {
@@ -136,43 +137,61 @@ function compareStats(champ: Fighter, opp: Fighter): StatCompare {
   return { winsChamp, winsOpp, rows };
 }
 
+/** Split a full name into a leading part + surname for the two-line display. */
+function splitName(name: string): { first: string; last: string } {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return { first: "", last: parts[0] };
+  return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
+}
+
 /**
- * One side of the arena. `isChampion` picks the reigning label + suppresses the
- * entry animation, so a champion who holds their slot stays visually static
- * while the incoming challenger (keyed by fighter id at the call site) animates.
+ * One pick in the arena (design §8 / 3g). Left is lime, right is red, always.
+ * `isChampion` picks the Keep vs Crown verb + a reigning kicker, and keys off
+ * the entry animation so only the incoming challenger animates in.
  */
-function FighterPanel({
+function PickCard({
   fighter,
+  tone,
   isChampion,
-  align,
+  onPick,
+  disabled,
 }: {
   fighter: Fighter;
+  tone: "lime" | "red";
   isChampion: boolean;
-  align: "left" | "right";
+  onPick: () => void;
+  disabled: boolean;
 }) {
-  const right = align === "right";
+  const color = tone === "lime" ? "var(--color-lime)" : "var(--color-red)";
+  const gradient =
+    tone === "lime"
+      ? "linear-gradient(180deg, rgba(198,255,0,0.05), transparent)"
+      : "linear-gradient(180deg, rgba(255,45,85,0.05), transparent)";
+  const name = splitName(fighter.name);
+  const top = fighter.statSections[0]?.stats[0];
+  const meta = top ? `${fighter.position} · ${top.value}${top.unit ?? ""} ${top.label}` : `${flag(fighter.countryCode)} ${fighter.nationality} · ${fighter.position}`;
   return (
     <div
-      class={`flex-1 flex flex-col justify-between px-6 py-7 md:px-9 ${right ? "items-end text-right" : ""} ${isChampion ? "" : "anim-challenger"}`}
+      class={`rounded-md border border-hairline p-7 md:p-[30px] text-center transition-colors ${isChampion ? "" : "anim-challenger"}`}
+      style={`background-image:${gradient}; background-color: var(--color-canvas-soft)`}
     >
-      <div>
-        <p
-          class={`font-mono text-[13px] uppercase tracking-widest mb-2 ${isChampion ? "text-lime" : "text-body"}`}
-        >
-          {isChampion ? "👑 Reigning" : "Challenger"}
-        </p>
-        <h2
-          class="font-headline font-black uppercase leading-none tracking-tight text-ink"
-          style="font-size: clamp(2rem, 6vw, 4rem)"
-        >
-          {fighter.shortName}
-        </h2>
+      <div class="font-mono text-[10px] uppercase tracking-[0.18em]" style={isChampion ? `color:${color}` : "color:var(--color-mute)"}>
+        {isChampion ? "👑 Reigning" : "Challenger"}
       </div>
-      <span class="font-sans text-sm text-body">
-        {right
-          ? `${fighter.nationality} ${flag(fighter.countryCode)}`
-          : `${flag(fighter.countryCode)} ${fighter.nationality}`}
-      </span>
+      {/* Reserve two lines so single- and double-line names occupy the same
+          height — keeps the meta line and vote button aligned across both cards. */}
+      <div class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink mt-3 min-h-[1.8em] flex flex-col justify-center" style="font-size: clamp(2.25rem, 5vw, 54px)">
+        <span>{name.first && <>{name.first}<br /></>}<span style={`color:${color}`}>{name.last}</span></span>
+      </div>
+      <div class="font-sans text-[13px] text-mute mt-3">{meta}</div>
+      <button
+        type="button"
+        onClick={onPick}
+        disabled={disabled}
+        class={`btn ${tone === "lime" ? "btn-primary" : "btn-danger"} text-[15px] px-[30px] py-3 mt-5 disabled:opacity-50`}
+      >
+        {isChampion ? "Keep" : "Crown"} {fighter.shortName}
+      </button>
     </div>
   );
 }
@@ -198,7 +217,7 @@ export default function ChampionMode({ roster }: Props) {
   const [current, setCurrent] = useState<Round | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showStats, setShowStats] = useState(true);
+  const [showStats, setShowStats] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const opponent = queue[idx] ?? null;
@@ -384,7 +403,7 @@ export default function ChampionMode({ roster }: Props) {
             aria-hidden="true"
             style="background: radial-gradient(ellipse 70% 60% at 50% -10%, rgba(200,255,0,0.08) 0%, transparent 60%)"
           ></div>
-          <div class="relative max-w-7xl mx-auto px-5 py-14 md:py-20 text-center">
+          <div class="relative page-container py-14 md:py-20 text-center">
             <h1
               class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink"
               style="font-size: clamp(3.5rem, 9vw, 7rem)"
@@ -400,7 +419,7 @@ export default function ChampionMode({ roster }: Props) {
         </section>
 
         {/* Setup controls — centred column */}
-        <div class="max-w-2xl mx-auto px-5 pt-8 pb-12 md:pt-10 md:pb-16 text-center">
+        <div class="page-container max-w-2xl pt-8 pb-12 md:pt-10 md:pb-16 text-center">
           {/* Mode — Ranked counts toward the rankings, Friendly is just for fun. */}
           <div>
             <p class="font-mono text-sm uppercase tracking-widest text-mute mb-4">
@@ -412,8 +431,9 @@ export default function ChampionMode({ roster }: Props) {
                 { id: "friendly", label: "Friendly", note: "Nothing counts" },
               ] as const).map((m) => (
                 <button
+                  type="button"
                   onClick={() => setMode(m.id)}
-                  class={`flex flex-col items-center text-center px-6 py-4 rounded-sm border transition-all ${
+                  class={`flex flex-col items-center text-center px-6 py-4 rounded-md border transition-colors ${
                     mode === m.id
                       ? "bg-lime text-canvas border-lime"
                       : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
@@ -444,8 +464,9 @@ export default function ChampionMode({ roster }: Props) {
             <div class="flex flex-wrap gap-3 justify-center">
               {presets.map((n) => (
                 <button
+                  type="button"
                   onClick={() => setCount(n)}
-                  class={`font-headline font-black uppercase text-xl tracking-wide px-7 h-12 flex items-center rounded-sm border transition-all ${
+                  class={`font-headline font-black uppercase text-lg tracking-wide px-6 h-11 inline-flex items-center rounded-md border transition-colors ${
                     count === n
                       ? "bg-lime text-canvas border-lime"
                       : "bg-canvas-soft text-ink border-hairline hover:border-hairline-strong"
@@ -468,9 +489,10 @@ export default function ChampionMode({ roster }: Props) {
           </div>
 
           <button
+            type="button"
             onClick={() => start(count)}
             disabled={mode === "ranked" && sessionLoading}
-            class="mt-12 font-headline font-black uppercase tracking-wider text-lg bg-lime text-canvas px-12 h-14 inline-flex items-center rounded-sm hover:bg-lime-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn btn-primary text-lg px-12 py-4 mt-12 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {mode === "ranked" && sessionLoading ? "Loading…" : "Enter the Arena →"}
           </button>
@@ -497,7 +519,7 @@ export default function ChampionMode({ roster }: Props) {
           : `You're a contrarian: the crowd disagreed with most of your calls (${inSync}% aligned).`;
 
     return (
-      <div class="max-w-3xl mx-auto px-5 py-14 md:py-20 text-center anim-arena">
+      <div class="page-container max-w-3xl py-14 md:py-20 text-center anim-arena">
         <p class="font-mono text-[13px] uppercase tracking-widest text-lime mb-4">
           Your GOAT
         </p>
@@ -533,76 +555,79 @@ export default function ChampionMode({ roster }: Props) {
           </p>
         )}
 
-        <div class="mt-10 grid grid-cols-3 gap-3 max-w-sm mx-auto">
-          {[
-            { n: backedGoat, l: "Times backed", c: "text-lime" },
-            { n: agreed, l: "Crowd agreed", c: "text-ink" },
-            { n: `${inSync}%`, l: "In sync", c: "text-ink" },
-          ].map(({ n, l, c }) => (
-            <div class="bg-canvas-soft border border-hairline rounded-md py-4">
-              <p class={`font-headline font-black text-3xl leading-none ${c}`}>{n}</p>
-              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mt-1.5">
-                {l}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <p class="mt-6 font-sans text-body text-sm leading-relaxed max-w-md mx-auto">
-          {alignedLine}
-        </p>
-
-        {/* Path recap */}
-        <div class="mt-10 text-left max-w-md mx-auto">
-          <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">
-            Your path
-          </p>
-          <div class="space-y-1.5">
-            {rounds.map((r) => (
-              <div class="flex items-center gap-3 bg-canvas-soft border border-hairline rounded-sm px-4 py-2.5">
-                <span class="font-headline font-black uppercase text-sm text-ink flex-1 truncate">
-                  {r.champion.shortName} <span class="text-mute">vs</span>{" "}
-                  {r.challenger.shortName}
-                </span>
-                <span class="font-mono text-[13px] uppercase tracking-wider text-lime">
-                  ▸ {r.picked.shortName}
-                </span>
-                <span
-                  class="text-xs"
-                  title={
-                    r.crowd === "agree"
-                      ? "Crowd agreed"
-                      : r.crowd === "disagree"
-                        ? "Crowd disagreed"
-                        : "Split"
-                  }
-                >
-                  {r.crowd === "agree" ? "🟢" : r.crowd === "disagree" ? "🔴" : "⚪"}
-                </span>
+        {/* One consistent report column: stats → takeaway → path → actions,
+            each block separated by the same mt-12 and sharing max-w-md. */}
+        <div class="max-w-md mx-auto">
+          <div class="mt-12 grid grid-cols-3 gap-3">
+            {[
+              { n: backedGoat, l: "Times backed", c: "text-lime" },
+              { n: agreed, l: "Crowd agreed", c: "text-ink" },
+              { n: `${inSync}%`, l: "In sync", c: "text-ink" },
+            ].map(({ n, l, c }) => (
+              <div class="bg-canvas-soft border border-hairline rounded-md py-5">
+                <p class={`font-headline font-black text-3xl leading-none ${c}`}>{n}</p>
+                <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute mt-2">
+                  {l}
+                </p>
               </div>
             ))}
           </div>
-        </div>
 
-        <div class="mt-10 flex flex-wrap gap-3 justify-center">
-          <a
-            href={`/goats/${champion.slug}`}
-            class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-8 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
-          >
-            {champion.shortName}'s Profile
-          </a>
-          <a
-            href={`/rankings/${arena}`}
-            class="font-sans font-medium text-sm text-ink border border-hairline-strong px-6 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors"
-          >
-            See the Rankings
-          </a>
-          <button
-            onClick={reset}
-            class="font-sans font-medium text-sm text-body px-6 h-12 flex items-center rounded-sm hover:text-ink transition-colors"
-          >
-            Play again
-          </button>
+          <p class="mt-6 font-sans text-body text-sm leading-relaxed">
+            {alignedLine}
+          </p>
+
+          {/* Path recap — each bout shows your pick and how the crowd landed,
+              worded so the verdict is legible without a legend. */}
+          <div class="mt-12 text-left">
+            <div class="flex items-baseline justify-between mb-3">
+              <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">Your path</p>
+              <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-mute">Pick · crowd</p>
+            </div>
+            <div class="flex flex-col gap-2">
+              {rounds.map((r) => {
+                const verdict =
+                  r.crowd === "agree"
+                    ? { label: "Crowd agreed", color: "var(--color-lime)" }
+                    : r.crowd === "disagree"
+                      ? { label: "Crowd differed", color: "var(--color-red)" }
+                      : { label: "Too close", color: "var(--color-mute)" };
+                return (
+                  <div class="flex items-center gap-3 bg-canvas-soft border border-hairline rounded-md px-4 py-3">
+                    <span class="font-headline font-black uppercase text-sm text-ink flex-1 min-w-0 truncate">
+                      {r.champion.shortName} <span class="text-mute">vs</span> {r.challenger.shortName}
+                    </span>
+                    <span class="font-mono text-[11px] uppercase tracking-wider text-lime shrink-0 text-right whitespace-nowrap">
+                      ▸ {r.picked.shortName}
+                    </span>
+                    <span
+                      class="font-mono text-[10px] uppercase tracking-[0.12em] shrink-0 w-[104px] flex items-center justify-end gap-1.5 whitespace-nowrap"
+                      style={`color:${verdict.color}`}
+                    >
+                      <span class="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={`background:${verdict.color}`}></span>
+                      {verdict.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div class="mt-12 flex flex-wrap gap-3 justify-center">
+            <a href={`/goats/${champion.slug}`} class="btn btn-primary text-base px-8 py-3">
+              {champion.shortName}'s Profile
+            </a>
+            <a href={`/rankings/${arena}`} class="btn btn-secondary text-sm px-6 py-3">
+              See the Rankings
+            </a>
+            <button
+              type="button"
+              onClick={reset}
+              class="font-sans font-medium text-sm text-body px-6 py-3 inline-flex items-center rounded-sm hover:text-ink transition-colors"
+            >
+              Play again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -627,61 +652,32 @@ export default function ChampionMode({ roster }: Props) {
   const rightPicked = current ? current.picked.id === rightFighter.id : false;
 
   return (
-    <div class="max-w-4xl mx-auto px-5 py-8 md:py-10">
+    <div>
       {/* Status bar */}
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-2 font-mono text-[13px] uppercase tracking-widest text-mute">
-          <span class="text-lime">👑 {champion.shortName}</span>
-          <span>· Bout {boutNo} / {totalBouts}</span>
-        </div>
-        <div class="font-mono text-[13px] uppercase tracking-widest text-mute">
-          In sync <span class="text-lime">{agreed}</span>
+      <div class="border-b border-hairline">
+        <div class="page-container h-[60px] flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime whitespace-nowrap">🔥 In sync · {agreed}</span>
+            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-mute whitespace-nowrap">Bout {boutNo} / {totalBouts}</span>
+          </div>
+          <button type="button" onClick={reset} class="chip">✕ Exit</button>
         </div>
       </div>
 
-      {/* Progress dots */}
-      <div class="flex gap-1.5 mb-8">
-        {queue.map((_, i) => {
-          const r = rounds[i];
-          const cls = r
-            ? r.crowd === "agree"
-              ? "bg-lime"
-              : r.crowd === "disagree"
-                ? "bg-red"
-                : "bg-body"
-            : i === idx
-              ? "bg-ink"
-              : "bg-hairline";
-          return <span class={`h-1 flex-1 rounded-full ${cls} transition-colors`}></span>;
-        })}
+      {/* Progress */}
+      <div class="h-1 bg-hairline">
+        <div class="h-full bg-lime transition-all duration-500" style={`width:${Math.round((rounds.length / totalBouts) * 100)}%`}></div>
       </div>
 
-      {/* Matchup card — the reigning GOAT stays put; only the new challenger
-          slot re-keys and animates in. */}
-      <div class="relative flex items-stretch min-h-[200px] md:min-h-[240px] bg-canvas-soft border border-hairline rounded-md overflow-hidden">
-        <FighterPanel
-          key={leftFighter.id}
-          fighter={leftFighter}
-          isChampion={championOnLeft}
-          align="left"
-        />
-
-        <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-10">
-          <span
-            class="anim-slash font-headline font-black text-[7rem] md:text-[10rem] leading-none text-lime select-none"
-            style="text-shadow: 0 0 50px rgba(200,255,0,0.3)"
-          >
-            /
-          </span>
+      <div class="page-container max-w-3xl pt-9 pb-12">
+        <div class="text-center">
+          <div class="font-mono text-[11px] uppercase tracking-[0.2em] text-lime">
+            Champion Mode · {arenaEmoji(arena)} {arenaLabel(arena)}
+          </div>
+          <h1 class="font-headline font-black uppercase text-4xl md:text-[46px] leading-[0.95] tracking-tight text-ink mt-3">
+            {phase === "arena" ? "Who takes it?" : !current ? "Reading the room…" : current.dethroned ? "New champion" : "Throne held"}
+          </h1>
         </div>
-
-        <FighterPanel
-          key={rightFighter.id}
-          fighter={rightFighter}
-          isChampion={!championOnLeft}
-          align="right"
-        />
-      </div>
 
       {/* Stat comparison — the decision aid */}
       {cmp && (
@@ -695,7 +691,7 @@ export default function ChampionMode({ roster }: Props) {
           >
             <div class="flex items-center gap-3">
               <span class="font-mono text-[13px] uppercase tracking-widest text-mute">
-                Stat Scoreline
+                Tale of the Tape
               </span>
               <span class="font-headline font-black uppercase text-sm">
                 <span class={cmp.winsChamp >= cmp.winsOpp ? "text-lime" : "text-ink"}>
@@ -750,30 +746,21 @@ export default function ChampionMode({ roster }: Props) {
 
       {/* Action / reveal */}
       {phase === "arena" ? (
-        <div class="mt-6">
-          <div class="flex flex-col sm:flex-row items-center gap-3 justify-center">
-            {/* Buttons follow the physical layout: left button = left GOAT,
-                right button = right GOAT — "Keep" the reigning one, "Crown" the challenger. */}
-            <button
-              onClick={() => cast(leftFighter)}
-              disabled={pending}
-              class="font-headline font-black uppercase tracking-wider text-base bg-canvas-soft-2 text-ink border border-hairline-strong px-8 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
-              {championOnLeft ? "Keep" : "Crown"} {leftFighter.shortName}
-            </button>
-            <span class="font-mono text-[13px] uppercase tracking-widest text-mute">vs</span>
-            <button
-              onClick={() => cast(rightFighter)}
-              disabled={pending}
-              class="font-headline font-black uppercase tracking-wider text-base bg-canvas-soft-2 text-ink border border-hairline-strong px-8 h-12 flex items-center rounded-sm hover:border-lime hover:text-lime transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
-              {championOnLeft ? "Crown" : "Keep"} {rightFighter.shortName}
-            </button>
+        <div class="mt-7">
+          {/* Left = lime, right = red; Keep the reigning GOAT or Crown the challenger. */}
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_90px_1fr] items-stretch gap-3 md:gap-0">
+            <PickCard key={leftFighter.id} fighter={leftFighter} tone="lime" isChampion={championOnLeft} onPick={() => cast(leftFighter)} disabled={pending} />
+            <div class="flex items-center justify-center py-2 md:py-0">
+              <div class="w-[60px] h-[60px] rounded-full bg-canvas-deep border border-hairline-strong flex items-center justify-center">
+                <span class="font-headline font-black italic text-[22px] text-ink">VS</span>
+              </div>
+            </div>
+            <PickCard key={rightFighter.id} fighter={rightFighter} tone="red" isChampion={!championOnLeft} onPick={() => cast(rightFighter)} disabled={pending} />
           </div>
-          <p class="text-center font-mono text-[13px] uppercase tracking-widest text-mute mt-3">
+          <p class="text-center font-mono text-[11px] uppercase tracking-[0.12em] text-mute mt-4">
             {mode === "ranked"
-              ? "Pick the greater · bouts build the head-to-head; the last standing earns +5"
-              : "Pick the greater · friendly run, nothing is recorded"}
+              ? "+5 votes to your crowned GOAT · finish to crown your champion"
+              : "Friendly run · nothing recorded"}
           </p>
           {error && (
             <p class="text-center font-mono text-[13px] uppercase tracking-widest text-red mt-3">
@@ -841,8 +828,9 @@ export default function ChampionMode({ roster }: Props) {
 
           <div class="mt-6 flex flex-col items-center gap-2">
             <button
+              type="button"
               onClick={() => next()}
-              class="font-headline font-black uppercase tracking-wider text-base bg-lime text-canvas px-10 h-12 flex items-center rounded-sm hover:bg-lime-dark transition-colors"
+              class="btn btn-primary text-base px-10 py-3"
             >
               {boutNo >= totalBouts ? "Crown Your GOAT →" : "Next Challenger →"}
             </button>
@@ -852,6 +840,7 @@ export default function ChampionMode({ roster }: Props) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

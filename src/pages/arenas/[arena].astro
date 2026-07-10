@@ -1,11 +1,17 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import PageHeader from '../../components/PageHeader.astro';
+import SectionHeader from '../../components/SectionHeader.astro';
 import BattleCard from '../../components/BattleCard.astro';
 import { getRoster } from '../../data';
-import { getArena } from '../../data/arenas';
+import { getArena, arenas } from '../../data/arenas';
 import { getAllBattleSummaries } from '../../lib/queries';
 import { flagEmoji, compactNumber } from '../../lib/format';
+
+/** Dark or light text on a solid accent chip. */
+function onAccent(hex: string): string {
+  const h = hex.replace('#', '');
+  return (0.299 * parseInt(h.slice(0, 2), 16) + 0.587 * parseInt(h.slice(2, 4), 16) + 0.114 * parseInt(h.slice(4, 6), 16)) / 255 > 0.6 ? '#0d0d0f' : '#f0f0f2';
+}
 
 // Live catalog — ordering follows community votes.
 export const prerender = false;
@@ -26,32 +32,34 @@ const description = `Every ${cat.label} GOAT battle and the legends behind them.
 <Layout title={title} description={description}>
 
   <!-- Header -->
-  <PageHeader
-    accent={accent}
-    breadcrumb={[
-      { label: 'GOATSBattle', href: '/' },
-      { label: 'Arenas', href: '/arenas' },
-      { label: cat.label },
-    ]}
+  <SectionHeader
     title={cat.label}
     highlight="Arena"
-    subtitle={`${allBattles.length} battles · ${roster.length} legends · ${totalVotes > 0 ? `${compactNumber(totalVotes)} votes cast` : 'voting just opened'}.`}>
+    accent={accent}
+    live={totalVotes > 0}
+    stat={`${allBattles.length} battles · ${roster.length} legends · ${totalVotes > 0 ? `${compactNumber(totalVotes)} votes` : 'voting open'}`}>
+    <div slot="chips">
+      {arenas.map((c) => {
+        const on = c.id === arena;
+        return (
+          <a href={`/arenas/${c.id}`} class={`chip${on ? ' chip-active' : ''}`}
+            style={on ? `background:${c.accent}; border-color:${c.accent}; color:${onAccent(c.accent)}` : ''}>
+            {c.emoji} {c.label}
+          </a>
+        );
+      })}
+    </div>
     <div class="mt-6 flex flex-wrap gap-3">
-      <a href={`/rankings/${arena}`}
-        class="font-headline font-black uppercase tracking-wider text-sm px-6 h-11 flex items-center rounded-sm transition-opacity hover:opacity-90"
-        style={`background:${accent}; color:#0d0d0f`}>
+      <a href={`/rankings/${arena}`} class="btn text-sm px-6 py-3" style={`background:${accent}; color:${onAccent(accent)}`}>
         View {cat.label} Rankings
       </a>
-      <a href="/arenas"
-        class="font-sans text-sm text-ink border border-hairline-strong px-6 h-11 flex items-center rounded-sm hover:border-ink transition-colors">
-        All Arenas
-      </a>
+      <a href="/arenas" class="btn btn-secondary text-sm px-6 py-3">All Arenas</a>
     </div>
-  </PageHeader>
+  </SectionHeader>
 
   <!-- Players roster -->
-  <section class="border-b border-hairline bg-canvas-soft">
-    <div class="max-w-7xl mx-auto px-5 py-12">
+  <section class="border-b border-hairline bg-canvas-soft mt-8">
+    <div class="page-container py-12">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
         <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">The Legends</h2>
@@ -76,7 +84,7 @@ const description = `Every ${cat.label} GOAT battle and the legends behind them.
 
   <!-- All battles -->
   <section>
-    <div class="max-w-7xl mx-auto px-5 py-12">
+    <div class="page-container py-12">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-0.5 h-5 inline-block" style={`background:${accent}`}></span>
         <h2 class="font-headline font-black uppercase text-xl tracking-tight text-ink">All Battles</h2>
