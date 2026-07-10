@@ -178,8 +178,10 @@ function PickCard({
       <div class="font-mono text-[10px] uppercase tracking-[0.18em]" style={isChampion ? `color:${color}` : "color:var(--color-mute)"}>
         {isChampion ? "👑 Reigning" : "Challenger"}
       </div>
-      <div class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink mt-3" style="font-size: clamp(2.25rem, 5vw, 54px)">
-        {name.first && <>{name.first}<br /></>}<span style={`color:${color}`}>{name.last}</span>
+      {/* Reserve two lines so single- and double-line names occupy the same
+          height — keeps the meta line and vote button aligned across both cards. */}
+      <div class="font-headline font-black uppercase leading-[0.9] tracking-tight text-ink mt-3 min-h-[1.8em] flex flex-col justify-center" style="font-size: clamp(2.25rem, 5vw, 54px)">
+        <span>{name.first && <>{name.first}<br /></>}<span style={`color:${color}`}>{name.last}</span></span>
       </div>
       <div class="font-sans text-[13px] text-mute mt-3">{meta}</div>
       <button
