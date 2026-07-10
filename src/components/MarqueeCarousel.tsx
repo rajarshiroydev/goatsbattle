@@ -26,13 +26,18 @@ interface Props {
  */
 export default function MarqueeCarousel({ battles }: Props) {
   const [i, setI] = useState(0);
+  const [paused, setPaused] = useState(false);
   const n = battles.length;
 
   useEffect(() => {
-    if (n <= 1) return;
-    const timer = setInterval(() => setI((cur) => (cur + 1) % n), 4200);
-    return () => clearInterval(timer);
-  }, [n]);
+    if (n <= 1 || paused) return;
+    // setTimeout (not setInterval) so navigation — which changes `i` — restarts
+    // the countdown rather than letting a near-due interval fire immediately.
+    // Paused while focus is inside the deck so the active card never slides out
+    // from under a focused link.
+    const timer = setTimeout(() => setI((cur) => (cur + 1) % n), 4200);
+    return () => clearTimeout(timer);
+  }, [n, i, paused]);
 
   if (n === 0) return null;
 
@@ -47,7 +52,11 @@ export default function MarqueeCarousel({ battles }: Props) {
   };
 
   return (
-    <div class="w-full h-full flex flex-col">
+    <div
+      class="w-full h-full flex flex-col"
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
       {/* Card stage — fills the column so the centre card's top sits flush
           with the hero heading on the left. */}
       <div class="relative flex-1 min-h-[280px]" style="perspective: 1400px">

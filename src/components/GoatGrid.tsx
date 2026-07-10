@@ -84,8 +84,8 @@ export default function GoatGrid({ goats, arenas }: Props) {
               key={g.slug}
               href={`/goats/${g.slug}`}
               class="group relative flex flex-col bg-canvas-soft border border-hairline rounded-md p-[18px] overflow-hidden transition-colors"
-              onMouseOver={(e) => (e.currentTarget.style.borderColor = g.accent)}
-              onMouseOut={(e) => (e.currentTarget.style.borderColor = '')}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = g.accent)}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
             >
               <span class="absolute -top-[18px] -right-1.5 font-headline font-black leading-none select-none pointer-events-none"
                 style={`font-size:96px; color:${ghost}`} aria-hidden="true">

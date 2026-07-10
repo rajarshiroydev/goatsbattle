@@ -80,10 +80,10 @@ const ticker: string[] = [
   <!-- ══════════════════════════════════════════
        SCOREBOARD TICKER — live scorelines marquee
   ══════════════════════════════════════════ -->
-  <section class="marquee border-b border-hairline bg-canvas-soft overflow-hidden" aria-hidden="true">
+  <section class="marquee border-b border-hairline bg-canvas-soft overflow-hidden">
     <div class="marquee-track flex items-center whitespace-nowrap py-2.5">
       {[0, 1].map((dup) => (
-        <div class="marquee-group flex items-center shrink-0">
+        <div class="marquee-group flex items-center shrink-0" aria-hidden={dup === 1 ? 'true' : undefined}>
           {ticker.map((item) => (
             <span class="flex items-center">
               <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-body px-6">{item}</span>
