@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import SectionHeader from '../../components/SectionHeader.astro';
+import PageHero from '../../components/PageHero.astro';
 import { arenas } from '../../data/arenas';
 import { getEntitiesByArena } from '../../data';
 
@@ -15,9 +15,13 @@ const description = 'Pick an arena and see its live, community-voted GOAT rankin
 
 <Layout title={title} description={description}>
 
-  <SectionHeader title="Rankings" stat={`${arenas.length} arenas · ranked by votes`} align="baseline" />
+  <PageHero
+    title="GOAT"
+    highlight="Rankings"
+    description="Pick an arena to see its live, community-voted leaderboard — the greatest of all time, ranked by the world right now."
+    stat={`${arenas.length} arenas · ranked by votes`} />
 
-  <section class="pt-5 pb-12">
+  <section class="pt-8 pb-12">
     <div class="page-container">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cards.map((c) => (

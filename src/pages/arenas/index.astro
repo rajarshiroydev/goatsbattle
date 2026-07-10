@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import SectionHeader from '../../components/SectionHeader.astro';
+import PageHero from '../../components/PageHero.astro';
 import { arenas } from '../../data/arenas';
 import { getEntitiesByArena, allEntities } from '../../data';
 import { getAllBattleSummaries } from '../../lib/queries';
@@ -30,9 +30,14 @@ const statLine = `${arenas.length} arenas · ${allEntities.length} goats · ${to
 
 <Layout title={title} description={description}>
 
-  <SectionHeader title="Pick your arena" stat={statLine} align="baseline" />
+  <PageHero
+    title="Pick your"
+    highlight="arena"
+    description="Every sport has its eternal argument. Choose an arena to see the community-voted rankings — and settle the debate yourself."
+    stat={statLine}
+    live={totalVotes > 0} />
 
-  <section class="pt-5 pb-12">
+  <section class="pt-8 pb-12">
     <div class="page-container">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cards.map((c) => (

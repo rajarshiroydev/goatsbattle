@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import SectionHeader from '../components/SectionHeader.astro';
+import PageHero from '../components/PageHero.astro';
 import GoatGrid from '../components/GoatGrid.tsx';
 import type { GoatCardData, GridArena } from '../components/GoatGrid.tsx';
 import { arenas } from '../data/arenas';
@@ -36,9 +36,12 @@ const description = 'Meet the greatest of all time across football, cricket, ten
 
 <Layout title={title} description={description}>
 
-  <SectionHeader title="The Goats" />
+  <PageHero
+    title="The"
+    highlight="Goats"
+    description="The greatest of all time, across every arena. Explore their careers, dive into the stats, and pit them against each other head-to-head." />
 
-  <section class="pt-5 pb-12">
+  <section class="pt-8 pb-12">
     <div class="page-container">
       <GoatGrid client:load goats={goats} arenas={gridArenas} />
     </div>
