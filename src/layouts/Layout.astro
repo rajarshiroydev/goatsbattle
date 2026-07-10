@@ -84,8 +84,9 @@ const isActive = (m: string[]) =>
           GOATS<span class="text-lime">BATTLE</span>
         </a>
 
-        <!-- Nav links (desktop) — absolutely centred in the bar, independent of the side widths -->
-        <div class="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+        <!-- Nav links (desktop) — absolutely centred in the bar, independent of the
+             side widths. Gated to lg: at md the six links would overlap the logo. -->
+        <div class="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           {navLinks.map((link) => (
             <a href={link.href}
               class:list={[

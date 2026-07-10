@@ -55,6 +55,7 @@ export default function GoatGrid({ goats, arenas }: Props) {
           const on = c.id === active;
           return (
             <button
+              key={c.id}
               type="button"
               onClick={() => setActive(c.id)}
               class="chip"
@@ -77,6 +78,7 @@ export default function GoatGrid({ goats, arenas }: Props) {
           const ghost = g.rank <= 3 ? `${g.accent}1f` : 'rgba(240,240,242,0.05)';
           return (
             <a
+              key={g.slug}
               href={`/goats/${g.slug}`}
               class="group relative block bg-canvas-soft border border-hairline rounded-md p-[18px] overflow-hidden transition-colors"
               onMouseOver={(e) => (e.currentTarget.style.borderColor = g.accent)}

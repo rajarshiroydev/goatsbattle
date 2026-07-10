@@ -89,10 +89,8 @@ const accent = entity.accent;
           <div class="mt-6 flex flex-wrap items-start gap-3">
             <ProfileVoteButton client:load id={entity.id} shortName={entity.shortName} accent={accent} />
             <a href={`/faceoff?goat=${entity.slug}`}
-              class="font-sans text-base border rounded-sm px-6 h-11 flex items-center gap-2 transition-colors whitespace-nowrap"
-              style={`color:${accent}; border-color:${accent}40`}
-              onmouseover={`this.style.borderColor='${accent}'`}
-              onmouseout={`this.style.borderColor='${accent}40'`}>
+              class="faceoff-cta font-sans text-base border rounded-sm px-6 h-11 flex items-center gap-2 transition-colors whitespace-nowrap"
+              style={`--accent:${accent}`}>
               Face Off
               <span class="text-sm">→</span>
             </a>
@@ -182,6 +180,16 @@ const accent = entity.accent;
       </div>
     </section>
   ))}
+
+  <style>
+    /* Accent-tinted Face Off CTA — hover brightens the border to the full accent.
+       Colour comes from the inline --accent var so it stays per-GOAT. */
+    .faceoff-cta {
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+    .faceoff-cta:hover { border-color: var(--accent); }
+  </style>
 
   <!-- Head-to-Head Record — every voted 1v1, split into wins and losses -->
   <section class="border-b border-hairline">

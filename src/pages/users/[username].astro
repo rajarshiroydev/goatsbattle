@@ -55,7 +55,8 @@ const joined = profile
   description={profile ? `${profile.username}'s profile, votes, and comments on GOATSBattle.` : 'This user could not be found.'}
 >
   {profile ? (
-    <section class="page-container max-w-3xl py-12">
+    <section class="page-container py-12">
+      <div class="max-w-3xl mx-auto">
       <!-- Hero -->
       <div class="flex items-center gap-5">
         <div class="w-20 h-20 rounded-full bg-lime text-canvas font-headline font-black text-4xl flex items-center justify-center overflow-hidden shrink-0">
@@ -91,6 +92,7 @@ const joined = profile
             ))}
           </ul>
         )}
+      </div>
       </div>
     </section>
   ) : (

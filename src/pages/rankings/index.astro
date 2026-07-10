@@ -25,10 +25,8 @@ const description = 'Pick an arena and see its live, community-voted GOAT rankin
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cards.map((c) => (
           <a href={`/rankings/${c.id}`}
-            class="group block bg-canvas-soft border border-hairline rounded-md p-[22px] transition-colors"
-            style={`background-image: linear-gradient(140deg, ${c.accent}12, transparent 55%)`}
-            onmouseover={`this.style.borderColor='${c.accent}'`}
-            onmouseout={`this.style.borderColor=''`}>
+            class="ranking-card group block bg-canvas-soft border border-hairline rounded-md p-[22px] transition-colors"
+            style={`--accent:${c.accent}; background-image: linear-gradient(140deg, ${c.accent}12, transparent 55%)`}>
             <div class="flex items-baseline gap-2.5">
               <span class="font-headline font-black uppercase text-3xl md:text-[34px] leading-none text-ink">{c.label}</span>
               <span class="text-[22px] leading-none">{c.emoji}</span>
@@ -50,5 +48,10 @@ const description = 'Pick an arena and see its live, community-voted GOAT rankin
       </p>
     </div>
   </section>
+
+  <style>
+    /* Hover brightens the card border to its arena accent (from the inline --accent var). */
+    .ranking-card:hover { border-color: var(--accent); }
+  </style>
 
 </Layout>

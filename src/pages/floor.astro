@@ -11,8 +11,8 @@ export const prerender = false;
 // ranks by upvotes, "New" by recency. Official match threads + posting a take
 // straight to the floor arrive with the matches API — see [[social-features]].
 const sort = Astro.url.searchParams.get('sort') === 'hot' ? 'hot' : 'new';
-let takes = await getRecentTakes(30);
-if (sort === 'hot') takes = [...takes].sort((a, b) => b.upvotes - a.upvotes);
+const TAKE_LIMIT = 30;
+const takes = await getRecentTakes(TAKE_LIMIT, sort);
 
 const chips = [
   { label: 'Hot', href: '/floor?sort=hot', active: sort === 'hot' },
@@ -61,7 +61,11 @@ const description = 'The floor is open. Every take from every battle, in one liv
       {takes.length > 0 ? (
         <>
           {takes.map((take) => <TakeRow take={take} />)}
-          <span class="self-center mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute">That's every take so far</span>
+          <span class="self-center mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute">
+            {takes.length < TAKE_LIMIT
+              ? "That's every take so far"
+              : `Showing the ${sort === 'hot' ? 'top' : 'latest'} ${TAKE_LIMIT} takes`}
+          </span>
         </>
       ) : (
         <div class="bg-canvas-soft border border-hairline rounded-md px-6 py-12 text-center">

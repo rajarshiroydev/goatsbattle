@@ -311,7 +311,10 @@ export interface FloorTake {
  * stream. Enriches each row with its author handle and both combatants (parsed
  * from the canonical battle slug); rows whose slug can't resolve are dropped.
  */
-export async function getRecentTakes(limit = 20): Promise<FloorTake[]> {
+export async function getRecentTakes(limit = 20, sort: 'new' | 'hot' = 'new'): Promise<FloorTake[]> {
+  // Order in the DB so the limit is applied to the right window — "hot" ranks by
+  // upvotes, "new" by recency. (A prior in-memory sort only reordered the newest
+  // N rows, so older high-upvote takes could never surface under "hot".)
   const rows = await db
     .select({
       id: comments.id,
@@ -324,7 +327,7 @@ export async function getRecentTakes(limit = 20): Promise<FloorTake[]> {
     .from(comments)
     .innerJoin(user, eq(comments.userId, user.id))
     .where(eq(comments.deleted, false))
-    .orderBy(desc(comments.createdAt))
+    .orderBy(sort === 'hot' ? desc(comments.upvotes) : desc(comments.createdAt))
     .limit(limit);
 
   return rows
