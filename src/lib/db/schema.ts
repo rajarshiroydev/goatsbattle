@@ -7,6 +7,7 @@ import {
   serial,
   boolean,
   index,
+  uniqueIndex,
   primaryKey,
   check,
   type AnyPgColumn,
@@ -311,6 +312,31 @@ export const commentVotes = pgTable(
   })
 );
 
+/**
+ * Comment stat tags — the "settle it with a fact" mechanic. A comment can cite
+ * one or more definitive goat stats (e.g. Messi · International Goals). Only the
+ * reference is stored (goat slug + stat label); the *value* is resolved live
+ * from the canonical stat data in code (src/data), so tags never go stale. The
+ * unique index dedupes the same stat tagged twice on one comment.
+ */
+export const commentStatTags = pgTable(
+  'comment_stat_tags',
+  {
+    id: serial('id').primaryKey(),
+    commentId: integer('comment_id')
+      .notNull()
+      .references(() => comments.id, { onDelete: 'cascade' }),
+    goatSlug: text('goat_slug')
+      .notNull()
+      .references(() => entities.id),
+    statLabel: text('stat_label').notNull(),
+  },
+  (t) => ({
+    commentIdx: index('comment_stat_tags_comment_idx').on(t.commentId),
+    uniq: uniqueIndex('comment_stat_tags_uniq').on(t.commentId, t.goatSlug, t.statLabel),
+  })
+);
+
 export type EntityRow = typeof entities.$inferSelect;
 export type BattleRow = typeof battles.$inferSelect;
 export type VoteRow = typeof votes.$inferSelect;
@@ -322,3 +348,4 @@ export type CommentVoteRow = typeof commentVotes.$inferSelect;
 export type MatchRow = typeof matches.$inferSelect;
 export type MatchMomentRow = typeof matchMoments.$inferSelect;
 export type MatchGoatRow = typeof matchGoats.$inferSelect;
+export type CommentStatTagRow = typeof commentStatTags.$inferSelect;

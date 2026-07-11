@@ -3,6 +3,18 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useSession } from '../lib/useSession';
 import { openAuthModal } from '../lib/authModal';
 import { relativeTime } from '../lib/format';
+import type { TaggableGoat, StatTag } from '../lib/statTags';
+
+/** A (goat, stat) reference the composer emits with a comment. */
+type StatTagInput = { goatSlug: string; statLabel: string };
+
+const MAX_STAT_TAGS = 6;
+
+/** "Int'l Goals 106" — compact stat display used on chips and picker options. */
+function statText(s: { statLabel: string; value: string | number; unit?: string } | { label: string; value: string | number; unit?: string }): string {
+  const label = 'statLabel' in s ? s.statLabel : s.label;
+  return `${label} ${s.value}${s.unit ? ` ${s.unit}` : ''}`;
+}
 
 interface FanTag {
   slug: string;
@@ -23,6 +35,7 @@ interface CommentNode {
   viewerUpvoted: boolean;
   fanTag: FanTag | null;
   moment: { id: number; minute: number; extra: number | null; type: string } | null;
+  statTags: StatTag[];
 }
 
 /** Exactly one of battleId / matchId — the discussion subject. */
@@ -33,6 +46,8 @@ type SubjectProps =
 type Props = SubjectProps & {
   accentA?: string;
   accentB?: string;
+  /** Goats whose stats can be cited in this discussion (composer stat picker). */
+  taggableGoats?: TaggableGoat[];
 };
 
 type SortMode = 'top' | 'new';
@@ -51,7 +66,7 @@ function momentLabel(m: { minute: number; extra: number | null; type: string }):
   return `${min} ${MOMENT_TYPE_LABEL[m.type] ?? m.type.replace(/_/g, ' ')}`;
 }
 
-export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
+export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635', taggableGoats }: Props) {
   // The subject drives the API query param and POST body (battle XOR match).
   const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId!)}`;
   const subjectBody: Record<string, string> = matchId ? { matchId } : { battleId: battleId! };
@@ -111,7 +126,12 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
     setComments((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }
 
-  async function post(parentId: number | null, body: string, momentId: number | null = null): Promise<boolean> {
+  async function post(
+    parentId: number | null,
+    body: string,
+    momentId: number | null = null,
+    statTags: StatTagInput[] = [],
+  ): Promise<boolean> {
     if (!user) {
       openAuthModal({ reason: 'Log in to join the discussion' });
       return false;
@@ -120,7 +140,13 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...subjectBody, parentId, body, ...(momentId != null ? { momentId } : {}) }),
+        body: JSON.stringify({
+          ...subjectBody,
+          parentId,
+          body,
+          ...(momentId != null ? { momentId } : {}),
+          ...(statTags.length ? { statTags } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Failed to post');
@@ -245,8 +271,9 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
           <Composer
             placeholder={activeMoment ? `Weigh in on ${activeMoment.label}…` : 'Add to the debate…'}
             avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}
-            onSubmit={async (body) => {
-              const ok = await post(null, body, activeMoment?.id ?? null);
+            goats={taggableGoats}
+            onSubmit={async (body, statTags) => {
+              const ok = await post(null, body, activeMoment?.id ?? null, statTags);
               if (ok && activeMoment) clearMoment();
               return ok;
             }}
@@ -299,6 +326,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
                 onUpvote={upvote}
                 onReply={post}
                 onDelete={remove}
+                goats={taggableGoats}
               />
             ))}
           </div>
@@ -391,13 +419,15 @@ function CommentItem({
   onUpvote,
   onReply,
   onDelete,
+  goats,
 }: {
   node: TreeNode;
   depth: number;
   viewerId: string | null;
   onUpvote: (n: CommentNode) => void;
-  onReply: (parentId: number | null, body: string) => Promise<boolean>;
+  onReply: (parentId: number | null, body: string, momentId?: number | null, statTags?: StatTagInput[]) => Promise<boolean>;
   onDelete: (n: CommentNode) => void;
+  goats?: TaggableGoat[];
 }) {
   const [replying, setReplying] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -466,6 +496,24 @@ function CommentItem({
             </button>
           )}
 
+          {/* Stat citations — definitive goat stats backing the argument */}
+          {node.statTags.length > 0 && (
+            <div class="flex flex-wrap gap-1.5 mb-1.5">
+              {node.statTags.map((t) => (
+                <a
+                  key={`${t.goatSlug}-${t.statLabel}`}
+                  href={`/goats/${t.goatSlug}`}
+                  class="inline-flex items-center gap-1 bg-canvas-soft border border-hairline rounded-sm px-2 py-0.5 font-mono text-[11px] text-ink hover:border-lime transition-colors"
+                  title={`${t.goatShortName} — ${statText(t)} (from the stat sheet)`}
+                >
+                  <span class="text-lime">⚡</span>
+                  <span class="font-semibold">{t.goatShortName}</span>
+                  <span class="text-mute">· {statText(t)}</span>
+                </a>
+              ))}
+            </div>
+          )}
+
           {/* Body */}
           <p
             class={`font-sans text-[16px] leading-relaxed whitespace-pre-wrap break-words ${
@@ -518,9 +566,10 @@ function CommentItem({
                 placeholder={`Reply to ${displayName}…`}
                 compact
                 autoFocus
+                goats={goats}
                 onCancel={() => setReplying(false)}
-                onSubmit={async (body) => {
-                  const ok = await onReply(node.id, body);
+                onSubmit={async (body, statTags) => {
+                  const ok = await onReply(node.id, body, null, statTags);
                   if (ok) setReplying(false);
                   return ok;
                 }}
@@ -564,6 +613,7 @@ function CommentItem({
                     onUpvote={onUpvote}
                     onReply={onReply}
                     onDelete={onDelete}
+                    goats={goats}
                   />
                 </div>
               </div>
@@ -588,17 +638,26 @@ function Composer({
   avatar,
   compact = false,
   autoFocus = false,
+  goats,
 }: {
   placeholder: string;
-  onSubmit: (body: string) => Promise<boolean>;
+  onSubmit: (body: string, statTags: StatTagInput[]) => Promise<boolean>;
   onCancel?: () => void;
   avatar?: ComponentChildren;
   compact?: boolean;
   autoFocus?: boolean;
+  goats?: TaggableGoat[];
 }) {
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
+  const [tags, setTags] = useState<StatTag[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickGoat, setPickGoat] = useState('');
+  const [pickStat, setPickStat] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const canTagStats = !!goats && goats.length > 0;
+  const activeGoat = goats?.find((g) => g.slug === (pickGoat || goats[0]?.slug));
 
   // Auto-grow to fit the content, capped so it never runs away.
   const MAX_HEIGHT = 220;
@@ -613,23 +672,45 @@ function Composer({
     autoGrow(textareaRef.current);
   }, [value]);
 
+  function addTag() {
+    if (!activeGoat || !pickStat || tags.length >= MAX_STAT_TAGS) return;
+    const stat = activeGoat.stats.find((s) => s.label === pickStat);
+    if (!stat) return;
+    if (tags.some((t) => t.goatSlug === activeGoat.slug && t.statLabel === stat.label)) return;
+    setTags((prev) => [
+      ...prev,
+      { goatSlug: activeGoat.slug, goatShortName: activeGoat.shortName, statLabel: stat.label, value: stat.value, ...(stat.unit ? { unit: stat.unit } : {}) },
+    ]);
+    setPickStat('');
+  }
+
+  function removeTag(i: number) {
+    setTags((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   async function submit() {
     const body = value.trim();
     if (!body || pending) return;
     setPending(true);
-    const ok = await onSubmit(body);
+    const ok = await onSubmit(body, tags.map((t) => ({ goatSlug: t.goatSlug, statLabel: t.statLabel })));
     setPending(false);
-    if (ok) setValue('');
+    if (ok) {
+      setValue('');
+      setTags([]);
+      setPickerOpen(false);
+    }
   }
 
   function cancel() {
     setValue('');
+    setTags([]);
+    setPickerOpen(false);
     textareaRef.current?.blur();
     onCancel?.();
   }
 
   // Show Cancel on replies (to close them) and on the main composer once typing has started.
-  const showCancel = !!onCancel || value.length > 0;
+  const showCancel = !!onCancel || value.length > 0 || tags.length > 0;
 
   return (
     <div class="flex gap-3">
@@ -648,7 +729,60 @@ function Composer({
           }}
           class="w-full bg-transparent border-0 border-b border-hairline rounded-none px-0 py-2 text-ink font-sans text-[16px] leading-relaxed resize-none placeholder:text-mute focus:outline-none focus:border-lime transition-colors"
         />
+
+        {/* Pending stat tags */}
+        {tags.length > 0 && (
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            {tags.map((t, i) => (
+              <span key={`${t.goatSlug}-${t.statLabel}`} class="inline-flex items-center gap-1 bg-canvas-soft border border-hairline rounded-sm px-2 py-0.5 font-mono text-[11px] text-ink">
+                <span class="text-lime">⚡</span>
+                <span class="font-semibold">{t.goatShortName}</span>
+                <span class="text-mute">· {statText(t)}</span>
+                <button onClick={() => removeTag(i)} class="text-mute hover:text-red ml-0.5" aria-label="Remove stat">✕</button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Stat picker */}
+        {canTagStats && pickerOpen && (
+          <div class="flex flex-wrap items-center gap-2 mt-2 bg-canvas-soft border border-hairline rounded-md p-2">
+            <select
+              value={pickGoat || goats![0].slug}
+              onChange={(e) => { setPickGoat((e.target as HTMLSelectElement).value); setPickStat(''); }}
+              class="bg-canvas border border-hairline rounded-sm px-2 py-1 font-sans text-[13px] text-ink focus:outline-none focus:border-lime"
+            >
+              {goats!.map((g) => <option value={g.slug} key={g.slug}>{g.shortName}</option>)}
+            </select>
+            <select
+              value={pickStat}
+              onChange={(e) => setPickStat((e.target as HTMLSelectElement).value)}
+              class="flex-1 min-w-[10rem] bg-canvas border border-hairline rounded-sm px-2 py-1 font-sans text-[13px] text-ink focus:outline-none focus:border-lime"
+            >
+              <option value="">Choose a stat…</option>
+              {activeGoat?.stats.map((s) => <option value={s.label} key={s.label}>{statText(s)}</option>)}
+            </select>
+            <button
+              onClick={addTag}
+              disabled={!pickStat || tags.length >= MAX_STAT_TAGS}
+              class="font-headline font-black uppercase tracking-wider text-[13px] text-lime hover:text-lime-dark px-2 h-8 disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
+        )}
+
         <div class="flex justify-end items-center gap-2 mt-2">
+          {canTagStats && (
+            <button
+              onClick={() => setPickerOpen((o) => !o)}
+              disabled={tags.length >= MAX_STAT_TAGS}
+              class={`mr-auto font-mono text-[12px] uppercase tracking-wider transition-colors disabled:opacity-40 ${pickerOpen ? 'text-lime' : 'text-mute hover:text-ink'}`}
+              title="Cite a definitive goat stat"
+            >
+              ⚡ Cite a stat
+            </button>
+          )}
           {showCancel && (
             <button
               onClick={cancel}
