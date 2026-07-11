@@ -29,10 +29,10 @@ const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
   votes: s.total.toLocaleString(),
 }));
 
-const floorChips = FLOOR_FILTERS.map((f, i) => ({
+const floorChips = FLOOR_FILTERS.map((f) => ({
   label: f.label,
   href: `/floor?filter=${f.key}`,
-  active: i === 0, // "Top" leads the preview
+  active: f.key === 'top', // "Top" leads the preview (matches the fetch above)
 }));
 
 // Scoreboard ticker between the hero and the floor — live scorelines woven
