@@ -40,7 +40,9 @@ export async function rateLimit(
         END
     RETURNING hits, window_start AS "windowStart"
   `);
-  const row = (result as unknown as Array<{ hits: number; windowStart: Date }>)[0];
+  const row = (result as unknown as {
+    rows: Array<{ hits: number; windowStart: Date }>;
+  }).rows[0];
   const hits = row?.hits ?? max + 1;
   const elapsed = Date.now() - new Date(row?.windowStart ?? Date.now()).getTime();
   const retryAfter = Math.max(1, Math.ceil((windowSeconds * 1000 - elapsed) / 1000));

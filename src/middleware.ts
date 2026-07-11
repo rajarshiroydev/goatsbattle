@@ -1,8 +1,11 @@
 import { defineMiddleware } from 'astro:middleware';
 import { auth } from './lib/auth';
 
+const devConnections = import.meta.env.DEV ? ' ws://localhost:*' : '';
+const upgradeInsecure = import.meta.env.PROD ? '; upgrade-insecure-requests' : '';
+
 const SECURITY_HEADERS: Record<string, string> = {
-  'Content-Security-Policy': "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data:; connect-src 'self'; upgrade-insecure-requests",
+  'Content-Security-Policy': `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data:; connect-src 'self'${devConnections}${upgradeInsecure}`,
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'X-Content-Type-Options': 'nosniff',

@@ -37,8 +37,8 @@ async function main() {
 
   const headClaims = await db.execute(sql`SELECT count(*)::int AS count FROM head_vote_windows`);
   const rateCounters = await db.execute(sql`SELECT count(*)::int AS count FROM rate_limits`);
-  const headCount = (headClaims as unknown as Array<{ count: number }>)[0]?.count ?? 0;
-  const rateCount = (rateCounters as unknown as Array<{ count: number }>)[0]?.count ?? 0;
+  const headCount = (headClaims as unknown as { rows: Array<{ count: number }> }).rows[0]?.count ?? 0;
+  const rateCount = (rateCounters as unknown as { rows: Array<{ count: number }> }).rows[0]?.count ?? 0;
   console.log(`✓ Security schema ready: ${headCount} head-vote claims, ${rateCount} active rate counters.`);
 }
 

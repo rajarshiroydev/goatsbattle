@@ -63,7 +63,9 @@ export async function recordHeadToHeadVote(
     )
     SELECT EXISTS (SELECT 1 FROM claimed) AS awarded
   `);
-  const claim = (claimResult as unknown as Array<{ awarded: boolean }>)[0];
+  const claim = (claimResult as unknown as {
+    rows: Array<{ awarded: boolean }>;
+  }).rows[0];
   const alreadyVoted = !claim?.awarded;
 
   const fresh = (await getBattleSummary(battleId)) ?? summary;
@@ -188,12 +190,14 @@ export async function recordRankingVote(
            updated.votes AS total
     FROM claimed CROSS JOIN updated
   `);
-  const awarded = (result as unknown as Array<{
-    windowStart: Date;
-    profileUsed: boolean;
-    championUsed: boolean;
-    total: number;
-  }>)[0];
+  const awarded = (result as unknown as {
+    rows: Array<{
+      windowStart: Date;
+      profileUsed: boolean;
+      championUsed: boolean;
+      total: number;
+    }>;
+  }).rows[0];
 
   if (!awarded) {
     const state = await getRankingVoteState(entityId, userId);
