@@ -4,6 +4,7 @@ import { getEntityBySlug, getBattlesForEntity, allBattlePairs } from '../../data
 import { arenaLabel } from '../../data/arenas';
 import { getBattleId, parseBattleSlug, getCanonicalBattleSlug } from '../../lib/battle';
 import { compareEntities } from '../../lib/stats';
+import { taggableGoatsForArena } from '../../lib/statTags';
 import RadarChart from '../../components/RadarChart.astro';
 import TrophyTimeline from '../../components/TrophyTimeline.astro';
 import VoteWidget from '../../components/VoteWidget.tsx';
@@ -35,6 +36,9 @@ const description = `${entityA.name} vs ${entityB.name}: side-by-side career sta
 // Stat comparison: shared sections with per-stat leader + proportional split,
 // plus the arena-win tally. See src/lib/stats.ts.
 const { sections: sharedSections, winsA, winsB, leader: statLeader } = compareEntities(entityA, entityB);
+
+// Stats citable in this 1v1 debate — the two combatants first, then the arena.
+const taggableGoats = taggableGoatsForArena(entityA.arena, [entityA.slug, entityB.slug]);
 
 const relatedA = getBattlesForEntity(slugA, { exclude: slugB, limit: 4 });
 const relatedB = getBattlesForEntity(slugB, { exclude: slugA, limit: 4 });
@@ -165,7 +169,7 @@ function tagline(e: typeof entityA): string {
   <!-- Community Discussion -->
   <section class="border-b border-hairline">
     <div class="page-container py-10">
-      <CommentThread client:visible battleId={canonical} accentA={entityA.accent} accentB={entityB.accent} />
+      <CommentThread client:visible battleId={canonical} accentA={entityA.accent} accentB={entityB.accent} taggableGoats={taggableGoats} />
     </div>
   </section>
 

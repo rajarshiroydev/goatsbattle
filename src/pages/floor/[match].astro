@@ -4,6 +4,7 @@ import MatchHeader from '../../components/MatchHeader.astro';
 import MatchTimeline from '../../components/MatchTimeline.astro';
 import CommentThread from '../../components/CommentThread.tsx';
 import { getMatchById, getMatchMoments } from '../../lib/queries';
+import { taggableGoatsForArena } from '../../lib/statTags';
 
 // Match data is dynamic (DB), so render on request.
 export const prerender = false;
@@ -13,6 +14,8 @@ const event = match ? await getMatchById(match) : null;
 if (!event) return Astro.redirect('/floor');
 
 const moments = await getMatchMoments(event.id);
+// Stats you can cite in the debate — every football goat, this match's first.
+const taggableGoats = taggableGoatsForArena('football', event.goats.map((g) => g.slug));
 
 const title = `${event.homeTeam} vs ${event.awayTeam} — The Floor | GOATSBattle`;
 const description = `${event.competition}. Join the debate on ${event.homeTeam} vs ${event.awayTeam} — follow the match timeline, back your GOAT, settle it on The Floor.`;
@@ -33,7 +36,7 @@ const description = `${event.competition}. Join the debate on ${event.homeTeam} 
         {/* Discussion (main column) */}
         <div class="order-2 lg:order-1 min-w-0">
           <h2 class="font-headline font-black uppercase text-ink text-2xl mb-3">The Debate</h2>
-          <CommentThread client:visible matchId={event.id} />
+          <CommentThread client:visible matchId={event.id} taggableGoats={taggableGoats} />
         </div>
 
         {/* Side panel — timeline + context (stacks above the thread on mobile) */}

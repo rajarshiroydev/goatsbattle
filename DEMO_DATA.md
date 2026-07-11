@@ -10,7 +10,7 @@ Status legend: 🔴 still demo · 🟡 needs decision · 🟢 resolved
 |---|---------|-------|-------------|--------------------|
 | 1 | Head-to-Head Record (per-goat profile) + rankings 1v1 popover | `scripts/seed-battle-votes.ts` → `battles.votesA/votesB` | Head-to-head vote tallies (totals 150–5000, hashed splits) on all 90 canonical battle pairings | 🔴 Reset tallies to 0/0 before launch, or keep as seed and let real votes accrue. Script only fills 0/0 rows, so real votes are safe either way. |
 | 2 | Head-to-Head Record — demo split votes | Cast via `/api/vote` (real ledger + tallies) on `messi-vs-ronaldo`, `mbappe-vs-messi`, `cruyff-vs-messi` | A few opponent votes added so those bars render a genuine two-colour split (75/25, 67/33) instead of shutouts — used to demo the split bar | 🔴 **Must reset** with the SQL below before launch (these are fabricated demos, not organic votes). Mark 🟢 once removed. |
-| 3 | The Floor — match events + timelines (GBT-7) | `scripts/seed-matches.ts` → `matches` / `match_moments` / `match_goats` | A handful of hand-authored football matches (Argentina–Egypt, WC 2026 fixtures) with moments incl. fouls/handball/VAR that API-Football's free feed can't supply | 🔴 Replace with real API-Football sync when the live-fetch phase lands. Seed is idempotent (re-run safe). Delete rows via the SQL below if a clean slate is needed. |
+| 3 | The Floor — match events + timelines (GBT-7) | `scripts/sync-matches.ts` → `matches` / `match_moments` / `match_goats` | Real data, but a **curated 5-match subset** of the 2022 World Cup knockouts (the matches our tracked goats played in) — not the full fixture list. Free tier = 100 req/day + seasons 2022–2024 only (WC 2026 is 403), so it's a deliberate slice. | 🟡 Before launch, decide the real coverage (more WC 2022 matches, or a paid plan for current seasons) and expand `FIXTURE_IDS` in `scripts/sync-matches.ts`. Re-run `npm run db:sync:matches` (idempotent). |
 
 ## How to reset an item
 
@@ -34,26 +34,14 @@ WHERE battle_id IN ('messi-vs-ronaldo', 'mbappe-vs-messi', 'cruyff-vs-messi')
 -- Then re-zero / recompute tallies (the UPDATE above already zeroes battles).
 ```
 
-Seeded match events (#3) — the FK cascade on `match_moments`/`match_goats`
-clears the children automatically. Comments left on a seeded match are removed
-first so the FK holds. Scoped to the five demo IDs so real synced matches and
-their user comments are untouched:
+Synced match events (#3) — everything comes from `scripts/sync-matches.ts`
+(externalId is non-null on synced rows). The FK cascade on
+`match_moments`/`match_goats` clears the children automatically; comments left on
+a match are removed first so the FK holds:
 
 ```sql
-DELETE FROM comments WHERE match_id IN (
-  'argentina-vs-egypt-2026-06-15',
-  'argentina-vs-france-2026-07-19',
-  'brazil-vs-argentina-2026-06-28',
-  'france-vs-portugal-2026-07-05',
-  'argentina-vs-spain-2026-07-11'
-);
-DELETE FROM matches WHERE id IN ( -- cascades to match_moments + match_goats
-  'argentina-vs-egypt-2026-06-15',
-  'argentina-vs-france-2026-07-19',
-  'brazil-vs-argentina-2026-06-28',
-  'france-vs-portugal-2026-07-05',
-  'argentina-vs-spain-2026-07-11'
-);
+DELETE FROM comments WHERE match_id IN (SELECT id FROM matches WHERE external_id IS NOT NULL);
+DELETE FROM matches WHERE external_id IS NOT NULL; -- cascades to moments + goats
 ```
 
 ## When adding new demo data

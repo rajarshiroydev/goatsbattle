@@ -1,7 +1,18 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
-import { comments, commentVotes, user, battles, matches } from './db/schema';
+import { comments, commentVotes, commentStatTags, user, battles, matches, matchMoments } from './db/schema';
 import { getFanTags, type FanTag } from './floor';
+import { resolveStat, MAX_STAT_TAGS, type StatTag, type StatTagInput } from './statTags';
+
+export { MAX_STAT_TAGS, type StatTagInput };
+
+/** The timeline moment a comment is anchored to (null for un-anchored comments). */
+export interface MomentRef {
+  id: number;
+  minute: number;
+  extra: number | null;
+  type: string;
+}
 
 /**
  * What a comment is attached to — a 1v1 battle or a match (event). Exactly one
@@ -31,6 +42,10 @@ export interface CommentNode {
   viewerUpvoted: boolean;
   /** The author's fan tag (goat they back), or null if they've cast no votes. */
   fanTag: FanTag | null;
+  /** The match-timeline moment this comment is anchored to, if any. */
+  moment: MomentRef | null;
+  /** Definitive goat stats cited by this comment (value resolved from code). */
+  statTags: StatTag[];
 }
 
 export const MAX_COMMENT_LENGTH = 4000;
@@ -59,13 +74,19 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
       authorUsername: user.username,
       authorImage: user.image,
       viewerUpvoted,
+      momentId: comments.momentId,
+      momentMinute: matchMoments.minute,
+      momentExtra: matchMoments.extra,
+      momentType: matchMoments.type,
     })
     .from(comments)
     .innerJoin(user, eq(user.id, comments.userId))
+    .leftJoin(matchMoments, eq(matchMoments.id, comments.momentId))
     .where(subjectWhere(subject))
     .orderBy(comments.createdAt);
 
   const fanTags = await getFanTags(rows.map((r) => r.authorId));
+  const statTagsByComment = await getStatTags(rows.map((r) => r.id));
 
   return rows.map((r) => ({
     id: r.id,
@@ -78,7 +99,34 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
     author: { username: r.authorUsername, name: r.authorName, image: r.authorImage },
     viewerUpvoted: !!r.viewerUpvoted,
     fanTag: fanTags.get(r.authorId) ?? null,
+    moment:
+      r.momentId !== null && r.momentMinute !== null
+        ? { id: r.momentId, minute: r.momentMinute, extra: r.momentExtra, type: r.momentType! }
+        : null,
+    statTags: statTagsByComment.get(r.id) ?? [],
   }));
+}
+
+/**
+ * Batch-load stat tags for a set of comments and resolve each to its live value
+ * from code (dropping any whose goat/stat no longer exists). One query for the
+ * whole page, grouped by comment id.
+ */
+async function getStatTags(commentIds: number[]): Promise<Map<number, StatTag[]>> {
+  const out = new Map<number, StatTag[]>();
+  if (commentIds.length === 0) return out;
+  const rows = await db
+    .select({ commentId: commentStatTags.commentId, goatSlug: commentStatTags.goatSlug, statLabel: commentStatTags.statLabel })
+    .from(commentStatTags)
+    .where(inArray(commentStatTags.commentId, commentIds));
+  for (const r of rows) {
+    const resolved = resolveStat(r.goatSlug, r.statLabel);
+    if (!resolved) continue;
+    const list = out.get(r.commentId) ?? [];
+    list.push(resolved);
+    out.set(r.commentId, list);
+  }
+  return out;
 }
 
 export type PostCommentResult =
@@ -87,14 +135,17 @@ export type PostCommentResult =
   | { status: 'not_found' };
 
 /**
- * Create a comment (or reply). Validates the body length and that any `parentId`
- * belongs to the same subject. Returns the created node shaped like the list.
+ * Create a comment (or reply). Validates the body length, that any `parentId`
+ * belongs to the same subject, and that any `momentId` belongs to this match.
+ * Returns the created node shaped like the list.
  */
 export async function postComment(
   subject: CommentSubject,
   userId: string,
   parentId: number | null,
   rawBody: string,
+  momentId: number | null = null,
+  statTagInputs: StatTagInput[] = [],
 ): Promise<PostCommentResult> {
   const body = rawBody.trim();
   if (body.length === 0) return { status: 'invalid', error: 'Comment cannot be empty' };
@@ -121,16 +172,54 @@ export async function postComment(
     }
   }
 
+  // A moment anchor is only valid on a match comment, and must belong to it.
+  let moment: MomentRef | null = null;
+  if (momentId !== null) {
+    if (!isMatch(subject)) {
+      return { status: 'invalid', error: 'Only match comments can tag a moment' };
+    }
+    const [m] = await db
+      .select({ id: matchMoments.id, matchId: matchMoments.matchId, minute: matchMoments.minute, extra: matchMoments.extra, type: matchMoments.type })
+      .from(matchMoments)
+      .where(eq(matchMoments.id, momentId))
+      .limit(1);
+    if (!m || m.matchId !== subject.match) {
+      return { status: 'invalid', error: 'Invalid moment' };
+    }
+    moment = { id: m.id, minute: m.minute, extra: m.extra, type: m.type };
+  }
+
+  // Resolve + dedupe the cited stats, dropping unknown goat/label pairs and
+  // capping the count. Values come from code so they can't be spoofed.
+  const seen = new Set<string>();
+  const statTags: StatTag[] = [];
+  for (const t of statTagInputs.slice(0, MAX_STAT_TAGS)) {
+    const key = `${t.goatSlug}|${t.statLabel}`;
+    if (seen.has(key)) continue;
+    const resolved = resolveStat(t.goatSlug, t.statLabel);
+    if (!resolved) continue;
+    seen.add(key);
+    statTags.push(resolved);
+  }
+
   const [inserted] = await db
     .insert(comments)
     .values({
       battleId: isMatch(subject) ? null : subject.battle,
       matchId: isMatch(subject) ? subject.match : null,
+      momentId,
       userId,
       parentId,
       body,
     })
     .returning({ id: comments.id, createdAt: comments.createdAt });
+
+  if (statTags.length > 0) {
+    await db
+      .insert(commentStatTags)
+      .values(statTags.map((s) => ({ commentId: inserted.id, goatSlug: s.goatSlug, statLabel: s.statLabel })))
+      .onConflictDoNothing();
+  }
 
   const [author] = await db
     .select({ name: user.name, username: user.username, image: user.image })
@@ -153,6 +242,8 @@ export async function postComment(
       author: { username: author?.username ?? null, name: author?.name ?? 'Unknown', image: author?.image ?? null },
       viewerUpvoted: false,
       fanTag: fanTags.get(userId) ?? null,
+      moment,
+      statTags,
     },
   };
 }
