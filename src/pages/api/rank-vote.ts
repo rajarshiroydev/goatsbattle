@@ -31,10 +31,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to vote', code: 'auth_required' }, 401);
   }
-  if (!locals.user.emailVerified) {
-    return json({ error: 'Verify your email before voting', code: 'email_verification_required' }, 403);
-  }
-
   const parsed = await parseJsonBody(request, rankVoteBodySchema);
   if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
   const { entityId, channel } = parsed.data;

@@ -18,7 +18,6 @@ export default function AuthModal({ googleEnabled = false }: Props) {
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,7 +25,6 @@ export default function AuthModal({ googleEnabled = false }: Props) {
       setReason(detail.reason ?? null);
       if (detail.mode) setMode(detail.mode);
       setError(null);
-      setNotice(null);
       setOpen(true);
     };
     const unsub = onOpenAuthModal(apply);
@@ -81,7 +79,6 @@ export default function AuthModal({ googleEnabled = false }: Props) {
   function close() {
     setOpen(false);
     setError(null);
-    setNotice(null);
   }
 
   async function submit(e: Event) {
@@ -89,21 +86,14 @@ export default function AuthModal({ googleEnabled = false }: Props) {
     if (pending) return;
     setPending(true);
     setError(null);
-    setNotice(null);
     try {
       const res =
         mode === 'signup'
           ? await authClient.signUp.email({ email, password, name })
           : await authClient.signIn.email({ email, password });
       if (res.error) throw new Error(res.error.message ?? 'Something went wrong');
-      if (mode === 'signup') {
-        setMode('signin');
-        setPassword('');
-        setNotice('Check your inbox and verify your email before logging in.');
-      } else {
-        emitSessionChanged();
-        close();
-      }
+      emitSessionChanged();
+      close();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -196,7 +186,7 @@ export default function AuthModal({ googleEnabled = false }: Props) {
             <input
               type="password"
               required
-              minLength={10}
+              minLength={isSignup ? 10 : undefined}
               value={password}
               onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
               class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
@@ -205,9 +195,6 @@ export default function AuthModal({ googleEnabled = false }: Props) {
 
           {error && (
             <p class="font-mono text-[13px] text-red mb-3">{error}</p>
-          )}
-          {notice && (
-            <p class="font-mono text-[13px] text-lime mb-3">{notice}</p>
           )}
 
           <button
@@ -225,7 +212,6 @@ export default function AuthModal({ googleEnabled = false }: Props) {
             onClick={() => {
               setMode(isSignup ? 'signin' : 'signup');
               setError(null);
-              setNotice(null);
             }}
             class="text-lime font-semibold hover:underline"
           >

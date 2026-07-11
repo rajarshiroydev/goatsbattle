@@ -52,10 +52,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to comment', code: 'auth_required' }, 401);
   }
-  if (!locals.user.emailVerified) {
-    return json({ error: 'Verify your email before commenting', code: 'email_verification_required' }, 403);
-  }
-
   const parsed = await parseJsonBody(request, commentBodySchema);
   if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
   const b = parsed.data;
@@ -90,10 +86,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in first', code: 'auth_required' }, 401);
   }
-  if (!locals.user.emailVerified) {
-    return json({ error: 'Verify your email first', code: 'email_verification_required' }, 403);
-  }
-
   const parsed = await parseJsonBody(request, deleteCommentBodySchema);
   if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
   const { commentId } = parsed.data;
