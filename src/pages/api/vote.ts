@@ -3,6 +3,7 @@ import { recordHeadToHeadVote } from '../../lib/voteService';
 import { getClientIp, hashIp, getCountry } from '../../lib/ip';
 import { rateLimit } from '../../lib/ratelimit';
 import { toResult } from '../../lib/voteWire';
+import { parseJsonBody, voteBodySchema } from '../../lib/apiValidation';
 
 export const prerender = false;
 
@@ -16,30 +17,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to vote', code: 'auth_required' }, 401);
   }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+  if (!locals.user.emailVerified) {
+    return json({ error: 'Verify your email before voting', code: 'email_verification_required' }, 403);
   }
 
-  const battleId = body && typeof (body as any).battleId === 'string' ? (body as any).battleId : null;
-  const choice = body && typeof (body as any).choice === 'string' ? (body as any).choice : null;
-  if (!battleId || !choice) {
-    return json({ error: 'battleId and choice are required' }, 400);
-  }
+  const parsed = await parseJsonBody(request, voteBodySchema);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const { battleId, choice } = parsed.data;
 
   const ipHash = hashIp(getClientIp(request.headers));
 
   // Per-user limit plus an IP-scoped ceiling (so churning accounts from one host
   // can't bypass the per-user cap). Checked in sequence so a failing request
   // doesn't also consume the other bucket's quota.
-  const rl = rateLimit(locals.user.id);
+  const rl = await rateLimit(`vote:user:${locals.user.id}`);
   if (!rl.ok) {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
-  const rlIp = rateLimit(`ip:${ipHash}`);
+  const rlIp = await rateLimit(`vote:ip:${ipHash}`, { max: 40 });
   if (!rlIp.ok) {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rlIp.retryAfter) });
   }

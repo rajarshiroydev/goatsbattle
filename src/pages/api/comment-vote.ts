@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { toggleCommentUpvote } from '../../lib/commentService';
 import { rateLimit } from '../../lib/ratelimit';
+import { commentVoteBodySchema, parseJsonBody } from '../../lib/apiValidation';
 
 export const prerender = false;
 
@@ -15,19 +16,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to upvote', code: 'auth_required' }, 401);
   }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+  if (!locals.user.emailVerified) {
+    return json({ error: 'Verify your email before upvoting', code: 'email_verification_required' }, 403);
   }
 
-  const commentId = typeof (body as any)?.commentId === 'number' ? (body as any).commentId : null;
-  const remove = (body as any)?.remove === true;
-  if (commentId === null) return json({ error: 'commentId is required' }, 400);
+  const parsed = await parseJsonBody(request, commentVoteBodySchema);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const { commentId, remove } = parsed.data;
 
-  const rl = rateLimit(`cv:${locals.user.id}`);
+  const rl = await rateLimit(`comments:vote:${locals.user.id}`);
   if (!rl.ok) {
     return json({ error: 'Too fast — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }

@@ -142,6 +142,29 @@ export const votes = pgTable(
 );
 
 /**
+ * Atomic rolling-window claim for head-to-head votes. The composite primary key
+ * gives each user/battle pair one mutable claim row; voteService refreshes it
+ * only after the previous 24-hour window has expired. This closes the
+ * check-then-write race that the append-only votes ledger cannot prevent.
+ */
+export const headVoteWindows = pgTable(
+  'head_vote_windows',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    battleId: text('battle_id')
+      .notNull()
+      .references(() => battles.id, { onDelete: 'cascade' }),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),
+    choice: text('choice').notNull().references(() => entities.id),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.battleId] }),
+  }),
+);
+
+/**
  * Vote windows — ranking-vote enforcement + Champion Mode lockout, per
  * (user, entity). `windowStart` anchors a shared 24h window opened by the user's
  * first ranking vote for that GOAT. `profileUsed`/`championUsed` mark which
@@ -165,6 +188,15 @@ export const voteWindows = pgTable(
     pk: primaryKey({ columns: [t.userId, t.entityId] }),
   })
 );
+
+/** Shared fixed-window rate-limit counters. Unlike an in-process Map, these are
+ * consistent across serverless instances. Expired keys are opportunistically
+ * recycled and can be pruned without affecting correctness. */
+export const rateLimits = pgTable('rate_limits', {
+  key: text('key').primaryKey(),
+  windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),
+  hits: integer('hits').notNull().default(1),
+});
 
 /**
  * Matches — football events users discuss on The Floor. Unlike entities/battles
@@ -340,6 +372,7 @@ export const commentStatTags = pgTable(
 export type EntityRow = typeof entities.$inferSelect;
 export type BattleRow = typeof battles.$inferSelect;
 export type VoteRow = typeof votes.$inferSelect;
+export type HeadVoteWindowRow = typeof headVoteWindows.$inferSelect;
 export type VoteWindowRow = typeof voteWindows.$inferSelect;
 export type UserRow = typeof user.$inferSelect;
 export type SessionRow = typeof session.$inferSelect;

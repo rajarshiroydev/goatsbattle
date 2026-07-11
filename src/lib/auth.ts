@@ -13,6 +13,32 @@ const secret = process.env.BETTER_AUTH_SECRET ?? import.meta.env.BETTER_AUTH_SEC
 const baseURL = process.env.BETTER_AUTH_URL ?? import.meta.env.BETTER_AUTH_URL;
 const googleClientId = process.env.GOOGLE_CLIENT_ID ?? import.meta.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? import.meta.env.GOOGLE_CLIENT_SECRET;
+const resendApiKey = process.env.RESEND_API_KEY ?? import.meta.env.RESEND_API_KEY;
+const verificationEmailFrom = process.env.VERIFICATION_EMAIL_FROM ?? import.meta.env.VERIFICATION_EMAIL_FROM;
+
+const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+})[char]!);
+
+async function sendVerificationEmail({ user: target, url }: { user: { email: string; name: string }; url: string }) {
+  if (!resendApiKey || !verificationEmailFrom) {
+    throw new Error('RESEND_API_KEY and VERIFICATION_EMAIL_FROM are required for email verification.');
+  }
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: verificationEmailFrom,
+      to: [target.email],
+      subject: 'Verify your GOATSBattle email',
+      html: `<p>Hi ${escapeHtml(target.name)},</p><p><a href="${escapeHtml(url)}">Verify your email</a> to vote and join discussions.</p>`,
+    }),
+  });
+  if (!response.ok) throw new Error(`Verification email provider returned ${response.status}.`);
+}
 
 // Only wire Google when both creds exist so local dev works without them.
 const socialProviders =
@@ -64,7 +90,19 @@ export const auth = betterAuth({
     // maxAge keeps revocation reasonably fresh; logout clears the cookie locally.
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
-  emailAndPassword: { enabled: true },
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+    minPasswordLength: 10,
+    maxPasswordLength: 128,
+  },
+  emailVerification: {
+    sendVerificationEmail,
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60,
+  },
   socialProviders,
   user: {
     // Extra app column; not accepted from signup input — set by the hook below.
