@@ -36,11 +36,24 @@ WHERE battle_id IN ('messi-vs-ronaldo', 'mbappe-vs-messi', 'cruyff-vs-messi')
 
 Seeded match events (#3) — the FK cascade on `match_moments`/`match_goats`
 clears the children automatically. Comments left on a seeded match are removed
-first so the FK holds:
+first so the FK holds. Scoped to the five demo IDs so real synced matches and
+their user comments are untouched:
 
 ```sql
-DELETE FROM comments WHERE match_id IS NOT NULL;
-DELETE FROM matches; -- cascades to match_moments + match_goats
+DELETE FROM comments WHERE match_id IN (
+  'argentina-vs-egypt-2026-06-15',
+  'argentina-vs-france-2026-07-19',
+  'brazil-vs-argentina-2026-06-28',
+  'france-vs-portugal-2026-07-05',
+  'argentina-vs-spain-2026-07-11'
+);
+DELETE FROM matches WHERE id IN ( -- cascades to match_moments + match_goats
+  'argentina-vs-egypt-2026-06-15',
+  'argentina-vs-france-2026-07-19',
+  'brazil-vs-argentina-2026-06-28',
+  'france-vs-portugal-2026-07-05',
+  'argentina-vs-spain-2026-07-11'
+);
 ```
 
 ## When adding new demo data

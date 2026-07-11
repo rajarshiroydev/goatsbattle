@@ -49,6 +49,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'Invalid JSON body' }, 400);
   }
 
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return json({ error: 'JSON body must be an object' }, 400);
+  }
+
   const b = body as Record<string, unknown>;
   const subject = resolveSubject(
     typeof b.battleId === 'string' ? b.battleId : null,

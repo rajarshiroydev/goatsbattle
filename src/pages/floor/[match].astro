@@ -15,7 +15,7 @@ if (!event) return Astro.redirect('/floor');
 const moments = await getMatchMoments(event.id);
 
 const title = `${event.homeTeam} vs ${event.awayTeam} — The Floor | GOATSBattle`;
-const description = `${event.competition}. Join the debate on ${event.homeTeam} vs ${event.awayTeam} — tag the moments, back your GOAT, settle it on The Floor.`;
+const description = `${event.competition}. Join the debate on ${event.homeTeam} vs ${event.awayTeam} — follow the match timeline, back your GOAT, settle it on The Floor.`;
 ---
 
 <Layout title={title} description={description}>

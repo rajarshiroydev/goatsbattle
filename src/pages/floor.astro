@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import SectionHeader from '../components/SectionHeader.astro';
 import EventRow from '../components/EventRow.astro';
-import { getFloorEvents } from '../lib/queries';
+import { getFloorEvents, getLiveEventCount } from '../lib/queries';
 import { FLOOR_FILTERS, parseFloorFilter } from '../lib/floor';
 
 // Live feed — read events on every request.
@@ -13,9 +13,10 @@ export const prerender = false;
 // Live (in progress), My Goats (events with the goats you back).
 const filter = parseFloorFilter(Astro.url.searchParams.get('filter'));
 const EVENT_LIMIT = 40;
-const events = await getFloorEvents({ filter, userId: Astro.locals.user?.id ?? null, limit: EVENT_LIMIT });
-
-const liveCount = events.filter((e) => e.status === 'live').length;
+const [events, liveCount] = await Promise.all([
+  getFloorEvents({ filter, userId: Astro.locals.user?.id ?? null, limit: EVENT_LIMIT }),
+  getLiveEventCount(),
+]);
 const chips = FLOOR_FILTERS.map((f) => ({
   ...f,
   href: `/floor?filter=${f.key}`,
@@ -23,7 +24,7 @@ const chips = FLOOR_FILTERS.map((f) => ({
 }));
 
 const title = 'The Floor — Match Debates | GOATSBattle';
-const description = 'The floor is open. Every match a GOAT played in, one debate at a time — tag the moments, back your GOAT, settle the greatness argument.';
+const description = 'The floor is open. Every match a GOAT played in, one debate at a time — follow the moment-by-moment timeline, back your GOAT, settle the greatness argument.';
 
 // Empty-state copy depends on why the list is empty.
 const emptyMsg =

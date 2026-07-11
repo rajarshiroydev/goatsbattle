@@ -24,13 +24,15 @@ interface CommentNode {
   fanTag: FanTag | null;
 }
 
-interface Props {
-  /** Exactly one of battleId / matchId — the discussion subject. */
-  battleId?: string;
-  matchId?: string;
+/** Exactly one of battleId / matchId — the discussion subject. */
+type SubjectProps =
+  | { battleId: string; matchId?: never }
+  | { matchId: string; battleId?: never };
+
+type Props = SubjectProps & {
   accentA?: string;
   accentB?: string;
-}
+};
 
 type SortMode = 'top' | 'new';
 
@@ -38,8 +40,8 @@ const MAX_DEPTH = 6;
 
 export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
   // The subject drives the API query param and POST body (battle XOR match).
-  const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId ?? '')}`;
-  const subjectBody: Record<string, string> = matchId ? { matchId } : { battleId: battleId ?? '' };
+  const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId!)}`;
+  const subjectBody: Record<string, string> = matchId ? { matchId } : { battleId: battleId! };
   const { user, loading: sessionLoading } = useSession();
   const [comments, setComments] = useState<CommentNode[]>([]);
   const [loading, setLoading] = useState(true);

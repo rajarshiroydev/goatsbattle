@@ -425,6 +425,16 @@ export async function getFloorEvents(opts: {
   return rows.map((r) => ({ ...r, goats: goatMap.get(r.id) ?? [] }));
 }
 
+/** Total matches currently in progress — the accurate "live now" count (the
+ * Floor list is capped/filtered, so it can't be counted from the rendered rows). */
+export async function getLiveEventCount(): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(matches)
+    .where(eq(matches.status, 'live'));
+  return row?.n ?? 0;
+}
+
 /** A single match (event) by id, with its participating goats. */
 export async function getMatchById(id: string): Promise<FloorEvent | null> {
   const commentCount = sql<number>`count(${comments.id})::int`;

@@ -80,7 +80,8 @@ const away = moments.filter((m) => m.team === 'away');
         {moments.map((m) => (
           <li class="flex items-start gap-2 text-sm">
             <span class="font-mono text-[11px] text-mute w-9 shrink-0 pt-0.5 text-right">{label(m)}</span>
-            <span class="shrink-0" title={m.type}>{glyph(m.type)}</span>
+            <span class="shrink-0" aria-hidden="true">{glyph(m.type)}</span>
+            <span class="sr-only">{m.team === 'home' ? homeTeam : awayTeam} — {m.type.replace(/_/g, ' ')}:</span>
             <span class="flex-1 min-w-0">
               <span class="font-sans font-semibold text-ink">{m.playerName ?? (m.team === 'home' ? homeTeam : awayTeam)}</span>
               {m.detail && <span class="font-sans text-body"> — {m.detail}</span>}

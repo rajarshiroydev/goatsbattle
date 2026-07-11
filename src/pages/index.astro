@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import MarqueeCarousel from '../components/MarqueeCarousel.tsx';
 import type { MarqueeBattle } from '../components/MarqueeCarousel.tsx';
 import EventRow from '../components/EventRow.astro';
-import { getHomeBattleData, getFloorEvents } from '../lib/queries';
+import { getHomeBattleData, getFloorEvents, getLiveEventCount } from '../lib/queries';
 import { FLOOR_FILTERS } from '../lib/floor';
 import { arenaLabel, arenaEmoji, getArena } from '../data/arenas';
 import { compactNumber } from '../lib/format';
@@ -11,11 +11,11 @@ import { compactNumber } from '../lib/format';
 // Live scoreboard — read the latest tallies + top match debates on every request.
 export const prerender = false;
 
-const [{ mostVoted, totalVotes }, events] = await Promise.all([
+const [{ mostVoted, totalVotes }, events, liveCount] = await Promise.all([
   getHomeBattleData(6),
   getFloorEvents({ filter: 'top', userId: Astro.locals.user?.id ?? null, limit: 4 }),
+  getLiveEventCount(),
 ]);
-const liveCount = events.filter((e) => e.status === 'live').length;
 
 // Marquee cards for the "Happening Now" carousel (left = lime, right = red).
 const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
