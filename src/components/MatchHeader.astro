@@ -1,0 +1,86 @@
+---
+/**
+ * The "post heading" atop a Reddit-style event page: the fixture, big scoreline,
+ * competition/venue/kickoff meta, status, and the tracked goats who played.
+ */
+import type { FloorEvent } from '../lib/queries';
+import { flagEmoji } from '../lib/format';
+
+interface Props {
+  event: FloorEvent;
+}
+
+const { event } = Astro.props;
+const isLive = event.status === 'live';
+const isUpcoming = event.status === 'scheduled';
+const hasScore = event.homeScore !== null && event.awayScore !== null;
+
+const kickoffLabel = event.kickoff.toLocaleDateString(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+function textOn(hex: string): string {
+  const h = hex.replace('#', '');
+  if (h.length < 6) return '#0d0d0f';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0d0d0f' : '#f0f0f2';
+}
+---
+
+<div class="bg-canvas-soft border border-hairline rounded-lg px-5 py-5 sm:px-7 sm:py-6">
+  {/* Eyebrow */}
+  <div class="flex items-center gap-3 mb-4">
+    <span class="font-mono text-[10px] uppercase tracking-[0.16em] text-mute">{event.competition}</span>
+    {isLive ? (
+      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-red flex items-center gap-1.5">
+        <span class="live-dot gb-pulse-fast" style="--dot: var(--color-red)"></span> Live
+      </span>
+    ) : (
+      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
+        {isUpcoming ? 'Upcoming' : 'Full time'}
+      </span>
+    )}
+  </div>
+
+  {/* Scoreline */}
+  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
+    <div class="text-right">
+      <div class="text-3xl sm:text-4xl leading-none mb-1">{flagEmoji(event.homeCode ?? '')}</div>
+      <div class="font-headline font-black uppercase text-ink text-2xl sm:text-3xl leading-none">{event.homeTeam}</div>
+    </div>
+
+    <div class="text-center px-1">
+      {hasScore ? (
+        <div class="font-headline font-black text-ink text-4xl sm:text-5xl leading-none tabular-nums">
+          {event.homeScore}<span class="text-mute px-1">–</span>{event.awayScore}
+        </div>
+      ) : (
+        <div class="font-headline font-black italic text-mute text-2xl">VS</div>
+      )}
+    </div>
+
+    <div class="text-left">
+      <div class="text-3xl sm:text-4xl leading-none mb-1">{flagEmoji(event.awayCode ?? '')}</div>
+      <div class="font-headline font-black uppercase text-ink text-2xl sm:text-3xl leading-none">{event.awayTeam}</div>
+    </div>
+  </div>
+
+  {/* Meta */}
+  <div class="mt-5 pt-4 border-t border-hairline flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.1em] text-mute">
+    <span>{kickoffLabel}</span>
+    {event.venue && <span>· {event.venue}</span>}
+    {event.goats.length > 0 && (
+      <span class="flex items-center gap-1.5 ml-auto">
+        <span class="text-mute normal-case tracking-normal">Goats on the pitch:</span>
+        {event.goats.map((g) => (
+          <a href={`/goats/${g.slug}`} class="team-tag" style={`--tag:${g.accent}; --tag-fg:${textOn(g.accent)}`}>{g.shortName}</a>
+        ))}
+      </span>
+    )}
+  </div>
+</div>

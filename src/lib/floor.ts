@@ -1,0 +1,88 @@
+import { inArray, sql } from 'drizzle-orm';
+import { db } from './db';
+import { votes } from './db/schema';
+import { getEntityBySlug } from '../data';
+
+/**
+ * The Floor's shared filter definitions — the single source used by both the
+ * landing preview and the dedicated /floor page (they previously duplicated the
+ * chip arrays inline). Per GBT-7 the filters are Top / Recents / Live / My Goats.
+ */
+export const FLOOR_FILTERS = [
+  { key: 'top', label: 'Top', hint: 'Most-discussed events' },
+  { key: 'recents', label: 'Recents', hint: 'Newest kickoffs first' },
+  { key: 'live', label: 'Live', hint: 'Happening right now' },
+  { key: 'mygoats', label: 'My Goats', hint: 'Events with the goats you back' },
+] as const;
+
+export type FloorFilter = (typeof FLOOR_FILTERS)[number]['key'];
+
+const FILTER_KEYS = FLOOR_FILTERS.map((f) => f.key) as readonly string[];
+
+/** Coerce an arbitrary query-param value to a valid filter (defaults to "top"). */
+export function parseFloorFilter(value: string | null | undefined): FloorFilter {
+  return (value && FILTER_KEYS.includes(value) ? value : 'top') as FloorFilter;
+}
+
+/**
+ * A user's "fan tag" — the goat they back most, shown before their username in
+ * discussions (design-guide §"Team tag"). Derived from their voting history; a
+ * dedicated allegiance picker is a future enhancement.
+ */
+export interface FanTag {
+  /** Goat slug, e.g. "messi". */
+  slug: string;
+  /** Uppercase short name for the tag, e.g. "MESSI". */
+  label: string;
+  /** Background accent (the goat's colour). */
+  bg: string;
+  /** Readable foreground for that background. */
+  fg: string;
+}
+
+/** Dark or light text for a solid tag background (mirrors TakeRow's textOn). */
+function textOn(hex: string): string {
+  const h = hex.replace('#', '');
+  if (h.length < 6) return '#0d0d0f';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0d0d0f' : '#f0f0f2';
+}
+
+/**
+ * Batch-resolve fan tags for a set of users. For each user we take the goat they
+ * have voted for most; users with no votes (or an unresolvable choice) are
+ * omitted. One grouped query for the whole set — cheap enough for a comment page.
+ */
+export async function getFanTags(userIds: string[]): Promise<Map<string, FanTag>> {
+  const out = new Map<string, FanTag>();
+  const ids = [...new Set(userIds.filter((id): id is string => !!id))];
+  if (ids.length === 0) return out;
+
+  const rows = await db
+    .select({ userId: votes.userId, choice: votes.choice, n: sql<number>`count(*)::int` })
+    .from(votes)
+    .where(inArray(votes.userId, ids))
+    .groupBy(votes.userId, votes.choice);
+
+  // Reduce to each user's top choice (highest count wins).
+  const top = new Map<string, { choice: string; n: number }>();
+  for (const r of rows) {
+    if (!r.userId) continue;
+    const cur = top.get(r.userId);
+    if (!cur || r.n > cur.n) top.set(r.userId, { choice: r.choice, n: r.n });
+  }
+
+  for (const [userId, { choice }] of top) {
+    const goat = getEntityBySlug(choice);
+    if (!goat) continue;
+    out.set(userId, {
+      slug: goat.slug,
+      label: goat.shortName.toUpperCase(),
+      bg: goat.accent,
+      fg: textOn(goat.accent),
+    });
+  }
+  return out;
+}

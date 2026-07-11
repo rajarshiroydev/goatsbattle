@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   pgTable,
   text,
@@ -7,6 +8,7 @@ import {
   boolean,
   index,
   primaryKey,
+  check,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
@@ -164,16 +166,99 @@ export const voteWindows = pgTable(
 );
 
 /**
- * Comments — threaded discussion under a battle. Adjacency list: `parentId` is
- * null for top-level comments, else points at the parent (self-ref, typed with
- * `AnyPgColumn` to break the circular reference). Soft-deleted comments keep the
- * row (so replies stay threaded) with `deleted=true`; the API blanks the body.
+ * Matches — football events users discuss on The Floor. Unlike entities/battles
+ * (curated content that lives in code), a match is dynamic external data, so it
+ * lives entirely in Postgres. `externalId` holds the API-Football fixture id so
+ * a future live-sync phase can upsert by it; today rows are hand-seeded (free
+ * tier = 100 req/day — see scripts/seed-matches.ts). `homeCode`/`awayCode` are
+ * ISO country codes used for flags/accents. `status` drives the Live filter.
+ */
+export const matches = pgTable(
+  'matches',
+  {
+    id: text('id').primaryKey(), // readable slug, e.g. "argentina-vs-egypt-2026-06-15"
+    externalId: text('external_id').unique(), // API-Football fixture id (future sync)
+    arena: text('arena').notNull().default('football'),
+    competition: text('competition').notNull(),
+    homeTeam: text('home_team').notNull(),
+    awayTeam: text('away_team').notNull(),
+    homeCode: text('home_code'), // ISO country code
+    awayCode: text('away_code'),
+    homeScore: integer('home_score'),
+    awayScore: integer('away_score'),
+    kickoff: timestamp('kickoff', { withTimezone: true }).notNull(),
+    status: text('status').notNull().default('finished'), // scheduled | live | finished
+    venue: text('venue'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('matches_status_idx').on(t.status),
+    kickoffIdx: index('matches_kickoff_idx').on(t.kickoff),
+  })
+);
+
+/**
+ * Match moments — the visual timeline of a match. API-Football's free events
+ * feed only supplies Goal/Card/Subst/VAR; richer types (`foul`, `handball` —
+ * e.g. the Argentina-Egypt disallowed-goal build-up) are hand-seeded to show
+ * the feature's intent. `goatSlug` links a moment to a tracked entity when the
+ * player is one. Read-only in this phase; tagging arrives in a follow-up.
+ */
+export const matchMoments = pgTable(
+  'match_moments',
+  {
+    id: serial('id').primaryKey(),
+    matchId: text('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    minute: integer('minute').notNull(),
+    extra: integer('extra'), // stoppage-time minute, e.g. 45+2 → minute 45, extra 2
+    type: text('type').notNull(), // goal|penalty|own_goal|yellow_card|red_card|foul|handball|sub|var
+    team: text('team').notNull(), // home | away
+    playerName: text('player_name'),
+    goatSlug: text('goat_slug').references(() => entities.id),
+    detail: text('detail'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    matchIdx: index('match_moments_match_idx').on(t.matchId),
+  })
+);
+
+/**
+ * Match ↔ goat participation. Powers the goat tags on event cards and the "My
+ * Goats" Floor filter (matches involving goats the viewer follows/voted for).
+ */
+export const matchGoats = pgTable(
+  'match_goats',
+  {
+    matchId: text('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    goatSlug: text('goat_slug')
+      .notNull()
+      .references(() => entities.id),
+    team: text('team'), // home | away
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.matchId, t.goatSlug] }),
+  })
+);
+
+/**
+ * Comments — threaded discussion under a battle *or* a match. Adjacency list:
+ * `parentId` is null for top-level comments, else points at the parent (self-ref,
+ * typed with `AnyPgColumn` to break the circular reference). Soft-deleted
+ * comments keep the row (so replies stay threaded) with `deleted=true`; the API
+ * blanks the body. Exactly one of `battleId`/`matchId` is set (CHECK) — the
+ * single seam that lets one comment stack serve both surfaces.
  */
 export const comments = pgTable(
   'comments',
   {
     id: serial('id').primaryKey(),
-    battleId: text('battle_id').notNull().references(() => battles.id),
+    battleId: text('battle_id').references(() => battles.id),
+    matchId: text('match_id').references(() => matches.id),
     userId: text('user_id')
       .notNull()
       .references(() => user.id),
@@ -186,7 +271,13 @@ export const comments = pgTable(
   },
   (t) => ({
     battleIdx: index('comments_battle_idx').on(t.battleId),
+    matchIdx: index('comments_match_idx').on(t.matchId),
     parentIdx: index('comments_parent_idx').on(t.parentId),
+    // Exactly one subject: a comment belongs to a battle XOR a match.
+    subjectCk: check(
+      'comments_subject_ck',
+      sql`(${t.battleId} IS NOT NULL)::int + (${t.matchId} IS NOT NULL)::int = 1`,
+    ),
   })
 );
 
@@ -219,3 +310,6 @@ export type UserRow = typeof user.$inferSelect;
 export type SessionRow = typeof session.$inferSelect;
 export type CommentRow = typeof comments.$inferSelect;
 export type CommentVoteRow = typeof commentVotes.$inferSelect;
+export type MatchRow = typeof matches.$inferSelect;
+export type MatchMomentRow = typeof matchMoments.$inferSelect;
+export type MatchGoatRow = typeof matchGoats.$inferSelect;

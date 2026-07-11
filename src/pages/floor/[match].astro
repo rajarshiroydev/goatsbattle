@@ -1,0 +1,47 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import MatchHeader from '../../components/MatchHeader.astro';
+import MatchTimeline from '../../components/MatchTimeline.astro';
+import CommentThread from '../../components/CommentThread.tsx';
+import { getMatchById, getMatchMoments } from '../../lib/queries';
+
+// Match data is dynamic (DB), so render on request.
+export const prerender = false;
+
+const { match } = Astro.params;
+const event = match ? await getMatchById(match) : null;
+if (!event) return Astro.redirect('/floor');
+
+const moments = await getMatchMoments(event.id);
+
+const title = `${event.homeTeam} vs ${event.awayTeam} — The Floor | GOATSBattle`;
+const description = `${event.competition}. Join the debate on ${event.homeTeam} vs ${event.awayTeam} — follow the match timeline, back your GOAT, settle it on The Floor.`;
+---
+
+<Layout title={title} description={description}>
+  <section class="pt-6 pb-12">
+    <div class="page-container">
+
+      <a href="/floor" class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute hover:text-ink transition-colors mb-4">
+        ← The Floor
+      </a>
+
+      <MatchHeader event={event} />
+
+      <div class="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
+
+        {/* Discussion (main column) */}
+        <div class="order-2 lg:order-1 min-w-0">
+          <h2 class="font-headline font-black uppercase text-ink text-2xl mb-3">The Debate</h2>
+          <CommentThread client:visible matchId={event.id} />
+        </div>
+
+        {/* Side panel — timeline + context (stacks above the thread on mobile) */}
+        <aside class="order-1 lg:order-2 lg:sticky lg:top-[76px] flex flex-col gap-4">
+          <MatchTimeline moments={moments} homeTeam={event.homeTeam} awayTeam={event.awayTeam} />
+        </aside>
+
+      </div>
+    </div>
+  </section>
+</Layout>

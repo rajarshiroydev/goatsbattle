@@ -1,6 +1,20 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from './db';
-import { comments, commentVotes, user, battles } from './db/schema';
+import { comments, commentVotes, user, battles, matches } from './db/schema';
+import { getFanTags, type FanTag } from './floor';
+
+/**
+ * What a comment is attached to — a 1v1 battle or a match (event). Exactly one
+ * is set per comment (enforced by a CHECK in the schema). The service switches
+ * its WHERE/insert on this so one comment stack serves both surfaces.
+ */
+export type CommentSubject = { battle: string } | { match: string };
+
+const isMatch = (s: CommentSubject): s is { match: string } => 'match' in s;
+
+/** WHERE clause selecting a subject's comments. */
+const subjectWhere = (s: CommentSubject) =>
+  isMatch(s) ? eq(comments.matchId, s.match) : eq(comments.battleId, s.battle);
 
 /** One comment as sent to the client. The island builds the tree from parentId. */
 export interface CommentNode {
@@ -15,17 +29,19 @@ export interface CommentNode {
   author: { username: string | null; name: string; image: string | null };
   /** Whether the requesting viewer has upvoted this comment. */
   viewerUpvoted: boolean;
+  /** The author's fan tag (goat they back), or null if they've cast no votes. */
+  fanTag: FanTag | null;
 }
 
 export const MAX_COMMENT_LENGTH = 4000;
 
 /**
- * Flat list of a battle's comments (adjacency list — the island nests them by
+ * Flat list of a subject's comments (adjacency list — the island nests them by
  * `parentId`). Joins the author and computes `viewerUpvoted` for `viewerId`
  * (null for logged-out readers → always false). Soft-deleted bodies are blanked
  * server-side so the raw text never leaves the DB.
  */
-export async function listComments(battleId: string, viewerId: string | null): Promise<CommentNode[]> {
+export async function listComments(subject: CommentSubject, viewerId: string | null): Promise<CommentNode[]> {
   const viewerUpvoted = viewerId
     ? sql<boolean>`EXISTS (SELECT 1 FROM comment_votes cv WHERE cv.comment_id = ${comments.id} AND cv.user_id = ${viewerId})`
     : sql<boolean>`false`;
@@ -46,8 +62,10 @@ export async function listComments(battleId: string, viewerId: string | null): P
     })
     .from(comments)
     .innerJoin(user, eq(user.id, comments.userId))
-    .where(eq(comments.battleId, battleId))
+    .where(subjectWhere(subject))
     .orderBy(comments.createdAt);
+
+  const fanTags = await getFanTags(rows.map((r) => r.authorId));
 
   return rows.map((r) => ({
     id: r.id,
@@ -59,6 +77,7 @@ export async function listComments(battleId: string, viewerId: string | null): P
     authorId: r.authorId,
     author: { username: r.authorUsername, name: r.authorName, image: r.authorImage },
     viewerUpvoted: !!r.viewerUpvoted,
+    fanTag: fanTags.get(r.authorId) ?? null,
   }));
 }
 
@@ -69,10 +88,10 @@ export type PostCommentResult =
 
 /**
  * Create a comment (or reply). Validates the body length and that any `parentId`
- * belongs to the same battle. Returns the created node shaped like the list.
+ * belongs to the same subject. Returns the created node shaped like the list.
  */
 export async function postComment(
-  battleId: string,
+  subject: CommentSubject,
   userId: string,
   parentId: number | null,
   rawBody: string,
@@ -83,23 +102,34 @@ export async function postComment(
     return { status: 'invalid', error: `Comment is too long (max ${MAX_COMMENT_LENGTH})` };
   }
 
-  const [battle] = await db.select({ id: battles.id }).from(battles).where(eq(battles.id, battleId)).limit(1);
-  if (!battle) return { status: 'not_found' };
+  // The subject (battle or match) must exist.
+  const subjectId = isMatch(subject) ? subject.match : subject.battle;
+  const exists = isMatch(subject)
+    ? await db.select({ id: matches.id }).from(matches).where(eq(matches.id, subjectId)).limit(1)
+    : await db.select({ id: battles.id }).from(battles).where(eq(battles.id, subjectId)).limit(1);
+  if (exists.length === 0) return { status: 'not_found' };
 
   if (parentId !== null) {
     const [parent] = await db
-      .select({ battleId: comments.battleId })
+      .select({ battleId: comments.battleId, matchId: comments.matchId })
       .from(comments)
       .where(eq(comments.id, parentId))
       .limit(1);
-    if (!parent || parent.battleId !== battleId) {
+    const parentSubjectId = parent ? (isMatch(subject) ? parent.matchId : parent.battleId) : null;
+    if (!parent || parentSubjectId !== subjectId) {
       return { status: 'invalid', error: 'Invalid parent comment' };
     }
   }
 
   const [inserted] = await db
     .insert(comments)
-    .values({ battleId, userId, parentId, body })
+    .values({
+      battleId: isMatch(subject) ? null : subject.battle,
+      matchId: isMatch(subject) ? subject.match : null,
+      userId,
+      parentId,
+      body,
+    })
     .returning({ id: comments.id, createdAt: comments.createdAt });
 
   const [author] = await db
@@ -107,6 +137,8 @@ export async function postComment(
     .from(user)
     .where(eq(user.id, userId))
     .limit(1);
+
+  const fanTags = await getFanTags([userId]);
 
   return {
     status: 'ok',
@@ -120,6 +152,7 @@ export async function postComment(
       authorId: userId,
       author: { username: author?.username ?? null, name: author?.name ?? 'Unknown', image: author?.image ?? null },
       viewerUpvoted: false,
+      fanTag: fanTags.get(userId) ?? null,
     },
   };
 }
