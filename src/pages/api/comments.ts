@@ -60,6 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
   const text = typeof b.body === 'string' ? b.body : null;
   const parentId = typeof b.parentId === 'number' ? b.parentId : null;
+  const momentId = typeof b.momentId === 'number' ? b.momentId : null;
   if (!subject || text === null) {
     return json({ error: 'exactly one of battleId/matchId, plus body, are required' }, 400);
   }
@@ -69,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'Too fast — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
 
-  const result = await postComment(subject, locals.user.id, parentId, text);
+  const result = await postComment(subject, locals.user.id, parentId, text, momentId);
   if (result.status === 'invalid') return json({ error: result.error }, 400);
   if (result.status === 'not_found') return json({ error: 'Subject not found' }, 404);
   return json({ comment: result.comment });

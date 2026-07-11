@@ -16,9 +16,10 @@
     "db:studio": "drizzle-kit studio",
     "db:migrate:auth": "tsx --env-file=.env scripts/migrate-auth-comments.ts",
     "db:migrate:matches": "tsx --env-file=.env scripts/migrate-matches.ts",
+    "db:migrate:moment-tags": "tsx --env-file=.env scripts/migrate-moment-tags.ts",
+    "db:sync:matches": "tsx --env-file=.env scripts/sync-matches.ts",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
-    "db:seed:votes": "tsx --env-file=.env scripts/seed-battle-votes.ts",
-    "db:seed:matches": "tsx --env-file=.env scripts/seed-matches.ts"
+    "db:seed:votes": "tsx --env-file=.env scripts/seed-battle-votes.ts"
   },
   "dependencies": {
     "@astrojs/preact": "^6.0.0",

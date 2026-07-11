@@ -22,6 +22,7 @@ interface CommentNode {
   author: { username: string | null; name: string; image: string | null };
   viewerUpvoted: boolean;
   fanTag: FanTag | null;
+  moment: { id: number; minute: number; extra: number | null; type: string } | null;
 }
 
 /** Exactly one of battleId / matchId — the discussion subject. */
@@ -38,6 +39,18 @@ type SortMode = 'top' | 'new';
 
 const MAX_DEPTH = 6;
 
+const MOMENT_TYPE_LABEL: Record<string, string> = {
+  goal: 'Goal', penalty: 'Penalty', own_goal: 'Own goal', penalty_missed: 'Missed pen',
+  yellow_card: 'Yellow card', red_card: 'Red card', foul: 'Foul', handball: 'Handball',
+  sub: 'Sub', var: 'VAR', shootout: 'Shootout',
+};
+
+/** "23' Penalty" — the human label for a moment anchor. */
+function momentLabel(m: { minute: number; extra: number | null; type: string }): string {
+  const min = `${m.minute}${m.extra ? `+${m.extra}` : ''}'`;
+  return `${min} ${MOMENT_TYPE_LABEL[m.type] ?? m.type.replace(/_/g, ' ')}`;
+}
+
 export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
   // The subject drives the API query param and POST body (battle XOR match).
   const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId!)}`;
@@ -47,6 +60,8 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('top');
+  // The timeline moment the composer is currently anchored to (match pages only).
+  const [activeMoment, setActiveMoment] = useState<{ id: number; label: string } | null>(null);
   // Guards against overlapping vote requests on the same comment, which would
   // otherwise let a stale optimistic flip race the server reply (0→1→0→1 flicker).
   const votingRef = useRef<Set<number>>(new Set());
@@ -67,6 +82,23 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
     };
   }, [subjectQuery]);
 
+  // Timeline → composer bridge: the MatchTimeline dispatches `gb:moment` when a
+  // moment is clicked; anchor the composer to it (match pages only).
+  useEffect(() => {
+    if (!matchId) return;
+    const onSelect = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d && typeof d.id === 'number') setActiveMoment({ id: d.id, label: String(d.label ?? '') });
+    };
+    window.addEventListener('gb:moment', onSelect);
+    return () => window.removeEventListener('gb:moment', onSelect);
+  }, [matchId]);
+
+  function clearMoment() {
+    setActiveMoment(null);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('gb:moment-clear'));
+  }
+
   // Adjacency list → nested tree. Replies stay chronological; the top-level order
   // is frozen (see orderRef) so upvoting doesn't reshuffle the list live.
   const tree = useMemo(() => buildTree(comments, sort, orderRef), [comments, sort]);
@@ -79,7 +111,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
     setComments((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }
 
-  async function post(parentId: number | null, body: string): Promise<boolean> {
+  async function post(parentId: number | null, body: string, momentId: number | null = null): Promise<boolean> {
     if (!user) {
       openAuthModal({ reason: 'Log in to join the discussion' });
       return false;
@@ -88,7 +120,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...subjectBody, parentId, body }),
+        body: JSON.stringify({ ...subjectBody, parentId, body, ...(momentId != null ? { momentId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Failed to post');
@@ -196,11 +228,30 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
           <div class="flex-1 min-w-0 border-b border-hairline pb-2 h-6 animate-pulse" />
         </div>
       ) : user ? (
-        <Composer
-          placeholder="Add to the debate…"
-          avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}
-          onSubmit={(body) => post(null, body)}
-        />
+        <div>
+          {activeMoment && (
+            <div class="flex items-center gap-2 mb-2 bg-canvas-soft border border-hairline rounded-md px-3 py-2">
+              <span class="team-tag" style={{ '--tag': 'var(--color-lime)', '--tag-fg': '#0d0d0f' }}>⚑ {activeMoment.label}</span>
+              <span class="flex-1 font-sans text-[13px] text-mute">Tagging this moment in your comment</span>
+              <button
+                onClick={clearMoment}
+                class="font-mono text-[11px] uppercase tracking-wider text-mute hover:text-ink transition-colors"
+                aria-label="Clear moment tag"
+              >
+                Clear ✕
+              </button>
+            </div>
+          )}
+          <Composer
+            placeholder={activeMoment ? `Weigh in on ${activeMoment.label}…` : 'Add to the debate…'}
+            avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}
+            onSubmit={async (body) => {
+              const ok = await post(null, body, activeMoment?.id ?? null);
+              if (ok && activeMoment) clearMoment();
+              return ok;
+            }}
+          />
+        </div>
       ) : (
         <div class="flex gap-3">
           <Avatar src={null} name="?" />
@@ -396,6 +447,24 @@ function CommentItem({
             )}
             <span class="font-mono text-[13px] text-mute">· {relativeTime(node.createdAt)}</span>
           </div>
+
+          {/* Moment tag — links the comment to a point on the match timeline */}
+          {node.moment && (
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('gb:moment', {
+                    detail: { id: node.moment!.id, label: momentLabel(node.moment!) },
+                  }),
+                )
+              }
+              class="inline-flex items-center gap-1 mb-1.5 font-mono text-[11px] uppercase tracking-wider text-lime hover:underline"
+              title="Highlight this moment on the timeline"
+            >
+              ⚑ {momentLabel(node.moment)}
+            </button>
+          )}
 
           {/* Body */}
           <p

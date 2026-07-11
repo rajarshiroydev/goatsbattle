@@ -169,8 +169,8 @@ export const voteWindows = pgTable(
  * Matches — football events users discuss on The Floor. Unlike entities/battles
  * (curated content that lives in code), a match is dynamic external data, so it
  * lives entirely in Postgres. `externalId` holds the API-Football fixture id so
- * a future live-sync phase can upsert by it; today rows are hand-seeded (free
- * tier = 100 req/day — see scripts/seed-matches.ts). `homeCode`/`awayCode` are
+ * a live-sync phase upserts by it (scripts/sync-matches.ts pulls a curated WC
+ * 2022 subset; free tier = 100 req/day). `homeCode`/`awayCode` are
  * ISO country codes used for flags/accents. `status` drives the Live filter.
  */
 export const matches = pgTable(
@@ -251,7 +251,8 @@ export const matchGoats = pgTable(
  * typed with `AnyPgColumn` to break the circular reference). Soft-deleted
  * comments keep the row (so replies stay threaded) with `deleted=true`; the API
  * blanks the body. Exactly one of `battleId`/`matchId` is set (CHECK) — the
- * single seam that lets one comment stack serve both surfaces.
+ * single seam that lets one comment stack serve both surfaces. A match comment
+ * may additionally anchor to a `momentId` (a point on the match timeline).
  */
 export const comments = pgTable(
   'comments',
@@ -259,6 +260,8 @@ export const comments = pgTable(
     id: serial('id').primaryKey(),
     battleId: text('battle_id').references(() => battles.id),
     matchId: text('match_id').references(() => matches.id),
+    // Optional timeline anchor — only valid on a match comment (CHECK below).
+    momentId: integer('moment_id').references(() => matchMoments.id, { onDelete: 'set null' }),
     userId: text('user_id')
       .notNull()
       .references(() => user.id),
@@ -272,11 +275,17 @@ export const comments = pgTable(
   (t) => ({
     battleIdx: index('comments_battle_idx').on(t.battleId),
     matchIdx: index('comments_match_idx').on(t.matchId),
+    momentIdx: index('comments_moment_idx').on(t.momentId),
     parentIdx: index('comments_parent_idx').on(t.parentId),
     // Exactly one subject: a comment belongs to a battle XOR a match.
     subjectCk: check(
       'comments_subject_ck',
       sql`(${t.battleId} IS NOT NULL)::int + (${t.matchId} IS NOT NULL)::int = 1`,
+    ),
+    // A moment anchor only makes sense on a match comment.
+    momentCk: check(
+      'comments_moment_ck',
+      sql`${t.momentId} IS NULL OR ${t.matchId} IS NOT NULL`,
     ),
   })
 );

@@ -1,9 +1,10 @@
 ---
 /**
- * Read-only visual match timeline (GBT-7 foundation). Plots each moment along a
- * 0–90'+ track — home moments above the line, away below — with a per-type glyph
- * and an accessible list beneath. Clicking a moment to anchor a discussion is a
- * follow-up; the markup/data are already shaped for it (each moment has an id).
+ * Visual + interactive match timeline (GBT-7). Plots each moment along a 0–90'+
+ * track (home above the line, away below) and lists them below. Every moment is
+ * clickable: it dispatches a `gb:moment` CustomEvent that the CommentThread
+ * island listens for, so a reader can anchor their comment to that exact moment.
+ * The list is the accessible, labelled interaction surface; markers mirror it.
  */
 import type { MatchMoment } from '../lib/queries';
 
@@ -16,18 +17,19 @@ interface Props {
 const { moments, homeTeam, awayTeam } = Astro.props;
 
 const GLYPH: Record<string, string> = {
-  goal: '⚽',
-  penalty: '⚽',
-  own_goal: '⚽',
-  yellow_card: '🟨',
-  red_card: '🟥',
-  foul: '⚠️',
-  handball: '✋',
-  sub: '🔁',
-  var: '📺',
+  goal: '⚽', penalty: '⚽', own_goal: '⚽', penalty_missed: '❌',
+  yellow_card: '🟨', red_card: '🟥', foul: '⚠️', handball: '✋',
+  sub: '🔁', var: '📺', shootout: '🥅',
+};
+const TYPE_LABEL: Record<string, string> = {
+  goal: 'Goal', penalty: 'Penalty', own_goal: 'Own goal', penalty_missed: 'Missed pen',
+  yellow_card: 'Yellow card', red_card: 'Red card', foul: 'Foul', handball: 'Handball',
+  sub: 'Sub', var: 'VAR', shootout: 'Shootout',
 };
 const glyph = (t: string) => GLYPH[t] ?? '•';
-const label = (m: MatchMoment) => `${m.minute}${m.extra ? `+${m.extra}` : ''}'`;
+const typeLabel = (t: string) => TYPE_LABEL[t] ?? t.replace(/_/g, ' ');
+const minuteLabel = (m: MatchMoment) => `${m.minute}${m.extra ? `+${m.extra}` : ''}'`;
+const anchorLabel = (m: MatchMoment) => `${minuteLabel(m)} ${typeLabel(m.type)}`;
 
 // Timeline runs to the last moment (min 90'). Position is a % of that span.
 const maxMinute = Math.max(90, ...moments.map((m) => m.minute + (m.extra ?? 0)));
@@ -46,26 +48,25 @@ const away = moments.filter((m) => m.team === 'away');
   {moments.length === 0 ? (
     <p class="font-sans text-sm text-mute py-4 text-center">No moments recorded for this match.</p>
   ) : (
-    <>
+    <div class="gb-timeline">
       {/* Track */}
       <div class="relative h-[92px] my-1" aria-hidden="true">
-        {/* home lane (above the line) */}
         {home.map((m) => (
-          <div class="absolute -translate-x-1/2 flex flex-col items-center gap-0.5" style={`left:${pct(m)}%; top:0`}>
-            <span class="text-[15px] leading-none" title={m.detail ?? undefined}>{glyph(m.type)}</span>
-            <span class="font-mono text-[9px] text-mute">{label(m)}</span>
-          </div>
+          <button type="button" class="gb-moment absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
+            style={`left:${pct(m)}%; top:0`} data-moment-id={m.id} data-moment-label={anchorLabel(m)} title={m.detail ?? anchorLabel(m)}>
+            <span class="text-[15px] leading-none">{glyph(m.type)}</span>
+            <span class="font-mono text-[9px] text-mute">{minuteLabel(m)}</span>
+          </button>
         ))}
-        {/* center line */}
         <div class="absolute left-0 right-0 top-1/2 h-px bg-hairline-strong"></div>
         <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style="background: var(--color-lime)"></div>
         <div class="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style="background: var(--color-red)"></div>
-        {/* away lane (below the line) */}
         {away.map((m) => (
-          <div class="absolute -translate-x-1/2 flex flex-col items-center gap-0.5" style={`left:${pct(m)}%; bottom:0`}>
-            <span class="font-mono text-[9px] text-mute">{label(m)}</span>
-            <span class="text-[15px] leading-none" title={m.detail ?? undefined}>{glyph(m.type)}</span>
-          </div>
+          <button type="button" class="gb-moment absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
+            style={`left:${pct(m)}%; bottom:0`} data-moment-id={m.id} data-moment-label={anchorLabel(m)} title={m.detail ?? anchorLabel(m)}>
+            <span class="font-mono text-[9px] text-mute">{minuteLabel(m)}</span>
+            <span class="text-[15px] leading-none">{glyph(m.type)}</span>
+          </button>
         ))}
       </div>
 
@@ -75,20 +76,58 @@ const away = moments.filter((m) => m.team === 'away');
         <span class="text-red">{awayTeam}</span>
       </div>
 
-      {/* Accessible moment list — also the seam for future click-to-tag */}
-      <ul class="flex flex-col gap-1.5 border-t border-hairline pt-3">
+      {/* Clickable moment list — the primary "tag a moment" surface */}
+      <ul class="flex flex-col gap-0.5 border-t border-hairline pt-2">
         {moments.map((m) => (
-          <li class="flex items-start gap-2 text-sm">
-            <span class="font-mono text-[11px] text-mute w-9 shrink-0 pt-0.5 text-right">{label(m)}</span>
-            <span class="shrink-0" aria-hidden="true">{glyph(m.type)}</span>
-            <span class="sr-only">{m.team === 'home' ? homeTeam : awayTeam} — {m.type.replace(/_/g, ' ')}:</span>
-            <span class="flex-1 min-w-0">
-              <span class="font-sans font-semibold text-ink">{m.playerName ?? (m.team === 'home' ? homeTeam : awayTeam)}</span>
-              {m.detail && <span class="font-sans text-body"> — {m.detail}</span>}
-            </span>
+          <li>
+            <button type="button"
+              class="gb-moment w-full flex items-start gap-2 text-sm text-left rounded px-1.5 py-1 hover:bg-canvas transition-colors"
+              data-moment-id={m.id} data-moment-label={anchorLabel(m)}
+              title={`Tag this moment: ${anchorLabel(m)}`}>
+              <span class="font-mono text-[11px] text-mute w-9 shrink-0 pt-0.5 text-right">{minuteLabel(m)}</span>
+              <span class="shrink-0" aria-hidden="true">{glyph(m.type)}</span>
+              <span class="sr-only">{m.team === 'home' ? homeTeam : awayTeam} — {typeLabel(m.type)}:</span>
+              <span class="flex-1 min-w-0">
+                <span class="font-sans font-semibold text-ink">{m.playerName ?? (m.team === 'home' ? homeTeam : awayTeam)}</span>
+                {m.detail && <span class="font-sans text-body"> — {m.detail}</span>}
+              </span>
+              <span class="gb-tag-hint shrink-0 self-center font-mono text-[9px] uppercase tracking-wider text-lime opacity-0">Tag ⚑</span>
+            </button>
           </li>
         ))}
       </ul>
-    </>
+    </div>
   )}
 </div>
+
+<style>
+  .gb-moment { cursor: pointer; }
+  .gb-moment:hover .gb-tag-hint,
+  .gb-moment:focus-visible .gb-tag-hint { opacity: 1; }
+  .gb-moment.is-active { background: rgba(200, 255, 0, 0.1); border-radius: 4px; }
+  .gb-moment.is-active .gb-tag-hint { opacity: 1; }
+</style>
+
+<script>
+  // Bridge the (static) timeline to the CommentThread island via window events.
+  const moments = Array.from(document.querySelectorAll<HTMLElement>('.gb-moment[data-moment-id]'));
+
+  function setActive(id: number | null) {
+    for (const el of moments) {
+      el.classList.toggle('is-active', id !== null && Number(el.dataset.momentId) === id);
+    }
+  }
+
+  for (const el of moments) {
+    el.addEventListener('click', () => {
+      const id = Number(el.dataset.momentId);
+      window.dispatchEvent(
+        new CustomEvent('gb:moment', { detail: { id, label: el.dataset.momentLabel ?? '' } }),
+      );
+    });
+  }
+
+  // The island echoes selection/clear back so timeline + composer stay in sync.
+  window.addEventListener('gb:moment', (e) => setActive((e as CustomEvent).detail?.id ?? null));
+  window.addEventListener('gb:moment-clear', () => setActive(null));
+</script>

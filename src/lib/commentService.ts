@@ -1,7 +1,15 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from './db';
-import { comments, commentVotes, user, battles, matches } from './db/schema';
+import { comments, commentVotes, user, battles, matches, matchMoments } from './db/schema';
 import { getFanTags, type FanTag } from './floor';
+
+/** The timeline moment a comment is anchored to (null for un-anchored comments). */
+export interface MomentRef {
+  id: number;
+  minute: number;
+  extra: number | null;
+  type: string;
+}
 
 /**
  * What a comment is attached to — a 1v1 battle or a match (event). Exactly one
@@ -31,6 +39,8 @@ export interface CommentNode {
   viewerUpvoted: boolean;
   /** The author's fan tag (goat they back), or null if they've cast no votes. */
   fanTag: FanTag | null;
+  /** The match-timeline moment this comment is anchored to, if any. */
+  moment: MomentRef | null;
 }
 
 export const MAX_COMMENT_LENGTH = 4000;
@@ -59,9 +69,14 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
       authorUsername: user.username,
       authorImage: user.image,
       viewerUpvoted,
+      momentId: comments.momentId,
+      momentMinute: matchMoments.minute,
+      momentExtra: matchMoments.extra,
+      momentType: matchMoments.type,
     })
     .from(comments)
     .innerJoin(user, eq(user.id, comments.userId))
+    .leftJoin(matchMoments, eq(matchMoments.id, comments.momentId))
     .where(subjectWhere(subject))
     .orderBy(comments.createdAt);
 
@@ -78,6 +93,10 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
     author: { username: r.authorUsername, name: r.authorName, image: r.authorImage },
     viewerUpvoted: !!r.viewerUpvoted,
     fanTag: fanTags.get(r.authorId) ?? null,
+    moment:
+      r.momentId !== null && r.momentMinute !== null
+        ? { id: r.momentId, minute: r.momentMinute, extra: r.momentExtra, type: r.momentType! }
+        : null,
   }));
 }
 
@@ -87,14 +106,16 @@ export type PostCommentResult =
   | { status: 'not_found' };
 
 /**
- * Create a comment (or reply). Validates the body length and that any `parentId`
- * belongs to the same subject. Returns the created node shaped like the list.
+ * Create a comment (or reply). Validates the body length, that any `parentId`
+ * belongs to the same subject, and that any `momentId` belongs to this match.
+ * Returns the created node shaped like the list.
  */
 export async function postComment(
   subject: CommentSubject,
   userId: string,
   parentId: number | null,
   rawBody: string,
+  momentId: number | null = null,
 ): Promise<PostCommentResult> {
   const body = rawBody.trim();
   if (body.length === 0) return { status: 'invalid', error: 'Comment cannot be empty' };
@@ -121,11 +142,29 @@ export async function postComment(
     }
   }
 
+  // A moment anchor is only valid on a match comment, and must belong to it.
+  let moment: MomentRef | null = null;
+  if (momentId !== null) {
+    if (!isMatch(subject)) {
+      return { status: 'invalid', error: 'Only match comments can tag a moment' };
+    }
+    const [m] = await db
+      .select({ id: matchMoments.id, matchId: matchMoments.matchId, minute: matchMoments.minute, extra: matchMoments.extra, type: matchMoments.type })
+      .from(matchMoments)
+      .where(eq(matchMoments.id, momentId))
+      .limit(1);
+    if (!m || m.matchId !== subject.match) {
+      return { status: 'invalid', error: 'Invalid moment' };
+    }
+    moment = { id: m.id, minute: m.minute, extra: m.extra, type: m.type };
+  }
+
   const [inserted] = await db
     .insert(comments)
     .values({
       battleId: isMatch(subject) ? null : subject.battle,
       matchId: isMatch(subject) ? subject.match : null,
+      momentId,
       userId,
       parentId,
       body,
@@ -153,6 +192,7 @@ export async function postComment(
       author: { username: author?.username ?? null, name: author?.name ?? 'Unknown', image: author?.image ?? null },
       viewerUpvoted: false,
       fanTag: fanTags.get(userId) ?? null,
+      moment,
     },
   };
 }
