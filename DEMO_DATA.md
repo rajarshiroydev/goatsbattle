@@ -10,6 +10,7 @@ Status legend: 🔴 still demo · 🟡 needs decision · 🟢 resolved
 |---|---------|-------|-------------|--------------------|
 | 1 | Head-to-Head Record (per-goat profile) + rankings 1v1 popover | `scripts/seed-battle-votes.ts` → `battles.votesA/votesB` | Head-to-head vote tallies (totals 150–5000, hashed splits) on all 90 canonical battle pairings | 🔴 Reset tallies to 0/0 before launch, or keep as seed and let real votes accrue. Script only fills 0/0 rows, so real votes are safe either way. |
 | 2 | Head-to-Head Record — demo split votes | Cast via `/api/vote` (real ledger + tallies) on `messi-vs-ronaldo`, `mbappe-vs-messi`, `cruyff-vs-messi` | A few opponent votes added so those bars render a genuine two-colour split (75/25, 67/33) instead of shutouts — used to demo the split bar | 🔴 **Must reset** with the SQL below before launch (these are fabricated demos, not organic votes). Mark 🟢 once removed. |
+| 3 | The Floor — match events + timelines (GBT-7) | `scripts/seed-matches.ts` → `matches` / `match_moments` / `match_goats` | A handful of hand-authored football matches (Argentina–Egypt, WC 2026 fixtures) with moments incl. fouls/handball/VAR that API-Football's free feed can't supply | 🔴 Replace with real API-Football sync when the live-fetch phase lands. Seed is idempotent (re-run safe). Delete rows via the SQL below if a clean slate is needed. |
 
 ## How to reset an item
 
@@ -31,6 +32,15 @@ DELETE FROM votes
 WHERE battle_id IN ('messi-vs-ronaldo', 'mbappe-vs-messi', 'cruyff-vs-messi')
   AND user_id IS NULL; -- demo votes predate accounts (no user attribution)
 -- Then re-zero / recompute tallies (the UPDATE above already zeroes battles).
+```
+
+Seeded match events (#3) — the FK cascade on `match_moments`/`match_goats`
+clears the children automatically. Comments left on a seeded match are removed
+first so the FK holds:
+
+```sql
+DELETE FROM comments WHERE match_id IS NOT NULL;
+DELETE FROM matches; -- cascades to match_moments + match_goats
 ```
 
 ## When adding new demo data

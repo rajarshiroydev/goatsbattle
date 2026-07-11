@@ -1,0 +1,71 @@
+---
+/**
+ * A single football-match event on The Floor. Whole-row-clickable (design §4),
+ * it links into the Reddit-style event page. Shows the fixture, score/status,
+ * the tracked goats who played, and the live discussion count.
+ */
+import type { FloorEvent } from '../lib/queries';
+import { flagEmoji, relativeTime, compactNumber } from '../lib/format';
+
+interface Props {
+  event: FloorEvent;
+}
+
+const { event } = Astro.props;
+const isLive = event.status === 'live';
+const isUpcoming = event.status === 'scheduled';
+const hasScore = event.homeScore !== null && event.awayScore !== null;
+
+/** Dark or light text for a solid tag background. */
+function textOn(hex: string): string {
+  const h = hex.replace('#', '');
+  if (h.length < 6) return '#0d0d0f';
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0d0d0f' : '#f0f0f2';
+}
+---
+
+<a
+  href={`/floor/${event.id}`}
+  class="group flex items-center gap-4 bg-canvas-soft border border-hairline rounded-md px-[18px] py-3.5 hover:border-hairline-strong transition-colors"
+  style={isLive ? 'border-left: 2px solid rgba(255,45,85,0.6)' : undefined}
+>
+  {/* Status / kickoff */}
+  <div class="shrink-0 w-16 flex flex-col items-start gap-1">
+    {isLive ? (
+      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-red flex items-center gap-1.5">
+        <span class="live-dot gb-pulse-fast" style="--dot: var(--color-red)"></span> Live
+      </span>
+    ) : (
+      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
+        {isUpcoming ? 'Upcoming' : relativeTime(event.kickoff)}
+      </span>
+    )}
+  </div>
+
+  {/* Fixture */}
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2 font-headline font-black uppercase text-ink text-lg leading-none">
+      <span class="truncate">{flagEmoji(event.homeCode ?? '')} {event.homeTeam}</span>
+      {hasScore ? (
+        <span class="font-mono text-sm text-body shrink-0">{event.homeScore}–{event.awayScore}</span>
+      ) : (
+        <span class="font-headline text-mute text-base italic shrink-0">vs</span>
+      )}
+      <span class="truncate">{event.awayTeam} {flagEmoji(event.awayCode ?? '')}</span>
+    </div>
+    <div class="mt-1.5 flex items-center gap-2 flex-wrap">
+      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">{event.competition}</span>
+      {event.goats.map((g) => (
+        <span class="team-tag" style={`--tag:${g.accent}; --tag-fg:${textOn(g.accent)}`}>{g.shortName}</span>
+      ))}
+    </div>
+  </div>
+
+  {/* Discussion count */}
+  <span class="shrink-0 flex items-center gap-1.5 font-mono text-[11px] text-mute whitespace-nowrap">
+    <span class="text-lime">💬</span> {compactNumber(event.commentCount)}
+  </span>
+</a>

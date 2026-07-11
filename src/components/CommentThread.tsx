@@ -4,6 +4,13 @@ import { useSession } from '../lib/useSession';
 import { openAuthModal } from '../lib/authModal';
 import { relativeTime } from '../lib/format';
 
+interface FanTag {
+  slug: string;
+  label: string;
+  bg: string;
+  fg: string;
+}
+
 interface CommentNode {
   id: number;
   parentId: number | null;
@@ -14,10 +21,13 @@ interface CommentNode {
   authorId: string;
   author: { username: string | null; name: string; image: string | null };
   viewerUpvoted: boolean;
+  fanTag: FanTag | null;
 }
 
 interface Props {
-  battleId: string;
+  /** Exactly one of battleId / matchId — the discussion subject. */
+  battleId?: string;
+  matchId?: string;
   accentA?: string;
   accentB?: string;
 }
@@ -26,7 +36,10 @@ type SortMode = 'top' | 'new';
 
 const MAX_DEPTH = 6;
 
-export default function CommentThread({ battleId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
+export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635' }: Props) {
+  // The subject drives the API query param and POST body (battle XOR match).
+  const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId ?? '')}`;
+  const subjectBody: Record<string, string> = matchId ? { matchId } : { battleId: battleId ?? '' };
   const { user, loading: sessionLoading } = useSession();
   const [comments, setComments] = useState<CommentNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +55,7 @@ export default function CommentThread({ battleId, accentA = '#a3e635', accentB =
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/comments?battle=${encodeURIComponent(battleId)}`)
+    fetch(`/api/comments?${subjectQuery}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: { comments: CommentNode[] }) => active && setComments(data.comments))
       .catch(() => active && setError('Could not load comments'))
@@ -50,7 +63,7 @@ export default function CommentThread({ battleId, accentA = '#a3e635', accentB =
     return () => {
       active = false;
     };
-  }, [battleId]);
+  }, [subjectQuery]);
 
   // Adjacency list → nested tree. Replies stay chronological; the top-level order
   // is frozen (see orderRef) so upvoting doesn't reshuffle the list live.
@@ -73,7 +86,7 @@ export default function CommentThread({ battleId, accentA = '#a3e635', accentB =
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ battleId, parentId, body }),
+        body: JSON.stringify({ ...subjectBody, parentId, body }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Failed to post');
@@ -359,6 +372,16 @@ function CommentItem({
         <div class={`flex-1 min-w-0 ${hasKids ? 'pb-3' : ''}`}>
           {/* Meta */}
           <div class="flex items-center gap-2 mb-1">
+            {node.fanTag && (
+              <a
+                href={`/goats/${node.fanTag.slug}`}
+                class="team-tag"
+                style={{ '--tag': node.fanTag.bg, '--tag-fg': node.fanTag.fg }}
+                title={`Backs ${node.fanTag.label}`}
+              >
+                {node.fanTag.label}
+              </a>
+            )}
             {node.author.username ? (
               <a
                 href={`/users/${node.author.username}`}

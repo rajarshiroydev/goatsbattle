@@ -1,0 +1,93 @@
+---
+/**
+ * Read-only visual match timeline (GBT-7 foundation). Plots each moment along a
+ * 0–90'+ track — home moments above the line, away below — with a per-type glyph
+ * and an accessible list beneath. Clicking a moment to anchor a discussion is a
+ * follow-up; the markup/data are already shaped for it (each moment has an id).
+ */
+import type { MatchMoment } from '../lib/queries';
+
+interface Props {
+  moments: MatchMoment[];
+  homeTeam: string;
+  awayTeam: string;
+}
+
+const { moments, homeTeam, awayTeam } = Astro.props;
+
+const GLYPH: Record<string, string> = {
+  goal: '⚽',
+  penalty: '⚽',
+  own_goal: '⚽',
+  yellow_card: '🟨',
+  red_card: '🟥',
+  foul: '⚠️',
+  handball: '✋',
+  sub: '🔁',
+  var: '📺',
+};
+const glyph = (t: string) => GLYPH[t] ?? '•';
+const label = (m: MatchMoment) => `${m.minute}${m.extra ? `+${m.extra}` : ''}'`;
+
+// Timeline runs to the last moment (min 90'). Position is a % of that span.
+const maxMinute = Math.max(90, ...moments.map((m) => m.minute + (m.extra ?? 0)));
+const pct = (m: MatchMoment) => Math.min(98, ((m.minute + (m.extra ?? 0)) / maxMinute) * 100);
+
+const home = moments.filter((m) => m.team === 'home');
+const away = moments.filter((m) => m.team === 'away');
+---
+
+<div class="bg-canvas-soft border border-hairline rounded-md p-4">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute">Match timeline</span>
+    <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute">{maxMinute}'</span>
+  </div>
+
+  {moments.length === 0 ? (
+    <p class="font-sans text-sm text-mute py-4 text-center">No moments recorded for this match.</p>
+  ) : (
+    <>
+      {/* Track */}
+      <div class="relative h-[92px] my-1" aria-hidden="true">
+        {/* home lane (above the line) */}
+        {home.map((m) => (
+          <div class="absolute -translate-x-1/2 flex flex-col items-center gap-0.5" style={`left:${pct(m)}%; top:0`}>
+            <span class="text-[15px] leading-none" title={m.detail ?? undefined}>{glyph(m.type)}</span>
+            <span class="font-mono text-[9px] text-mute">{label(m)}</span>
+          </div>
+        ))}
+        {/* center line */}
+        <div class="absolute left-0 right-0 top-1/2 h-px bg-hairline-strong"></div>
+        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style="background: var(--color-lime)"></div>
+        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style="background: var(--color-red)"></div>
+        {/* away lane (below the line) */}
+        {away.map((m) => (
+          <div class="absolute -translate-x-1/2 flex flex-col items-center gap-0.5" style={`left:${pct(m)}%; bottom:0`}>
+            <span class="font-mono text-[9px] text-mute">{label(m)}</span>
+            <span class="text-[15px] leading-none" title={m.detail ?? undefined}>{glyph(m.type)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Lane labels */}
+      <div class="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.12em] mb-3">
+        <span class="text-lime">{homeTeam}</span>
+        <span class="text-red">{awayTeam}</span>
+      </div>
+
+      {/* Accessible moment list — also the seam for future click-to-tag */}
+      <ul class="flex flex-col gap-1.5 border-t border-hairline pt-3">
+        {moments.map((m) => (
+          <li class="flex items-start gap-2 text-sm">
+            <span class="font-mono text-[11px] text-mute w-9 shrink-0 pt-0.5 text-right">{label(m)}</span>
+            <span class="shrink-0" title={m.type}>{glyph(m.type)}</span>
+            <span class="flex-1 min-w-0">
+              <span class="font-sans font-semibold text-ink">{m.playerName ?? (m.team === 'home' ? homeTeam : awayTeam)}</span>
+              {m.detail && <span class="font-sans text-body"> — {m.detail}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+</div>

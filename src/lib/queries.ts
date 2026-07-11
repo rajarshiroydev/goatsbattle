@@ -1,8 +1,17 @@
-import { sql, gt, eq, or, desc } from 'drizzle-orm';
+import { sql, gt, eq, and, or, desc } from 'drizzle-orm';
 import { db } from './db';
-import { battles, votes, entities, comments, user } from './db/schema';
+import {
+  battles,
+  votes,
+  voteWindows,
+  entities,
+  comments,
+  matches,
+  matchMoments,
+  matchGoats,
+} from './db/schema';
 import { getEntityBySlug, arenas } from '../data';
-import { parseBattleSlug } from './battle';
+import type { FloorFilter } from './floor';
 import type { Entity } from './types';
 
 /**
@@ -287,61 +296,6 @@ export async function getHeadToHeadRecordForEntity(
     .sort((x, y) => y.total - x.total || x.margin - y.margin);
 }
 
-/**
- * A single "take" for The Floor — a battle comment enriched with its author and
- * the two combatants it's arguing over. The Floor is a read-only aggregation of
- * existing battle comments across every matchup (design §5 / 3a). The Team/side
- * tag and official match threads arrive later with the matches API; for now each
- * take carries its arena and the two sides so the UI can render the design.
- */
-export interface FloorTake {
-  id: number;
-  battleId: string;
-  body: string;
-  upvotes: number;
-  username: string | null;
-  createdAt: Date;
-  arena: string;
-  a: Entity;
-  b: Entity;
-}
-
-/**
- * Recent non-deleted takes across every battle, newest first — the global floor
- * stream. Enriches each row with its author handle and both combatants (parsed
- * from the canonical battle slug); rows whose slug can't resolve are dropped.
- */
-export async function getRecentTakes(limit = 20, sort: 'new' | 'hot' = 'new'): Promise<FloorTake[]> {
-  // Order in the DB so the limit is applied to the right window — "hot" ranks by
-  // upvotes, "new" by recency. (A prior in-memory sort only reordered the newest
-  // N rows, so older high-upvote takes could never surface under "hot".)
-  const rows = await db
-    .select({
-      id: comments.id,
-      battleId: comments.battleId,
-      body: comments.body,
-      upvotes: comments.upvotes,
-      createdAt: comments.createdAt,
-      username: user.username,
-    })
-    .from(comments)
-    .innerJoin(user, eq(comments.userId, user.id))
-    .where(eq(comments.deleted, false))
-    .orderBy(sort === 'hot' ? desc(comments.upvotes) : desc(comments.createdAt))
-    .limit(limit);
-
-  return rows
-    .map((row): FloorTake | null => {
-      const parsed = parseBattleSlug(row.battleId);
-      if (!parsed) return null;
-      const a = getEntityBySlug(parsed[0]);
-      const b = getEntityBySlug(parsed[1]);
-      if (!a || !b) return null;
-      return { ...row, arena: a.arena, a, b };
-    })
-    .filter((t): t is FloorTake => t !== null);
-}
-
 /** Live tally for a single battle, used by the results/vote API endpoints. */
 export async function getBattleSummary(slug: string): Promise<BattleSummary | null> {
   const [row] = await db
@@ -357,4 +311,181 @@ export async function getBattleSummary(slug: string): Promise<BattleSummary | nu
     .limit(1);
 
   return row ? toSummary(row) : null;
+}
+
+// ── The Floor: football match events ─────────────────────────────────────────
+
+/** A goat that played in a match, enriched with its display data. */
+export interface EventGoat {
+  slug: string;
+  shortName: string;
+  accent: string;
+  team: string | null;
+}
+
+/** One match as shown in the Floor list / previews. */
+export interface FloorEvent {
+  id: string;
+  competition: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeCode: string | null;
+  awayCode: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  kickoff: Date;
+  status: string; // scheduled | live | finished
+  venue: string | null;
+  commentCount: number;
+  goats: EventGoat[];
+}
+
+/** Enrich a set of match ids with their participating goats (one query, no N+1). */
+async function goatsForMatches(matchIds: string[]): Promise<Map<string, EventGoat[]>> {
+  const map = new Map<string, EventGoat[]>();
+  if (matchIds.length === 0) return map;
+
+  const rows = await db
+    .select({ matchId: matchGoats.matchId, goatSlug: matchGoats.goatSlug, team: matchGoats.team })
+    .from(matchGoats)
+    .where(or(...matchIds.map((id) => eq(matchGoats.matchId, id))));
+
+  for (const r of rows) {
+    const goat = getEntityBySlug(r.goatSlug);
+    if (!goat) continue;
+    const list = map.get(r.matchId) ?? [];
+    list.push({ slug: goat.slug, shortName: goat.shortName, accent: goat.accent, team: r.team });
+    map.set(r.matchId, list);
+  }
+  return map;
+}
+
+/**
+ * Match events for The Floor. Filters (GBT-7):
+ *  - `top`      → most-discussed first (comment count desc)
+ *  - `recents`  → newest kickoff first
+ *  - `live`     → status = 'live'
+ *  - `mygoats`  → matches whose goats the viewer has voted for (needs `userId`;
+ *                 returns [] when logged out — the UI prompts a login instead).
+ * A future phase adds My-Goats sub-filters (commented / most-active / date).
+ */
+export async function getFloorEvents(opts: {
+  filter: FloorFilter;
+  userId?: string | null;
+  limit?: number;
+}): Promise<FloorEvent[]> {
+  const { filter, userId = null, limit = 30 } = opts;
+
+  // Count live (non-deleted) comments via a LEFT JOIN + GROUP BY on the match PK
+  // (a correlated subquery in the select list shadows `id` to comments.id).
+  const commentCount = sql<number>`count(${comments.id})::int`;
+
+  // "My Goats" needs a signed-in viewer with at least one backed goat.
+  if (filter === 'mygoats' && !userId) return [];
+
+  const where =
+    filter === 'live'
+      ? eq(matches.status, 'live')
+      : filter === 'mygoats'
+        ? sql`EXISTS (
+            SELECT 1 FROM ${matchGoats} mg
+            JOIN ${voteWindows} vw ON vw.entity_id = mg.goat_slug
+            WHERE mg.match_id = ${matches.id} AND vw.user_id = ${userId}
+          )`
+        : undefined;
+
+  const orderBy =
+    filter === 'recents' || filter === 'live'
+      ? [desc(matches.kickoff)]
+      : [desc(commentCount), desc(matches.kickoff)]; // top, mygoats
+
+  const rows = await db
+    .select({
+      id: matches.id,
+      competition: matches.competition,
+      homeTeam: matches.homeTeam,
+      awayTeam: matches.awayTeam,
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+      kickoff: matches.kickoff,
+      status: matches.status,
+      venue: matches.venue,
+      commentCount,
+    })
+    .from(matches)
+    .leftJoin(comments, and(eq(comments.matchId, matches.id), eq(comments.deleted, false)))
+    .where(where)
+    .groupBy(matches.id)
+    .orderBy(...orderBy)
+    .limit(limit);
+
+  const goatMap = await goatsForMatches(rows.map((r) => r.id));
+  return rows.map((r) => ({ ...r, goats: goatMap.get(r.id) ?? [] }));
+}
+
+/** A single match (event) by id, with its participating goats. */
+export async function getMatchById(id: string): Promise<FloorEvent | null> {
+  const commentCount = sql<number>`count(${comments.id})::int`;
+  const [row] = await db
+    .select({
+      id: matches.id,
+      competition: matches.competition,
+      homeTeam: matches.homeTeam,
+      awayTeam: matches.awayTeam,
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+      kickoff: matches.kickoff,
+      status: matches.status,
+      venue: matches.venue,
+      commentCount,
+    })
+    .from(matches)
+    .leftJoin(comments, and(eq(comments.matchId, matches.id), eq(comments.deleted, false)))
+    .where(eq(matches.id, id))
+    .groupBy(matches.id)
+    .limit(1);
+  if (!row) return null;
+
+  const goatMap = await goatsForMatches([id]);
+  return { ...row, goats: goatMap.get(id) ?? [] };
+}
+
+/** One moment on a match's timeline, enriched with the goat's short name. */
+export interface MatchMoment {
+  id: number;
+  minute: number;
+  extra: number | null;
+  type: string;
+  team: string; // home | away
+  playerName: string | null;
+  goatSlug: string | null;
+  goatShortName: string | null;
+  detail: string | null;
+}
+
+/** A match's moments, ordered along the timeline. */
+export async function getMatchMoments(matchId: string): Promise<MatchMoment[]> {
+  const rows = await db
+    .select({
+      id: matchMoments.id,
+      minute: matchMoments.minute,
+      extra: matchMoments.extra,
+      type: matchMoments.type,
+      team: matchMoments.team,
+      playerName: matchMoments.playerName,
+      goatSlug: matchMoments.goatSlug,
+      detail: matchMoments.detail,
+    })
+    .from(matchMoments)
+    .where(eq(matchMoments.matchId, matchId))
+    .orderBy(matchMoments.minute, matchMoments.extra);
+
+  return rows.map((r) => ({
+    ...r,
+    goatShortName: r.goatSlug ? (getEntityBySlug(r.goatSlug)?.shortName ?? null) : null,
+  }));
 }

@@ -2,18 +2,20 @@
 import Layout from '../layouts/Layout.astro';
 import MarqueeCarousel from '../components/MarqueeCarousel.tsx';
 import type { MarqueeBattle } from '../components/MarqueeCarousel.tsx';
-import TakeRow from '../components/TakeRow.astro';
-import { getHomeBattleData, getRecentTakes } from '../lib/queries';
+import EventRow from '../components/EventRow.astro';
+import { getHomeBattleData, getFloorEvents } from '../lib/queries';
+import { FLOOR_FILTERS } from '../lib/floor';
 import { arenaLabel, arenaEmoji, getArena } from '../data/arenas';
 import { compactNumber } from '../lib/format';
 
-// Live scoreboard — read the latest tallies + takes on every request.
+// Live scoreboard — read the latest tallies + top match debates on every request.
 export const prerender = false;
 
-const [{ mostVoted, totalVotes }, takes] = await Promise.all([
+const [{ mostVoted, totalVotes }, events] = await Promise.all([
   getHomeBattleData(6),
-  getRecentTakes(8),
+  getFloorEvents({ filter: 'top', userId: Astro.locals.user?.id ?? null, limit: 4 }),
 ]);
+const liveCount = events.filter((e) => e.status === 'live').length;
 
 // Marquee cards for the "Happening Now" carousel (left = lime, right = red).
 const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
@@ -27,12 +29,11 @@ const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
   votes: s.total.toLocaleString(),
 }));
 
-const floorChips = [
-  { label: 'Hot', active: true },
-  { label: 'New', active: false },
-  { label: 'Live matches', active: false },
-  { label: 'My goats', active: false },
-];
+const floorChips = FLOOR_FILTERS.map((f, i) => ({
+  label: f.label,
+  href: `/floor?filter=${f.key}`,
+  active: i === 0, // "Top" leads the preview
+}));
 
 // Scoreboard ticker between the hero and the floor — live scorelines woven
 // with a few evergreen call-outs. Duplicated in the track for a seamless loop.
@@ -106,30 +107,30 @@ const ticker: string[] = [
         <span class="font-headline font-black uppercase text-3xl leading-none text-ink">The Floor</span>
         <div class="flex flex-wrap items-center gap-1.5 ml-2">
           {floorChips.map((c) => (
-            <a href="/floor" class:list={['chip', c.active && 'chip-active']}>{c.label}</a>
+            <a href={c.href} class:list={['chip', c.active && 'chip-active']}>{c.label}</a>
           ))}
         </div>
-        <span class="ml-auto flex items-center gap-2">
-          <span class="live-dot"></span>
-          <span class="font-mono text-[11px] text-mute whitespace-nowrap">
-            {totalVotes > 0 ? `${compactNumber(totalVotes)} votes counted` : 'Live'}
+        {liveCount > 0 && (
+          <span class="ml-auto flex items-center gap-2">
+            <span class="live-dot"></span>
+            <span class="font-mono text-[11px] text-mute whitespace-nowrap">{liveCount} live now</span>
           </span>
-        </span>
+        )}
       </div>
 
       <!-- Stream -->
       <div class="mt-4 flex flex-col gap-2.5">
-        {takes.length > 0 ? (
+        {events.length > 0 ? (
           <>
-            {takes.map((take) => <TakeRow take={take} />)}
+            {events.map((event) => <EventRow event={event} />)}
             <a href="/floor"
               class="self-center mt-1.5 chip">Enter the floor ↓</a>
           </>
         ) : (
           <div class="bg-canvas-soft border border-hairline rounded-md px-6 py-10 text-center">
             <p class="font-headline font-black uppercase text-2xl text-ink">The floor is open</p>
-            <p class="mt-2 font-sans text-body">Be the first to drop a take — pick a battle and defend your GOAT.</p>
-            <a href="/arenas" class="btn btn-primary text-sm px-6 py-2.5 mt-5">Browse battles</a>
+            <p class="mt-2 font-sans text-body">Match debates are coming to the floor — check back soon.</p>
+            <a href="/goats" class="btn btn-primary text-sm px-6 py-2.5 mt-5">Browse goats</a>
           </div>
         )}
       </div>
