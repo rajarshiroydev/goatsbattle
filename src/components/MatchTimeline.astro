@@ -52,7 +52,7 @@ const away = moments.filter((m) => m.team === 'away');
       {/* Track */}
       <div class="relative h-[92px] my-1" aria-hidden="true">
         {home.map((m) => (
-          <button type="button" class="gb-moment absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
+          <button type="button" tabindex="-1" class="gb-moment absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
             style={`left:${pct(m)}%; top:0`} data-moment-id={m.id} data-moment-label={anchorLabel(m)} title={m.detail ?? anchorLabel(m)}>
             <span class="text-[15px] leading-none">{glyph(m.type)}</span>
             <span class="font-mono text-[9px] text-mute">{minuteLabel(m)}</span>
@@ -62,7 +62,7 @@ const away = moments.filter((m) => m.team === 'away');
         <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style="background: var(--color-lime)"></div>
         <div class="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style="background: var(--color-red)"></div>
         {away.map((m) => (
-          <button type="button" class="gb-moment absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
+          <button type="button" tabindex="-1" class="gb-moment absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
             style={`left:${pct(m)}%; bottom:0`} data-moment-id={m.id} data-moment-label={anchorLabel(m)} title={m.detail ?? anchorLabel(m)}>
             <span class="font-mono text-[9px] text-mute">{minuteLabel(m)}</span>
             <span class="text-[15px] leading-none">{glyph(m.type)}</span>

@@ -1,8 +1,8 @@
 /**
- * Migration for moment tagging (GBT-7 deferred feature). Idempotent — safe to
- * re-run. Adds `comments.moment_id` so a match comment can anchor to a point on
- * the match timeline, with a CHECK that a moment anchor only exists on a match
- * comment. Applies DDL directly (see scripts/migrate-matches.ts for why).
+ * Migration for moment tagging (GBT-7). Idempotent — safe to re-run. Adds
+ * `comments.moment_id` so a match comment can anchor to a point on the match
+ * timeline, with a CHECK that a moment anchor only exists on a match comment.
+ * Applies DDL directly (see scripts/migrate-matches.ts for why).
  *
  * Run with:  npm run db:migrate:moment-tags
  */

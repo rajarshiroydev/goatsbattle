@@ -126,6 +126,22 @@ async function syncFixture(fx: ApiFixture) {
   });
 
   // ── Moments ──────────────────────────────────────────────────────────────
+  // Skip re-syncing moments for a match that already has them: deleting rows
+  // would fire `comments.moment_id ON DELETE SET NULL` and silently erase users'
+  // moment tags (and burns an API call). Historical results don't change, so
+  // first-sync-wins is safe; a future re-import would need identity-based
+  // reconciliation (and neon-http has no interactive transactions to wrap it).
+  const already = await db
+    .select({ id: matchMoments.id })
+    .from(matchMoments)
+    .where(eq(matchMoments.matchId, id))
+    .limit(1);
+  if (already.length > 0) {
+    await syncGoats(fx, id);
+    console.log(`  ✓ ${id} — kept existing moments (already synced)`);
+    return id;
+  }
+
   const events = await getFixtureEvents(fx.fixture.id);
   const moments = events
     .map((ev) => {
@@ -162,10 +178,15 @@ async function syncFixture(fx: ApiFixture) {
     });
   }
 
-  await db.delete(matchMoments).where(eq(matchMoments.matchId, id));
   if (moments.length) await db.insert(matchMoments).values(moments);
 
-  // ── Participating goats (team-anchored) ──────────────────────────────────
+  const goatCount = await syncGoats(fx, id);
+  console.log(`  ✓ ${id} — ${moments.length} moments, ${goatCount} goats`);
+  return id;
+}
+
+/** Replace a match's goat links (no dependent rows, so delete+reinsert is safe). */
+async function syncGoats(fx: ApiFixture, id: string): Promise<number> {
   const goats: Array<{ matchId: string; goatSlug: string; team: string }> = [];
   for (const side of ['home', 'away'] as const) {
     const slug = TEAM_GOAT[fx.teams[side].name];
@@ -173,9 +194,7 @@ async function syncFixture(fx: ApiFixture) {
   }
   await db.delete(matchGoats).where(eq(matchGoats.matchId, id));
   if (goats.length) await db.insert(matchGoats).values(goats);
-
-  console.log(`  ✓ ${id} — ${moments.length} moments, ${goats.length} goats`);
-  return id;
+  return goats.length;
 }
 
 async function main() {
@@ -183,15 +202,17 @@ async function main() {
   const all = await getFixtures(LEAGUE, SEASON);
   const byId = new Map(all.map((f) => [f.fixture.id, f]));
 
+  // Fail fast before any writes if the curated set is incomplete — better than
+  // silently landing partial match/goat coverage.
+  const missing = FIXTURE_IDS.filter((fid) => !byId.has(fid));
+  if (missing.length > 0) {
+    throw new Error(`Fixtures not found in season ${SEASON}: ${missing.join(', ')}. Aborting without writes.`);
+  }
+
   console.log(`→ Syncing ${FIXTURE_IDS.length} curated matches…`);
   const done: string[] = [];
   for (const fid of FIXTURE_IDS) {
-    const fx = byId.get(fid);
-    if (!fx) {
-      console.warn(`  ! fixture ${fid} not found in ${SEASON} — skipping`);
-      continue;
-    }
-    done.push(await syncFixture(fx));
+    done.push(await syncFixture(byId.get(fid)!));
   }
 
   console.log(`\n✓ Done. Synced ${done.length} real matches from API-Football.`);

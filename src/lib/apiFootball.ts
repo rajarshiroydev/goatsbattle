@@ -54,8 +54,10 @@ async function apiGet<T>(path: string, params: Record<string, string | number>):
   const qs = new URLSearchParams(
     Object.entries(params).map(([k, v]) => [k, String(v)]),
   ).toString();
+  // Bound each request so a stalled upstream can't hang the sync indefinitely.
   const res = await fetch(`${BASE_URL}${path}?${qs}`, {
     headers: { 'x-apisports-key': API_KEY },
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) {
     throw new Error(`API-Football ${path} failed: ${res.status} ${res.statusText}`);

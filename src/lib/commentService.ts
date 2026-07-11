@@ -2,16 +2,9 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
 import { comments, commentVotes, commentStatTags, user, battles, matches, matchMoments } from './db/schema';
 import { getFanTags, type FanTag } from './floor';
-import { resolveStat, type StatTag } from './statTags';
+import { resolveStat, MAX_STAT_TAGS, type StatTag, type StatTagInput } from './statTags';
 
-/** A (goat, stat) reference a comment cites, before value resolution. */
-export interface StatTagInput {
-  goatSlug: string;
-  statLabel: string;
-}
-
-/** Cap on stat tags per comment — keeps a comment an argument, not a spreadsheet. */
-export const MAX_STAT_TAGS = 6;
+export { MAX_STAT_TAGS, type StatTagInput };
 
 /** The timeline moment a comment is anchored to (null for un-anchored comments). */
 export interface MomentRef {

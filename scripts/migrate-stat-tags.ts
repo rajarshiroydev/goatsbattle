@@ -1,7 +1,7 @@
 /**
- * Migration for stat tagging (GBT-7 deferred feature). Idempotent — safe to
- * re-run. Adds `comment_stat_tags` so a comment can cite one or more definitive
- * goat stats. Applies DDL directly (see scripts/migrate-matches.ts for why).
+ * Migration for stat tagging (GBT-7). Idempotent — safe to re-run. Adds
+ * `comment_stat_tags` so a comment can cite one or more definitive goat stats.
+ * Applies DDL directly (see scripts/migrate-matches.ts for why).
  *
  * Run with:  npm run db:migrate:stat-tags
  */

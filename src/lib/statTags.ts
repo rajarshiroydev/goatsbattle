@@ -13,6 +13,16 @@ export interface StatTag {
   unit?: string;
 }
 
+/** A (goat, stat) reference a comment cites, before value resolution. The single
+ * source of truth for the request contract, shared by the client and service. */
+export interface StatTagInput {
+  goatSlug: string;
+  statLabel: string;
+}
+
+/** Cap on stat tags per comment — keeps a comment an argument, not a spreadsheet. */
+export const MAX_STAT_TAGS = 6;
+
 /** Resolve a (goat, stat label) reference to its current value, or null if gone. */
 export function resolveStat(goatSlug: string, statLabel: string): StatTag | null {
   const goat = getEntityBySlug(goatSlug);

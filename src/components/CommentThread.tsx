@@ -3,12 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useSession } from '../lib/useSession';
 import { openAuthModal } from '../lib/authModal';
 import { relativeTime } from '../lib/format';
-import type { TaggableGoat, StatTag } from '../lib/statTags';
-
-/** A (goat, stat) reference the composer emits with a comment. */
-type StatTagInput = { goatSlug: string; statLabel: string };
-
-const MAX_STAT_TAGS = 6;
+import { MAX_STAT_TAGS } from '../lib/statTags';
+import type { TaggableGoat, StatTag, StatTagInput } from '../lib/statTags';
 
 /** "Int'l Goals 106" — compact stat display used on chips and picker options. */
 function statText(s: { statLabel: string; value: string | number; unit?: string } | { label: string; value: string | number; unit?: string }): string {
@@ -106,6 +102,15 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
       if (d && typeof d.id === 'number') setActiveMoment({ id: d.id, label: String(d.label ?? '') });
     };
     window.addEventListener('gb:moment', onSelect);
+
+    // Replay a selection made before this (client:visible) island hydrated, so a
+    // moment clicked during load still reaches the composer.
+    const selected = document.querySelector<HTMLElement>('.gb-moment.is-active[data-moment-id]');
+    const preId = Number(selected?.dataset.momentId);
+    if (selected && Number.isFinite(preId)) {
+      setActiveMoment({ id: preId, label: selected.dataset.momentLabel ?? '' });
+    }
+
     return () => window.removeEventListener('gb:moment', onSelect);
   }, [matchId]);
 
@@ -748,6 +753,7 @@ function Composer({
         {canTagStats && pickerOpen && (
           <div class="flex flex-wrap items-center gap-2 mt-2 bg-canvas-soft border border-hairline rounded-md p-2">
             <select
+              aria-label="Goat"
               value={pickGoat || goats![0].slug}
               onChange={(e) => { setPickGoat((e.target as HTMLSelectElement).value); setPickStat(''); }}
               class="bg-canvas border border-hairline rounded-sm px-2 py-1 font-sans text-[13px] text-ink focus:outline-none focus:border-lime"
@@ -755,6 +761,7 @@ function Composer({
               {goats!.map((g) => <option value={g.slug} key={g.slug}>{g.shortName}</option>)}
             </select>
             <select
+              aria-label="Statistic"
               value={pickStat}
               onChange={(e) => setPickStat((e.target as HTMLSelectElement).value)}
               class="flex-1 min-w-[10rem] bg-canvas border border-hairline rounded-sm px-2 py-1 font-sans text-[13px] text-ink focus:outline-none focus:border-lime"
