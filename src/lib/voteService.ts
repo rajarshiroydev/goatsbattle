@@ -44,7 +44,7 @@ export async function recordHeadToHeadVote(
       ON CONFLICT (user_id, battle_id) DO UPDATE
       SET window_start = excluded.window_start, choice = excluded.choice
       WHERE head_vote_windows.window_start <= now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'
-      RETURNING 1
+      RETURNING choice
     ), ledger AS (
       INSERT INTO votes (battle_id, choice, user_id, ip_hash, country)
       SELECT ${battleId}, ${choice}, ${userId}, ${ipHash}, ${country}
@@ -61,15 +61,23 @@ export async function recordHeadToHeadVote(
       UPDATE entities SET votes_against = votes_against + 1
       WHERE id = ${loser} AND EXISTS (SELECT 1 FROM claimed)
     )
-    SELECT EXISTS (SELECT 1 FROM claimed) AS awarded
+    SELECT EXISTS (SELECT 1 FROM claimed) AS awarded,
+           CASE
+             WHEN EXISTS (SELECT 1 FROM claimed) THEN ${choice}
+             ELSE (
+               SELECT choice FROM head_vote_windows
+               WHERE user_id = ${userId} AND battle_id = ${battleId}
+             )
+           END AS choice
   `);
   const claim = (claimResult as unknown as {
-    rows: Array<{ awarded: boolean }>;
+    rows: Array<{ awarded: boolean; choice: string | null }>;
   }).rows[0];
   const alreadyVoted = !claim?.awarded;
+  const votedChoice = claim?.choice ?? choice;
 
   const fresh = (await getBattleSummary(battleId)) ?? summary;
-  return { status: 'ok', alreadyVoted, summary: fresh, votedChoice: choice };
+  return { status: 'ok', alreadyVoted, summary: fresh, votedChoice };
 }
 
 export interface VoteState {

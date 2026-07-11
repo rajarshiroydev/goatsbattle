@@ -289,7 +289,7 @@ export default function ChampionMode({ roster }: Props) {
       const res = await fetch("/api/rank-vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entityId: champ.id, channel: "champion" }),
+        body: JSON.stringify({ goatSlug: champ.id, channel: "champion" }),
       });
       const data = await res.json();
       setCrownResult({ awarded: res.ok ? data.awarded ?? 0 : 0, total: data.total ?? 0 });

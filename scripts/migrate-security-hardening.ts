@@ -30,6 +30,7 @@ const statements = [
      window_start timestamptz NOT NULL DEFAULT now(),
      hits integer NOT NULL DEFAULT 1 CHECK (hits > 0)
    )`,
+  `CREATE INDEX IF NOT EXISTS rate_limits_window_start_idx ON rate_limits (window_start)`,
 ];
 
 async function main() {

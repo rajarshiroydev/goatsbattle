@@ -13,27 +13,27 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
     headers: { 'Content-Type': 'application/json', ...headers },
   });
 
-/** GET ?entity=slug → this user's ranking-vote window state for that GOAT. */
+/** GET ?goat=slug → this user's ranking-vote window state for that GOAT. */
 export const GET: APIRoute = async ({ url, locals }) => {
-  const parsedEntity = slugSchema.safeParse(url.searchParams.get('entity'));
-  if (!parsedEntity.success) return json({ error: 'valid entity is required' }, 400);
-  const entityId = parsedEntity.data;
+  const parsedGoat = slugSchema.safeParse(url.searchParams.get('goat'));
+  if (!parsedGoat.success) return json({ error: 'valid goat is required' }, 400);
+  const goatSlug = parsedGoat.data;
   if (locals.user) {
     const rl = await rateLimit(`rank-state:${locals.user.id}`, { max: 60 });
     if (!rl.ok) return json({ error: 'Too many requests' }, 429);
   }
-  const state = await getRankingVoteState(entityId, locals.user?.id ?? null);
+  const state = await getRankingVoteState(goatSlug, locals.user?.id ?? null);
   return json(state);
 };
 
-/** POST { entityId, channel } → cast a ranking vote (+1 profile / +5 champion). */
+/** POST { goatSlug, channel } → cast a ranking vote (+1 profile / +5 champion). */
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to vote', code: 'auth_required' }, 401);
   }
   const parsed = await parseJsonBody(request, rankVoteBodySchema);
   if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
-  const { entityId, channel } = parsed.data;
+  const { goatSlug, channel } = parsed.data;
 
   const ipHash = hashIp(getClientIp(request.headers));
 
@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rlIp.retryAfter) });
   }
 
-  const result = await recordRankingVote(entityId, channel, locals.user.id, ipHash);
+  const result = await recordRankingVote(goatSlug, channel, locals.user.id, ipHash);
   if (result.status === 'unknown_entity') return json({ error: 'Unknown GOAT' }, 404);
 
   return json(result);

@@ -49,7 +49,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/rank-vote?entity=${encodeURIComponent(id)}`)
+    fetch(`/api/rank-vote?goat=${encodeURIComponent(id)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: RankState) => active && setState(data))
       .catch(() => {})
@@ -82,7 +82,7 @@ export default function ProfileVoteButton({ id, shortName, accent }: Props) {
       const res = await fetch('/api/rank-vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entityId: id, channel: 'profile' }),
+        body: JSON.stringify({ goatSlug: id, channel: 'profile' }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Vote failed');

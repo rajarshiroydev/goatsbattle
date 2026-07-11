@@ -3,6 +3,8 @@ import { db } from './db';
 
 const DEFAULT_WINDOW_SECONDS = 60;
 const DEFAULT_MAX_HITS = 20;
+const MAX_SUPPORTED_WINDOW_SECONDS = 60;
+const PRUNE_BATCH_SIZE = 100;
 
 export interface RateResult {
   ok: boolean;
@@ -24,11 +26,28 @@ export async function rateLimit(
   options: RateLimitOptions = {},
 ): Promise<RateResult> {
   const max = options.max ?? DEFAULT_MAX_HITS;
-  const windowSeconds = options.windowSeconds ?? DEFAULT_WINDOW_SECONDS;
+  const windowSeconds = Math.min(
+    Math.max(1, options.windowSeconds ?? DEFAULT_WINDOW_SECONDS),
+    MAX_SUPPORTED_WINDOW_SECONDS,
+  );
+  const normalizedKey = key.slice(0, 200);
 
   const result = await db.execute(sql`
+    WITH expired AS (
+      SELECT key
+      FROM rate_limits
+      WHERE window_start < now() - (${MAX_SUPPORTED_WINDOW_SECONDS} * interval '1 second')
+        AND key <> ${normalizedKey}
+      ORDER BY window_start
+      LIMIT ${PRUNE_BATCH_SIZE}
+    ), pruned AS (
+      DELETE FROM rate_limits
+      USING expired
+      WHERE rate_limits.key = expired.key
+        AND rate_limits.window_start < now() - (${MAX_SUPPORTED_WINDOW_SECONDS} * interval '1 second')
+    )
     INSERT INTO rate_limits (key, window_start, hits)
-    VALUES (${key.slice(0, 200)}, now(), 1)
+    VALUES (${normalizedKey}, now(), 1)
     ON CONFLICT (key) DO UPDATE
     SET hits = CASE
           WHEN rate_limits.window_start <= now() - (${windowSeconds} * interval '1 second') THEN 1

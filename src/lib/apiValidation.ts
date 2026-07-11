@@ -10,7 +10,7 @@ export const voteBodySchema = z.object({
 }).strict();
 
 export const rankVoteBodySchema = z.object({
-  entityId: slugSchema,
+  goatSlug: slugSchema,
   channel: z.enum(['profile', 'champion']),
 }).strict();
 
@@ -46,15 +46,35 @@ export async function parseJsonBody<T>(
     return { ok: false, status: 413, error: 'Request body is too large' };
   }
 
-  let raw: string;
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  const reader = request.body?.getReader();
   try {
-    raw = await request.text();
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > maxBytes) {
+          await reader.cancel().catch(() => undefined);
+          return { ok: false, status: 413, error: 'Request body is too large' };
+        }
+        chunks.push(value);
+      }
+    }
   } catch {
     return { ok: false, status: 400, error: 'Could not read request body' };
+  } finally {
+    reader?.releaseLock();
   }
-  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
-    return { ok: false, status: 413, error: 'Request body is too large' };
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
   }
+  const raw = new TextDecoder().decode(bytes);
 
   let value: unknown;
   try {

@@ -17,10 +17,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to vote', code: 'auth_required' }, 401);
   }
-  const parsed = await parseJsonBody(request, voteBodySchema);
-  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
-  const { battleId, choice } = parsed.data;
-
   const ipHash = hashIp(getClientIp(request.headers));
 
   // Per-user limit plus an IP-scoped ceiling (so churning accounts from one host
@@ -34,6 +30,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rlIp.ok) {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rlIp.retryAfter) });
   }
+
+  const parsed = await parseJsonBody(request, voteBodySchema);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const { battleId, choice } = parsed.data;
 
   const country = getCountry(request.headers);
   const outcome = await recordHeadToHeadVote(battleId, choice, locals.user.id, ipHash, country);

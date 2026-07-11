@@ -35,7 +35,10 @@ Don't use for:
 **Where to look:**
 ```bash
 # Search patterns
-grep -r "api_key\|API_KEY\|secret\|SECRET\|password\|PASSWORD\|token\|TOKEN" --include="*.{js,ts,py,java,go,rb,php,env*,yml,yaml,json,config}"
+grep -r "api_key\|API_KEY\|secret\|SECRET\|password\|PASSWORD\|token\|TOKEN" \
+  --include="*.js" --include="*.ts" --include="*.py" --include="*.java" \
+  --include="*.go" --include="*.rb" --include="*.php" --include="*.env*" \
+  --include="*.yml" --include="*.yaml" --include="*.json" --include="*.config"
 
 # Common files
 .env
@@ -644,12 +647,13 @@ ls -la .env* config/
 ### Step 2: Secrets Scan (10 min)
 
 ```bash
-# Search for common secret patterns
-grep -r "api_key\|API_KEY\|secret\|password\|token" --include="*.{js,ts,py,env*,yml,yaml}" | grep -v node_modules | grep -v ".git"
+# Redacted tracked-history scan. Git mode excludes node_modules and .git contents.
+# Findings report file paths and line locations while suppressing secret values.
+gitleaks git --redact --no-banner .
 
-# Check frontend bundles
-find . -name "bundle*.js" -o -name "main*.js" | head -5
-# Scan large bundle files for secrets
+# Scan frontend bundles without printing secret-containing source lines.
+find dist -type f \( -name "bundle*.js" -o -name "main*.js" \) \
+  -exec gitleaks dir --redact --no-banner {} \;
 ```
 
 ### Step 3: Auth Review (20 min)
@@ -694,7 +698,7 @@ find . -name "bundle*.js" -o -name "main*.js" | head -5
 
 Keep it simple and actionable:
 
-```markdown
+````markdown
 # Vibecoder Security Review: [Project Name]
 
 **Date:** 2024-XX-XX
@@ -750,14 +754,14 @@ app.get('/api/profile', (req, res) => {
 1. Move all secrets to environment variables
 2. Add ownership checks to all data access routes
 3. Enable rate limiting on login endpoint
-4. Update vulnerable dependencies: `npm audit fix`
+4. Run `npm audit`, review its proposed dependency and remediation changes, and apply updates only through an explicitly approved change
 
 ## Context
 
 **Stack:** [React, Express, PostgreSQL, etc.]
 **Environment:** [Production, staging visible]
 **Auth pattern:** [JWT, sessions, etc.]
-```
+````
 
 ## Time Budget
 
@@ -833,15 +837,12 @@ This skill **is** good for:
 
 ## Success Criteria
 
-A good vibecoder review finds:
-- 3-5 high-severity issues in typical projects
-- 5-10 medium-severity issues
+A good vibecoder review provides:
+- Thorough coverage of the relevant attack surface
+- Evidence-backed findings, including zero findings when the review supports that result
 - Actionable, specific remediation advice
 - Clear attack scenarios for each finding
-
-**Red flags if you find nothing:**
-- Either the code is unusually secure (rare for vibecoders)
-- Or you missed something - dig deeper
+- Accurate severity based on demonstrated impact and exploitability
 
 ## The Bottom Line
 
@@ -852,4 +853,3 @@ A good vibecoder review finds:
 - No validation (adds friction to development)
 
 **Your job:** Find these patterns before attackers do. Focus on what's easy to exploit, not theoretical risks.
-

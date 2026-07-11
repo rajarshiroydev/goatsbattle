@@ -192,11 +192,17 @@ export const voteWindows = pgTable(
 /** Shared fixed-window rate-limit counters. Unlike an in-process Map, these are
  * consistent across serverless instances. Expired keys are opportunistically
  * recycled and can be pruned without affecting correctness. */
-export const rateLimits = pgTable('rate_limits', {
-  key: text('key').primaryKey(),
-  windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),
-  hits: integer('hits').notNull().default(1),
-});
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    key: text('key').primaryKey(),
+    windowStart: timestamp('window_start', { withTimezone: true }).notNull().defaultNow(),
+    hits: integer('hits').notNull().default(1),
+  },
+  (t) => ({
+    windowStartIdx: index('rate_limits_window_start_idx').on(t.windowStart),
+  }),
+);
 
 /**
  * Matches — football events users discuss on The Floor. Unlike entities/battles

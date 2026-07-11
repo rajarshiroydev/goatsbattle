@@ -90,6 +90,11 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
   const { commentId } = parsed.data;
 
+  const rl = await rateLimit(`comments:write:${locals.user.id}`, { max: 10 });
+  if (!rl.ok) {
+    return json({ error: 'Too fast — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+  }
+
   const result = await deleteComment(commentId, locals.user.id);
   if (result.status === 'not_found') return json({ error: 'Comment not found' }, 404);
   if (result.status === 'forbidden') return json({ error: 'Not your comment' }, 403);
