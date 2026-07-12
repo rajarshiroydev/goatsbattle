@@ -31,10 +31,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to vote', code: 'auth_required' }, 401);
   }
-  const parsed = await parseJsonBody(request, rankVoteBodySchema);
-  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
-  const { goatSlug, channel } = parsed.data;
-
   const ipHash = hashIp(getClientIp(request.headers));
 
   // Per-user limit plus an IP-scoped ceiling, checked in sequence (see /api/vote).
@@ -48,6 +44,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rlIp.ok) {
     return json({ error: 'Too many votes — slow down.' }, 429, { 'Retry-After': String(rlIp.retryAfter) });
   }
+
+  const parsed = await parseJsonBody(request, rankVoteBodySchema);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const { goatSlug, channel } = parsed.data;
 
   const result = await recordRankingVote(goatSlug, channel, locals.user.id, ipHash);
   if (result.status === 'unknown_entity') return json({ error: 'Unknown GOAT' }, 404);

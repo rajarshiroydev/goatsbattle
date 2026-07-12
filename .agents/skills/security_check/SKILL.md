@@ -34,11 +34,12 @@ Don't use for:
 
 **Where to look:**
 ```bash
-# Search patterns
-grep -r "api_key\|API_KEY\|secret\|SECRET\|password\|PASSWORD\|token\|TOKEN" \
-  --include="*.js" --include="*.ts" --include="*.py" --include="*.java" \
-  --include="*.go" --include="*.rb" --include="*.php" --include="*.env*" \
-  --include="*.yml" --include="*.yaml" --include="*.json" --include="*.config"
+# Search patterns (report file paths only; never print matching contents)
+rg -l --hidden "api_key|API_KEY|secret|SECRET|password|PASSWORD|token|TOKEN" \
+  -g "*.js" -g "*.ts" -g "*.py" -g "*.java" -g "*.go" -g "*.rb" \
+  -g "*.php" -g "*.env*" -g "*.yml" -g "*.yaml" -g "*.json" -g "*.config" \
+  -g "!.git/**" -g "!node_modules/**" -g "!dist/**" -g "!build/**" \
+  -g "!.astro/**" -g "!coverage/**" .
 
 # Common files
 .env
@@ -651,9 +652,8 @@ ls -la .env* config/
 # Findings report file paths and line locations while suppressing secret values.
 gitleaks git --redact --no-banner .
 
-# Scan frontend bundles without printing secret-containing source lines.
-find dist -type f \( -name "bundle*.js" -o -name "main*.js" \) \
-  -exec gitleaks dir --redact --no-banner {} \;
+# Scan the entire frontend output, including hashed assets under dist/_astro.
+gitleaks dir --redact --no-banner dist
 ```
 
 ### Step 3: Auth Review (20 min)
