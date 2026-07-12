@@ -64,7 +64,11 @@ export const auth = betterAuth({
     // maxAge keeps revocation reasonably fresh; logout clears the cookie locally.
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
-  emailAndPassword: { enabled: true },
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 10,
+    maxPasswordLength: 128,
+  },
   socialProviders,
   user: {
     // Extra app column; not accepted from signup input — set by the hook below.

@@ -186,7 +186,7 @@ export default function AuthModal({ googleEnabled = false }: Props) {
             <input
               type="password"
               required
-              minLength={8}
+              minLength={isSignup ? 10 : undefined}
               value={password}
               onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
               class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"

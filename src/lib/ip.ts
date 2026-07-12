@@ -5,14 +5,21 @@ import { createHash } from 'node:crypto';
 const SALT = process.env.IP_HASH_SALT ?? import.meta.env.IP_HASH_SALT;
 
 /**
- * Best-effort client IP from proxy headers. Vercel sets `x-forwarded-for`
- * (client first) and `x-real-ip`. Falls back to a constant so hashing never
- * throws — the unique constraint still dedups within that bucket.
+ * Client IP only from a header paired with evidence that the request traversed
+ * a supported trusted edge. This prevents direct/local clients from choosing an
+ * arbitrary X-Forwarded-For value. Vercel overwrites x-vercel-forwarded-for;
+ * Cloudflare overwrites cf-connecting-ip for Worker requests.
  */
 export function getClientIp(headers: Headers): string {
-  const fwd = headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
-  return headers.get('x-real-ip') ?? '0.0.0.0';
+  if (headers.has('x-vercel-id')) {
+    return headers.get('x-vercel-forwarded-for')?.split(',')[0].trim()
+      ?? headers.get('x-forwarded-for')?.split(',')[0].trim()
+      ?? '0.0.0.0';
+  }
+  if (headers.has('cf-ray')) {
+    return headers.get('cf-connecting-ip') ?? '0.0.0.0';
+  }
+  return '0.0.0.0';
 }
 
 /**

@@ -1,6 +1,25 @@
 import { defineMiddleware } from 'astro:middleware';
 import { auth } from './lib/auth';
 
+const contentSecurityPolicy = import.meta.env.DEV
+  ? "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data:; connect-src 'self' ws://localhost:*"
+  : "frame-ancestors 'none'; upgrade-insecure-requests";
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': contentSecurityPolicy,
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+};
+
+const secured = (response: Response) => {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    response.headers.set(name, value);
+  }
+  return response;
+};
+
 /**
  * Attach the better-auth session/user to `context.locals` for on-demand routes
  * (API routes + SSR pages read `locals.user`). Short-circuits to null when the
@@ -13,8 +32,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.session = null;
 
   // Prerendered pages have no per-request session; skip the header read + DB hit.
-  if (context.isPrerendered) return next();
-  if (!context.request.headers.has('cookie')) return next();
+  if (context.isPrerendered) return secured(await next());
+  if (!context.request.headers.has('cookie')) return secured(await next());
 
   try {
     // Bound the lookup so a slow auth/DB backend can't stall every request;
@@ -32,5 +51,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // leave the logged-out defaults set above
   }
 
-  return next();
+  return secured(await next());
 });

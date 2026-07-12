@@ -18,8 +18,9 @@ export type VoteOutcome =
  * this user voted this pairing within the window, the counts are left untouched.
  * `ipHash` is still stored as a secondary anti-abuse signal.
  *
- * neon-http has no transactions, so this is a check-then-write; the small race
- * (two simultaneous votes from one user) is acceptable at this scale.
+ * The rolling-window claim, ledger insert, and all counter updates happen in one
+ * PostgreSQL statement. This is atomic even through neon-http and prevents
+ * parallel requests from awarding more than once.
  */
 export async function recordHeadToHeadVote(
   battleId: string,
@@ -35,44 +36,48 @@ export async function recordHeadToHeadVote(
   const isB = choice === summary.b.id;
   if (!isA && !isB) return { status: 'bad_choice' };
 
-  const alreadyVoted = await hasRecentHeadToHeadVote(battleId, userId);
-
-  if (!alreadyVoted) {
-    const loser = isA ? summary.b.id : summary.a.id;
-    const battleBump = isA ? sql`votes_a = votes_a + 1` : sql`votes_b = votes_b + 1`;
-
-    // Record the ledger row, bump the matchup tally, and update the two
-    // head-to-head aggregates (wins/losses) used for the win-rate display.
-    await db.insert(votes).values({ battleId, choice, userId, ipHash, country });
-    await db.execute(sql`
-      WITH ub AS (
-        UPDATE battles SET ${battleBump} WHERE id = ${battleId}
-      ),
-      uw AS (
-        UPDATE entities SET votes_for = votes_for + 1 WHERE id = ${choice}
-      )
-      UPDATE entities SET votes_against = votes_against + 1 WHERE id = ${loser}
-    `);
-  }
+  const loser = isA ? summary.b.id : summary.a.id;
+  const claimResult = await db.execute(sql`
+    WITH claimed AS (
+      INSERT INTO head_vote_windows (user_id, battle_id, window_start, choice)
+      VALUES (${userId}, ${battleId}, now(), ${choice})
+      ON CONFLICT (user_id, battle_id) DO UPDATE
+      SET window_start = excluded.window_start, choice = excluded.choice
+      WHERE head_vote_windows.window_start <= now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'
+      RETURNING choice
+    ), ledger AS (
+      INSERT INTO votes (battle_id, choice, user_id, ip_hash, country)
+      SELECT ${battleId}, ${choice}, ${userId}, ${ipHash}, ${country}
+      FROM claimed
+    ), battle_update AS (
+      UPDATE battles
+      SET votes_a = votes_a + CASE WHEN entity_a = ${choice} THEN 1 ELSE 0 END,
+          votes_b = votes_b + CASE WHEN entity_b = ${choice} THEN 1 ELSE 0 END
+      WHERE id = ${battleId} AND EXISTS (SELECT 1 FROM claimed)
+    ), winner_update AS (
+      UPDATE entities SET votes_for = votes_for + 1
+      WHERE id = ${choice} AND EXISTS (SELECT 1 FROM claimed)
+    ), loser_update AS (
+      UPDATE entities SET votes_against = votes_against + 1
+      WHERE id = ${loser} AND EXISTS (SELECT 1 FROM claimed)
+    )
+    SELECT EXISTS (SELECT 1 FROM claimed) AS awarded,
+           CASE
+             WHEN EXISTS (SELECT 1 FROM claimed) THEN ${choice}
+             ELSE (
+               SELECT choice FROM head_vote_windows
+               WHERE user_id = ${userId} AND battle_id = ${battleId}
+             )
+           END AS choice
+  `);
+  const claim = (claimResult as unknown as {
+    rows: Array<{ awarded: boolean; choice: string | null }>;
+  }).rows[0];
+  const alreadyVoted = !claim?.awarded;
+  const votedChoice = claim?.choice ?? choice;
 
   const fresh = (await getBattleSummary(battleId)) ?? summary;
-  return { status: 'ok', alreadyVoted, summary: fresh, votedChoice: choice };
-}
-
-/** Whether this user voted this pairing within the rolling window. */
-async function hasRecentHeadToHeadVote(battleId: string, userId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: votes.id })
-    .from(votes)
-    .where(
-      and(
-        eq(votes.battleId, battleId),
-        eq(votes.userId, userId),
-        gt(votes.createdAt, sql`now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`),
-      ),
-    )
-    .limit(1);
-  return !!row;
+  return { status: 'ok', alreadyVoted, summary: fresh, votedChoice };
 }
 
 export interface VoteState {
@@ -152,59 +157,73 @@ export async function recordRankingVote(
     return { status: 'unknown_entity', awarded: 0, total: 0, profileUsed: false, championUsed: false, windowResetsAt: null };
   }
 
-  const [win] = await db
-    .select({
-      profileUsed: voteWindows.profileUsed,
-      championUsed: voteWindows.championUsed,
-      windowStart: voteWindows.windowStart,
-      active: sql<boolean>`${voteWindows.windowStart} > now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'`,
-    })
-    .from(voteWindows)
-    .where(and(eq(voteWindows.userId, userId), eq(voteWindows.entityId, entityId)))
-    .limit(1);
-
-  const active = !!win?.active;
-  const usedField = channel === 'profile' ? 'profileUsed' : 'championUsed';
-
-  // Already spent this channel in the live window → reject.
-  if (active && win?.[usedField]) {
-    return {
-      status: 'already_used',
-      awarded: 0,
-      total: entity.votes,
-      profileUsed: win.profileUsed,
-      championUsed: win.championUsed,
-      windowResetsAt: resetsAt(win.windowStart),
-    };
-  }
-
   const value = VOTE_VALUES[channel];
-  const profileUsed = channel === 'profile' ? true : active ? !!win?.profileUsed : false;
-  const championUsed = channel === 'champion' ? true : active ? !!win?.championUsed : false;
-  // Keep the anchor when extending a live window; reset it when opening a new one.
-  const windowStart = active && win ? win.windowStart : new Date();
+  const profileUsedInput = channel === 'profile';
+  const championUsedInput = channel === 'champion';
+  const result = await db.execute(sql`
+    WITH claimed AS (
+      INSERT INTO vote_windows
+        (user_id, entity_id, ip_hash, window_start, profile_used, champion_used)
+      VALUES
+        (${userId}, ${entityId}, ${ipHash}, now(), ${profileUsedInput}, ${championUsedInput})
+      ON CONFLICT (user_id, entity_id) DO UPDATE
+      SET window_start = CASE
+            WHEN vote_windows.window_start <= now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'
+              THEN excluded.window_start
+            ELSE vote_windows.window_start
+          END,
+          profile_used = CASE
+            WHEN vote_windows.window_start <= now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'
+              THEN excluded.profile_used
+            ELSE vote_windows.profile_used OR excluded.profile_used
+          END,
+          champion_used = CASE
+            WHEN vote_windows.window_start <= now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'
+              THEN excluded.champion_used
+            ELSE vote_windows.champion_used OR excluded.champion_used
+          END,
+          ip_hash = excluded.ip_hash
+      WHERE vote_windows.window_start <= now() - interval '${sql.raw(String(WINDOW_HOURS))} hours'
+         OR (${channel} = 'profile' AND vote_windows.profile_used = false)
+         OR (${channel} = 'champion' AND vote_windows.champion_used = false)
+      RETURNING window_start, profile_used, champion_used
+    ), updated AS (
+      UPDATE entities SET votes = votes + ${value}
+      WHERE id = ${entityId} AND EXISTS (SELECT 1 FROM claimed)
+      RETURNING votes
+    )
+    SELECT claimed.window_start AS "windowStart",
+           claimed.profile_used AS "profileUsed",
+           claimed.champion_used AS "championUsed",
+           updated.votes AS total
+    FROM claimed CROSS JOIN updated
+  `);
+  const awarded = (result as unknown as {
+    rows: Array<{
+      windowStart: Date;
+      profileUsed: boolean;
+      championUsed: boolean;
+      total: number;
+    }>;
+  }).rows[0];
 
-  await db
-    .insert(voteWindows)
-    .values({ userId, entityId, ipHash, windowStart, profileUsed, championUsed })
-    .onConflictDoUpdate({
-      target: [voteWindows.userId, voteWindows.entityId],
-      set: { windowStart, profileUsed, championUsed, ipHash },
-    });
-
-  const [updated] = await db
-    .update(entities)
-    .set({ votes: sql`${entities.votes} + ${value}` })
-    .where(eq(entities.id, entityId))
-    .returning({ votes: entities.votes });
+  if (!awarded) {
+    const state = await getRankingVoteState(entityId, userId);
+    const [fresh] = await db
+      .select({ votes: entities.votes })
+      .from(entities)
+      .where(eq(entities.id, entityId))
+      .limit(1);
+    return { status: 'already_used', awarded: 0, total: fresh?.votes ?? entity.votes, ...state };
+  }
 
   return {
     status: 'awarded',
     awarded: value,
-    total: updated?.votes ?? entity.votes + value,
-    profileUsed,
-    championUsed,
-    windowResetsAt: resetsAt(windowStart),
+    total: awarded.total,
+    profileUsed: awarded.profileUsed,
+    championUsed: awarded.championUsed,
+    windowResetsAt: resetsAt(new Date(awarded.windowStart)),
   };
 }
 

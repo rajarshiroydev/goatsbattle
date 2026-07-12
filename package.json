@@ -18,6 +18,7 @@
     "db:migrate:matches": "tsx --env-file=.env scripts/migrate-matches.ts",
     "db:migrate:moment-tags": "tsx --env-file=.env scripts/migrate-moment-tags.ts",
     "db:migrate:stat-tags": "tsx --env-file=.env scripts/migrate-stat-tags.ts",
+    "db:migrate:security": "tsx --env-file=.env scripts/migrate-security-hardening.ts",
     "db:sync:matches": "tsx --env-file=.env scripts/sync-matches.ts",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "db:seed:votes": "tsx --env-file=.env scripts/seed-battle-votes.ts"
@@ -33,7 +34,8 @@
     "drizzle-orm": "^0.45.2",
     "preact": "^10.29.3",
     "satori": "^0.26.0",
-    "tailwindcss": "^4.3.2"
+    "tailwindcss": "^4.3.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
@@ -42,5 +44,11 @@
     "playwright": "^1.61.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "path-to-regexp": "6.3.0",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   }
 }

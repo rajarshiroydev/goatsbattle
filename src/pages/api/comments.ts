@@ -2,6 +2,12 @@ import type { APIRoute } from 'astro';
 import { listComments, postComment, deleteComment, type CommentSubject } from '../../lib/commentService';
 import { rateLimit } from '../../lib/ratelimit';
 import { getClientIp, hashIp } from '../../lib/ip';
+import {
+  commentBodySchema,
+  deleteCommentBodySchema,
+  parseJsonBody,
+  slugSchema,
+} from '../../lib/apiValidation';
 
 export const prerender = false;
 
@@ -23,11 +29,16 @@ const resolveSubject = (battle: string | null, match: string | null): CommentSub
 
 /** GET ?battle=slug | ?match=id → flat list of the subject's comments (public read). */
 export const GET: APIRoute = async ({ url, request, locals }) => {
-  const subject = resolveSubject(url.searchParams.get('battle'), url.searchParams.get('match'));
+  const battle = url.searchParams.get('battle');
+  const match = url.searchParams.get('match');
+  if ((battle && !slugSchema.safeParse(battle).success) || (match && !slugSchema.safeParse(match).success)) {
+    return json({ error: 'invalid battle/match query parameter' }, 400);
+  }
+  const subject = resolveSubject(battle, match);
   if (!subject) return json({ error: 'exactly one of battle/match query param required' }, 400);
 
   // Lightweight anti-abuse ceiling for the public read (keyed by client IP).
-  const rl = rateLimit(`cget:${hashIp(getClientIp(request.headers))}`);
+  const rl = await rateLimit(`comments:read:${hashIp(getClientIp(request.headers))}`, { max: 60 });
   if (!rl.ok) {
     return json({ error: 'Too many requests — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
@@ -41,45 +52,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in to comment', code: 'auth_required' }, 401);
   }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
-  }
-
-  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
-    return json({ error: 'JSON body must be an object' }, 400);
-  }
-
-  const b = body as Record<string, unknown>;
+  const parsed = await parseJsonBody(request, commentBodySchema);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const b = parsed.data;
   const subject = resolveSubject(
-    typeof b.battleId === 'string' ? b.battleId : null,
-    typeof b.matchId === 'string' ? b.matchId : null,
+    b.battleId ?? null,
+    b.matchId ?? null,
   );
-  const text = typeof b.body === 'string' ? b.body : null;
-  const parentId = typeof b.parentId === 'number' ? b.parentId : null;
-  const momentId = typeof b.momentId === 'number' ? b.momentId : null;
-  // Stat tags: [{ goatSlug, statLabel }] — anything malformed is dropped here,
-  // and the service re-validates each against the canonical stat data.
-  const statTags = Array.isArray(b.statTags)
-    ? b.statTags
-        .filter((t): t is { goatSlug: string; statLabel: string } =>
-          !!t && typeof t === 'object' &&
-          typeof (t as any).goatSlug === 'string' && typeof (t as any).statLabel === 'string')
-        .map((t) => ({ goatSlug: t.goatSlug, statLabel: t.statLabel }))
-    : [];
-  if (!subject || text === null) {
+  if (!subject) {
     return json({ error: 'exactly one of battleId/matchId, plus body, are required' }, 400);
   }
 
-  const rl = rateLimit(`c:${locals.user.id}`);
+  const rl = await rateLimit(`comments:write:${locals.user.id}`, { max: 10 });
   if (!rl.ok) {
     return json({ error: 'Too fast — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
 
-  const result = await postComment(subject, locals.user.id, parentId, text, momentId, statTags);
+  const result = await postComment(
+    subject,
+    locals.user.id,
+    b.parentId ?? null,
+    b.body,
+    b.momentId ?? null,
+    b.statTags,
+  );
   if (result.status === 'invalid') return json({ error: result.error }, 400);
   if (result.status === 'not_found') return json({ error: 'Subject not found' }, 404);
   return json({ comment: result.comment });
@@ -90,16 +86,14 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   if (!locals.user) {
     return json({ error: 'Log in first', code: 'auth_required' }, 401);
   }
+  const parsed = await parseJsonBody(request, deleteCommentBodySchema);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const { commentId } = parsed.data;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Invalid JSON body' }, 400);
+  const rl = await rateLimit(`comments:write:${locals.user.id}`, { max: 10 });
+  if (!rl.ok) {
+    return json({ error: 'Too fast — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
   }
-
-  const commentId = typeof (body as any)?.commentId === 'number' ? (body as any).commentId : null;
-  if (commentId === null) return json({ error: 'commentId is required' }, 400);
 
   const result = await deleteComment(commentId, locals.user.id);
   if (result.status === 'not_found') return json({ error: 'Comment not found' }, 404);
