@@ -162,8 +162,9 @@ Keep this list current. Each entry = symptom → cause → fix.
   preview work, and a backfill each look under the RPM cap but collectively exhaust the
   trial → Cause: an in-memory limiter is per process/isolate → Fix:
   `reserveStatsApiRequest` atomically reserves from `provider_sync_state` (10 RPM, 9,500
-  total safety stop), and `backfill-thestatsapi-timelines.ts` spaces requests by 6.5 seconds;
-  never run imports/backfills concurrently.
+  total safety stop), and `backfill-thestatsapi-timelines.ts` spaces requests by 10.5 seconds
+  (at most 6 RPM) so the production cron retains headroom; never run multiple imports/backfills
+  concurrently.
 - **Marking a source degraded must not remove it from the retry set.** Symptom: one transient
   provider failure makes that match stop syncing forever → Cause: the failure path changes
   `match_sources.status` from `active` to `degraded`, so an active-only scheduler can never

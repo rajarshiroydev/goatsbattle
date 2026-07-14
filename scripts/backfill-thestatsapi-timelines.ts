@@ -8,6 +8,10 @@ const delay = (milliseconds: number) => new Promise<void>((resolve) => {
   setTimeout(resolve, milliseconds);
 });
 
+// Keep historical work below the shared 10 RPM ceiling so the production cron
+// retains capacity for score, lineup, and live-timeline requests.
+const BACKFILL_DELAY_MS = 10_500;
+
 function requestedLimit() {
   const raw = process.argv.find((arg) => arg.startsWith('--limit='))?.slice('--limit='.length);
   if (!raw) return 100;
@@ -40,11 +44,11 @@ async function main() {
      LIMIT $3`,
     [THE_STATS_API_PROVIDER, requestedMatch ?? null, limit, replay],
   ) as Array<{ matchId: string; providerMatchId: string }>;
-  console.log(`Preparing to backfill ${rows.length} finished timeline(s) at <=10 requests/minute.`);
+  console.log(`Preparing to backfill ${rows.length} finished timeline(s) at <=6 requests/minute.`);
   let finalized = 0;
   let unavailable = 0;
   for (const [index, row] of rows.entries()) {
-    if (index > 0) await delay(6_500);
+    if (index > 0) await delay(BACKFILL_DELAY_MS);
     const result = await backfillStatsApiTimeline({
       databaseUrl: connectionString,
       apiKey,
