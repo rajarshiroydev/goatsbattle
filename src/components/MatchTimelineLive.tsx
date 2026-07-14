@@ -1,51 +1,52 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
+import {
+  subscribeMatchMoments, anchorLabel, cardColor, minuteLabel, momentGlyph, momentTypeLabel,
+  isGoal, isCard, type Moment,
+} from '../lib/matchMoments';
 
-interface Moment {
-  id: number;
-  minute: number;
-  extra: number | null;
-  type: string;
-  team: string;
-  playerName: string | null;
-  goatSlug: string | null;
-  goatShortName: string | null;
-  detail: string | null;
-}
 interface Props {
   matchId: string;
   homeTeam: string;
   awayTeam: string;
 }
 
-const GLYPH: Record<string, string> = {
-  goal: '⚽', penalty: '⚽', own_goal: '⚽', penalty_missed: '❌',
-  yellow_card: '🟨', red_card: '🟥', foul: '⚠️', handball: '✋',
-  sub: '🔁', var: '📺', shootout: '🥅',
-};
-const TYPE_LABEL: Record<string, string> = {
-  goal: 'Goal', penalty: 'Penalty', own_goal: 'Own goal', penalty_missed: 'Missed pen',
-  yellow_card: 'Yellow card', red_card: 'Red card', foul: 'Foul', handball: 'Handball',
-  sub: 'Sub', var: 'VAR', shootout: 'Shootout',
-};
-const glyph = (type: string) => GLYPH[type] ?? '•';
-const typeLabel = (type: string) => TYPE_LABEL[type] ?? type.replace(/_/g, ' ');
-const minuteLabel = (moment: Moment) => `${moment.minute}${moment.extra ? `+${moment.extra}` : ''}'`;
-const anchorLabel = (moment: Moment) => `${minuteLabel(moment)} ${typeLabel(moment.type)}`;
+/** "GOAL · penalty · 1–0" style sub-label for a moment row (design §4a). */
+function detailLine(moment: Moment, score: string | null): string {
+  const parts: string[] = [];
+  if (isGoal(moment.type)) {
+    parts.push(moment.type === 'own_goal' ? 'Own goal' : 'Goal');
+    if (moment.type === 'penalty') parts.push('penalty');
+  } else {
+    parts.push(moment.type === 'red_card' ? 'Red' : moment.type === 'yellow_card' ? 'Yellow' : momentTypeLabel(moment.type));
+  }
+  if (moment.detail) parts.push(moment.detail);
+  if (score) parts.push(score);
+  return parts.join(' · ');
+}
 
 export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props) {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [hasProvisional, setHasProvisional] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
-    fetch(`/api/match-moments?match=${encodeURIComponent(matchId)}`)
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: { moments: Moment[] }) => active && setMoments(data.moments))
-      .catch(() => active && setError(true))
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
+    return subscribeMatchMoments(
+      matchId,
+      (feed) => {
+        setMoments(feed.moments);
+        setHasProvisional(feed.hasProvisional);
+        setFetchedAt(feed.fetchedAt);
+        setError(false);
+        setLoading(false);
+      },
+      () => {
+        setError(true);
+        setLoading(false);
+      },
+    );
   }, [matchId]);
 
   useEffect(() => {
@@ -54,27 +55,37 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
     return () => window.removeEventListener('gb:moment-clear', clear);
   }, []);
 
-  const maxMinute = useMemo(
-    () => Math.max(90, ...moments.map((moment) => moment.minute + (moment.extra ?? 0))),
-    [moments],
-  );
-  const pct = (moment: Moment) => Math.min(98, ((moment.minute + (moment.extra ?? 0)) / maxMinute) * 100);
-  const home = moments.filter((moment) => moment.team === 'home');
-  const away = moments.filter((moment) => moment.team === 'away');
+  // Running score after each goal, so goal rows can read "2–0" like the design.
+  const scoreByMoment = useMemo(() => {
+    const map = new Map<number, string>();
+    let home = 0;
+    let away = 0;
+    for (const m of moments) {
+      if (!isGoal(m.type)) continue;
+      // Own goals credit the opposing side.
+      if (m.type === 'own_goal') { m.team === 'home' ? (away += 1) : (home += 1); }
+      else { m.team === 'home' ? (home += 1) : (away += 1); }
+      map.set(m.id, `${home}–${away}`);
+    }
+    return map;
+  }, [moments]);
 
   function select(moment: Moment) {
     setActiveId(moment.id);
-    window.dispatchEvent(new CustomEvent('gb:moment', {
-      detail: { id: moment.id, label: anchorLabel(moment) },
-    }));
+    window.dispatchEvent(new CustomEvent('gb:moment', { detail: { id: moment.id, label: anchorLabel(moment) } }));
   }
 
   return (
-    <div class="bg-canvas-soft border border-hairline rounded-md p-4">
-      <div class="flex items-center justify-between mb-3">
-        <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute">Match timeline</span>
-        {!loading && moments.length > 0 && <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute">{maxMinute}'</span>}
+    <div class="bg-canvas-soft border border-hairline rounded-lg p-4 sm:p-5">
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink">Match Moments</span>
+        {!loading && moments.length > 0 && (
+          <span class={`font-mono text-[10px] ${hasProvisional ? 'text-red' : 'text-mute'}`}>
+            {hasProvisional ? 'Live · provisional' : `${moments.length} ${moments.length === 1 ? 'event' : 'events'}`}
+          </span>
+        )}
       </div>
+
       {loading ? (
         <p class="font-sans text-sm text-mute py-4 text-center">Loading match moments…</p>
       ) : error ? (
@@ -82,50 +93,58 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
       ) : moments.length === 0 ? (
         <p class="font-sans text-sm text-mute py-4 text-center">No moments recorded for this match.</p>
       ) : (
-        <div>
-          <div class="relative h-[92px] my-1" aria-hidden="true">
-            {home.map((moment) => (
-              <button key={moment.id} type="button" tabIndex={-1}
-                class={`absolute -translate-x-1/2 flex flex-col items-center gap-0.5 cursor-pointer${activeId === moment.id ? ' bg-lime/10 rounded' : ''}`}
-                style={`left:${pct(moment)}%; top:0`} title={moment.detail ?? anchorLabel(moment)} onClick={() => select(moment)}>
-                <span class="text-[15px] leading-none">{glyph(moment.type)}</span>
-                <span class="font-mono text-[9px] text-mute">{minuteLabel(moment)}</span>
-              </button>
-            ))}
-            <div class="absolute left-0 right-0 top-1/2 h-px bg-hairline-strong" />
-            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-lime" />
-            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-red" />
-            {away.map((moment) => (
-              <button key={moment.id} type="button" tabIndex={-1}
-                class={`absolute -translate-x-1/2 flex flex-col items-center gap-0.5 cursor-pointer${activeId === moment.id ? ' bg-lime/10 rounded' : ''}`}
-                style={`left:${pct(moment)}%; bottom:0`} title={moment.detail ?? anchorLabel(moment)} onClick={() => select(moment)}>
-                <span class="font-mono text-[9px] text-mute">{minuteLabel(moment)}</span>
-                <span class="text-[15px] leading-none">{glyph(moment.type)}</span>
-              </button>
-            ))}
-          </div>
-          <div class="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.12em] mb-3">
-            <span class="text-lime">{homeTeam}</span><span class="text-red">{awayTeam}</span>
-          </div>
-          <ul class="flex flex-col gap-0.5 border-t border-hairline pt-2">
-            {moments.map((moment) => (
+        <ul class="mt-1">
+          {moments.map((moment, index) => {
+            const home = moment.team === 'home';
+            const goal = isGoal(moment.type);
+            const card = isCard(moment.type);
+            const showHalfTime = index > 0 && moments[index - 1].minute <= 45 && moment.minute > 45;
+            return (
               <li key={moment.id}>
-                <button type="button" onClick={() => select(moment)}
-                  class={`w-full flex items-start gap-2 text-sm text-left rounded px-1.5 py-1 hover:bg-canvas transition-colors${activeId === moment.id ? ' bg-lime/10' : ''}`}
-                  title={`Tag this moment: ${anchorLabel(moment)}`}>
-                  <span class="font-mono text-[11px] text-mute w-9 shrink-0 pt-0.5 text-right">{minuteLabel(moment)}</span>
-                  <span class="shrink-0" aria-hidden="true">{glyph(moment.type)}</span>
-                  <span class="sr-only">{moment.team === 'home' ? homeTeam : awayTeam} — {typeLabel(moment.type)}:</span>
-                  <span class="flex-1 min-w-0">
-                    <span class="font-sans font-semibold text-ink">{moment.playerName ?? (moment.team === 'home' ? homeTeam : awayTeam)}</span>
-                    {moment.detail && <span class="font-sans text-body"> — {moment.detail}</span>}
+                {showHalfTime && (
+                  <div class="flex items-center gap-2.5 py-2">
+                    <span class="flex-1 h-px bg-hairline" />
+                    <span class="font-mono text-[9px] uppercase tracking-[0.16em] text-mute">Half time</span>
+                    <span class="flex-1 h-px bg-hairline" />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => select(moment)}
+                  title={`Tag this moment: ${anchorLabel(moment)}`}
+                  class={`group grid grid-cols-[34px_18px_1fr_auto] items-start gap-2.5 w-full text-left py-3 border-b border-[color:var(--color-hairline)]/70 last:border-0 transition-colors hover:bg-canvas ${activeId === moment.id ? 'bg-lime/5' : ''}`}
+                >
+                  <span class={`font-headline font-extrabold text-[14px] leading-none pt-0.5 ${home ? 'text-lime' : 'text-red'}`}>{minuteLabel(moment)}</span>
+                  <span class="mt-0.5 flex justify-center" aria-hidden="true">
+                    {goal ? (
+                      <span class={`w-4 h-4 rounded-full ${home ? 'bg-lime' : 'bg-red'} grid place-items-center text-[9px] leading-none`}>⚽</span>
+                    ) : card ? (
+                      <span class="w-3 h-[15px] rounded-[2px]" style={`background:${cardColor(moment.type)}`} />
+                    ) : (
+                      <span class="text-[12px] leading-none">{momentGlyph(moment.type)}</span>
+                    )}
                   </span>
-                  <span class="shrink-0 self-center font-mono text-[9px] uppercase tracking-wider text-lime">Tag ⚑</span>
+                  <span class="min-w-0">
+                    <span class="sr-only">{home ? homeTeam : awayTeam} — </span>
+                    <span class={`block font-sans text-[13.5px] leading-tight text-ink ${goal ? 'font-bold' : 'font-semibold'}`}>
+                      {moment.playerName ?? (home ? homeTeam : awayTeam)}
+                    </span>
+                    <span class={`block mt-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${goal ? 'text-lime' : 'text-mute'}`}>
+                      {detailLine(moment, goal ? scoreByMoment.get(moment.id) ?? null : null)}
+                      {moment.verificationStatus === 'provisional' ? ' · provisional' : ''}
+                    </span>
+                  </span>
+                  <span class="self-center font-mono text-[9px] uppercase tracking-wider text-lime opacity-0 group-hover:opacity-100 transition-opacity">Tag ⚑</span>
                 </button>
               </li>
-            ))}
-          </ul>
-        </div>
+            );
+          })}
+        </ul>
+      )}
+      {hasProvisional && fetchedAt && (
+        <p class="mt-3 font-mono text-[9px] uppercase tracking-[0.1em] text-mute">
+          Live events may be corrected · feed updated {new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
       )}
     </div>
   );

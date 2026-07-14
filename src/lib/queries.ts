@@ -1,4 +1,4 @@
-import { sql, gt, eq, and, or, desc } from 'drizzle-orm';
+import { sql, gt, eq, and, or, desc, inArray } from 'drizzle-orm';
 import { db } from './db';
 import {
   battles,
@@ -8,6 +8,7 @@ import {
   comments,
   matches,
   matchMoments,
+  matchTimelineState,
   matchGoats,
 } from './db/schema';
 import { getEntityBySlug, arenas } from '../data';
@@ -475,12 +476,26 @@ export interface MatchMoment {
   goatSlug: string | null;
   goatShortName: string | null;
   detail: string | null;
+  verificationStatus: 'provisional' | 'confirmed';
 }
 
-/** A match's moments, ordered along the timeline. */
-export async function getMatchMoments(matchId: string): Promise<MatchMoment[]> {
+export interface MatchMomentFeed {
+  moments: MatchMoment[];
+  matchStatus: string | null;
+  fetchedAt: string | null;
+  hasProvisional: boolean;
+}
+
+/** A match's moments, ordered along the timeline with live-feed freshness. */
+export async function getMatchMomentFeed(
+  matchId: string,
+  includeProvisional = false,
+): Promise<MatchMomentFeed> {
+  const statuses = includeProvisional ? ['provisional', 'confirmed'] : ['confirmed'];
   const rows = await db
     .select({
+      matchStatus: matches.status,
+      fetchedAt: matchTimelineState.fetchedAt,
       id: matchMoments.id,
       minute: matchMoments.minute,
       extra: matchMoments.extra,
@@ -489,20 +504,40 @@ export async function getMatchMoments(matchId: string): Promise<MatchMoment[]> {
       playerName: matchMoments.playerName,
       goatSlug: matchMoments.goatSlug,
       detail: matchMoments.detail,
+      verificationStatus: matchMoments.verificationStatus,
     })
-    .from(matchMoments)
-    .where(and(
-      eq(matchMoments.matchId, matchId),
-      eq(matchMoments.verificationStatus, 'confirmed'),
+    .from(matches)
+    .leftJoin(matchTimelineState, eq(matchTimelineState.matchId, matches.id))
+    .leftJoin(matchMoments, and(
+      eq(matchMoments.matchId, matches.id),
+      inArray(matchMoments.verificationStatus, statuses),
     ))
+    .where(eq(matches.id, matchId))
     .orderBy(
+      sql`${matchMoments.minute} ASC NULLS LAST`,
+      sql`${matchMoments.extra} ASC NULLS FIRST`,
       sql`${matchMoments.providerSequence} ASC NULLS LAST`,
-      matchMoments.minute,
-      matchMoments.extra,
     );
 
-  return rows.map((r) => ({
-    ...r,
-    goatShortName: r.goatSlug ? (getEntityBySlug(r.goatSlug)?.shortName ?? null) : null,
-  }));
+  const moments: MatchMoment[] = rows
+    .filter((row): row is typeof row & { id: number; minute: number; type: string; team: string; verificationStatus: string } =>
+      row.id !== null && row.minute !== null && row.type !== null
+      && row.team !== null && row.verificationStatus !== null)
+    .map(({ matchStatus: _matchStatus, fetchedAt: _fetchedAt, ...row }) => ({
+      ...row,
+      verificationStatus: row.verificationStatus as MatchMoment['verificationStatus'],
+      goatShortName: row.goatSlug ? (getEntityBySlug(row.goatSlug)?.shortName ?? null) : null,
+    }));
+  const state = rows[0];
+  return {
+    moments,
+    matchStatus: state?.matchStatus ?? null,
+    fetchedAt: state?.fetchedAt ? new Date(state.fetchedAt).toISOString() : null,
+    hasProvisional: moments.some((moment) => moment.verificationStatus === 'provisional'),
+  };
+}
+
+/** Confirmed-only compatibility helper for server-rendered callers. */
+export async function getMatchMoments(matchId: string): Promise<MatchMoment[]> {
+  return (await getMatchMomentFeed(matchId)).moments;
 }

@@ -10,7 +10,9 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
 
   useEffect(() => {
     let active = true;
-    const refresh = () => fetch('/api/world-cup-status')
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return Promise.resolve();
+      return fetch('/api/world-cup-status')
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data: StatusResponse) => {
         if (!active) return;
@@ -18,8 +20,9 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
         if (update) setMatch((current) => ({ ...current, ...update }));
       })
       .catch(() => undefined);
+    };
     refresh();
-    const poll = window.setInterval(refresh, 120_000);
+    const poll = window.setInterval(refresh, 30_000);
     const clock = window.setInterval(() => {
       if (active) setNow(Date.now());
     }, 60_000);
@@ -38,38 +41,54 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
     : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 
   return (
-    <div class="bg-canvas-soft border border-hairline rounded-lg px-5 py-5 sm:px-7 sm:py-6">
-      <div class="flex flex-wrap items-center gap-3 mb-4 font-mono text-[10px] uppercase tracking-[0.14em] text-mute">
+    <div class="bg-canvas-soft border border-hairline rounded-lg overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 sm:px-6 py-3.5 border-b border-hairline font-mono text-[10px] sm:text-[10.5px] uppercase tracking-[0.14em] text-mute">
         <span>FIFA World Cup 2026 · Match {match.matchNumber}</span>
-        {match.status === 'live' ? (
-          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live</span>
-        ) : <span>{match.status === 'finished' ? 'Full time' : `Kickoff in ${countdown}`}</span>}
-        {match.delayed && <span class="ml-auto text-red">Updates delayed</span>}
+        <span class="flex items-center gap-3">
+          {match.status === 'live' ? (
+            <span class="inline-flex items-center gap-1.5 text-red"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live</span>
+          ) : <span class={match.status === 'finished' ? 'border border-hairline rounded-full px-2.5 py-1' : ''}>{match.status === 'finished' ? 'Full time' : `Kickoff in ${countdown}`}</span>}
+          {match.delayed && <span class="text-red">Updates delayed</span>}
+        </span>
       </div>
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
-        <div class="text-right">
-          <div class="text-3xl sm:text-4xl leading-none mb-1">{flagEmoji(match.homeCode ?? '')}</div>
-          <div class="font-headline font-black uppercase text-ink text-2xl sm:text-3xl leading-none">{match.homeTeam}</div>
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 px-4 sm:px-6 py-6 sm:py-7">
+        <div class="flex flex-col sm:flex-row items-center sm:justify-end gap-1.5 sm:gap-4">
+          <span class="font-headline font-black uppercase text-ink text-2xl sm:text-4xl md:text-5xl leading-none text-center sm:text-right">{match.homeTeam}</span>
+          <span class="text-3xl sm:text-4xl leading-none order-first sm:order-none">{flagEmoji(match.homeCode ?? '')}</span>
         </div>
-        <div class="text-center px-1 font-headline font-black text-ink text-4xl sm:text-5xl leading-none tabular-nums">
-          {hasScore ? <>{match.homeScore}<span class="text-mute px-1">–</span>{match.awayScore}</> : <span class="italic text-mute text-2xl">VS</span>}
+        <div class="flex flex-col items-center gap-1.5 px-1 sm:px-5">
+          <div class="flex items-center justify-center gap-2 sm:gap-4">
+            {hasScore ? (
+              <>
+                <span class="font-headline font-black text-lime text-4xl sm:text-6xl leading-none tabular-nums">{match.homeScore}</span>
+                <span class="font-headline font-black text-hairline-strong text-2xl sm:text-4xl leading-none">–</span>
+                <span class="font-headline font-black text-red text-4xl sm:text-6xl leading-none tabular-nums">{match.awayScore}</span>
+              </>
+            ) : <span class="font-headline font-black italic text-mute text-xl sm:text-3xl leading-none">VS</span>}
+          </div>
           {match.homePenaltyScore !== null && match.homePenaltyScore !== undefined
             && match.awayPenaltyScore !== null && match.awayPenaltyScore !== undefined
-            && <span class="block mt-2 font-mono text-[10px] uppercase tracking-wider text-mute">{match.homePenaltyScore}–{match.awayPenaltyScore} pens</span>}
+            && <span class="font-mono text-[10px] uppercase tracking-wider text-mute whitespace-nowrap">{match.homePenaltyScore}–{match.awayPenaltyScore} pens</span>}
         </div>
-        <div class="text-left">
-          <div class="text-3xl sm:text-4xl leading-none mb-1">{flagEmoji(match.awayCode ?? '')}</div>
-          <div class="font-headline font-black uppercase text-ink text-2xl sm:text-3xl leading-none">{match.awayTeam}</div>
+        <div class="flex flex-col sm:flex-row items-center sm:justify-start gap-1.5 sm:gap-4">
+          <span class="text-3xl sm:text-4xl leading-none">{flagEmoji(match.awayCode ?? '')}</span>
+          <span class="font-headline font-black uppercase text-ink text-2xl sm:text-4xl md:text-5xl leading-none text-center sm:text-left">{match.awayTeam}</span>
         </div>
       </div>
-      <div class="mt-5 pt-4 border-t border-hairline flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.1em] text-mute">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 sm:px-6 py-3.5 border-t border-hairline bg-sunken font-mono text-[10.5px] uppercase tracking-[0.12em] text-mute">
         <span>{kickoff.toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</span>
-        <span>· {match.venue}</span>
-        {match.goats?.map((goat) => (
-          <a key={goat.slug} href={`/goats/${goat.slug}`} class="team-tag hover:border-lime hover:text-ink transition-colors">
-            {goat.shortName}
-          </a>
-        ))}
+        <span class="text-hairline-strong">·</span>
+        <span>{match.venue}</span>
+        {match.goats && match.goats.length > 0 && (
+          <span class="flex items-center gap-1.5 ml-auto">
+            <span class="normal-case tracking-normal">Goats on the pitch:</span>
+            {match.goats.map((goat) => (
+              <a key={goat.slug} href={`/goats/${goat.slug}`} class="team-tag hover:border-lime hover:text-ink transition-colors">
+                {goat.shortName}
+              </a>
+            ))}
+          </span>
+        )}
       </div>
     </div>
   );

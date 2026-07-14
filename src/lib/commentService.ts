@@ -12,7 +12,7 @@ export interface MomentRef {
   minute: number;
   extra: number | null;
   type: string;
-  verificationStatus: 'confirmed' | 'retracted' | 'superseded';
+  verificationStatus: 'provisional' | 'confirmed' | 'retracted' | 'superseded';
 }
 
 /**
@@ -187,11 +187,18 @@ export async function postComment(
       return { status: 'invalid', error: 'Only match comments can tag a moment' };
     }
     const [m] = await db
-      .select({ id: matchMoments.id, matchId: matchMoments.matchId, minute: matchMoments.minute, extra: matchMoments.extra, type: matchMoments.type })
+      .select({
+        id: matchMoments.id,
+        matchId: matchMoments.matchId,
+        minute: matchMoments.minute,
+        extra: matchMoments.extra,
+        type: matchMoments.type,
+        verificationStatus: matchMoments.verificationStatus,
+      })
       .from(matchMoments)
       .where(and(
         eq(matchMoments.id, momentId),
-        eq(matchMoments.verificationStatus, 'confirmed'),
+        inArray(matchMoments.verificationStatus, ['provisional', 'confirmed']),
       ))
       .limit(1);
     if (!m || m.matchId !== subject.match) {
@@ -202,7 +209,7 @@ export async function postComment(
       minute: m.minute,
       extra: m.extra,
       type: m.type,
-      verificationStatus: 'confirmed',
+      verificationStatus: m.verificationStatus as MomentRef['verificationStatus'],
     };
   }
 

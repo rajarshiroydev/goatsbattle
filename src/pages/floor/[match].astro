@@ -4,6 +4,7 @@ import MatchHeader from '../../components/MatchHeader.astro';
 import WorldCupMatchHeader from '../../components/WorldCupMatchHeader.tsx';
 import type { WorldCupHubMatch } from '../../components/WorldCupHub';
 import MatchTimelineLive from '../../components/MatchTimelineLive.tsx';
+import MatchTimelineRail from '../../components/MatchTimelineRail.tsx';
 import CommentThread from '../../components/CommentThread.tsx';
 import ShareButton from '../../components/ShareButton.tsx';
 import { taggableGoatsForArena } from '../../lib/statTags';
@@ -63,21 +64,21 @@ const image = worldCupFixture?.matchNumber && worldCupFixture.matchNumber >= 101
   <section class="pt-6 pb-12">
     <div class="page-container">
 
-      <a href={worldCupEvent ? '/world-cup' : '/floor'} class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute hover:text-ink transition-colors mb-4">
-        ← {worldCupEvent ? 'World Cup' : 'The Floor'}
-      </a>
-
-      {liveHeader ? <WorldCupMatchHeader client:load initial={liveHeader} /> : <MatchHeader event={event} />}
-      <div class="mt-3 flex justify-end">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <a href={worldCupEvent ? '/world-cup' : '/floor'} class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute hover:text-ink transition-colors">
+          ← {worldCupEvent ? 'World Cup' : 'The Floor'}
+        </a>
         <ShareButton client:load title={`${event.homeTeam} vs ${event.awayTeam} — GOATSBattle`} text={`Join the ${event.homeTeam} vs ${event.awayTeam} discussion on The Floor.`} />
       </div>
+
+      {liveHeader ? <WorldCupMatchHeader client:load initial={liveHeader} /> : <MatchHeader event={event} />}
+      <MatchTimelineRail client:load matchId={event.id} homeTeam={event.homeTeam} awayTeam={event.awayTeam} />
 
       <div class="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
 
         {/* Discussion (main column) */}
         <div class="order-2 lg:order-1 min-w-0">
-          <h2 class="font-headline font-black uppercase text-ink text-2xl mb-3">The Debate</h2>
-          <CommentThread client:visible matchId={event.id} taggableGoats={taggableGoats} prompts={prompts} />
+          <CommentThread client:visible title="The Debate" matchId={event.id} taggableGoats={taggableGoats} prompts={prompts} />
         </div>
 
         {/* Side panel — timeline + context (stacks above the thread on mobile) */}

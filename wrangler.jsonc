@@ -18,7 +18,8 @@
     "preview": {
       "name": "goatsbattle-preview",
       "vars": {
-        "APP_ENV": "preview"
+        "APP_ENV": "preview",
+        "LIVE_MOMENTS_ENABLED": "true"
       },
       // Astro's Cloudflare adapter auto-injects a SESSION KV binding (better-auth
       // itself stores sessions in Postgres, so this is effectively unused). Pin the
@@ -44,7 +45,8 @@
         "crons": ["* * * * *"]
       },
       "vars": {
-        "APP_ENV": "production"
+        "APP_ENV": "production",
+        "LIVE_MOMENTS_ENABLED": "false"
       },
       "kv_namespaces": [
         { "binding": "SESSION", "id": "15a174bd4b144bf9958469bed9b8794f" }
