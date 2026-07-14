@@ -39,7 +39,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   const rl = await rateLimit(`comments:read:${hashIp(getClientIp(request.headers))}`, { max: 120 });
   if (!rl.ok) {
-    return json({ error: 'Too many requests.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+    return json({ error: 'Too many requests.' }, 429, {
+      'Retry-After': String(rl.retryAfter),
+      'Cache-Control': 'private, no-store',
+    });
   }
 
   const list = await listComments(subject, locals.user?.id ?? null);
