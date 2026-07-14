@@ -22,7 +22,7 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
       .catch(() => undefined);
     };
     refresh();
-    const poll = window.setInterval(refresh, 30_000);
+    const poll = window.setInterval(refresh, 10_000);
     const clock = window.setInterval(() => {
       if (active) setNow(Date.now());
     }, 60_000);

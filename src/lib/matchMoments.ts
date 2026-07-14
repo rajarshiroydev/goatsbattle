@@ -33,7 +33,7 @@ interface FeedStore {
 }
 
 const stores = new Map<string, FeedStore>();
-const POLL_MS = 15_000;
+const POLL_MS = 10_000;
 
 function storeFor(matchId: string): FeedStore {
   let store = stores.get(matchId);
