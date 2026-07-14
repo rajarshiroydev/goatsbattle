@@ -32,51 +32,53 @@ function textOn(hex: string): string {
 }
 ---
 
-<div class="bg-canvas-soft border border-hairline rounded-lg px-5 py-5 sm:px-7 sm:py-6">
-  {/* Eyebrow */}
-  <div class="flex items-center gap-3 mb-4">
-    <span class="font-mono text-[10px] uppercase tracking-[0.16em] text-mute">{event.competition}</span>
+<div class="bg-canvas-soft border border-hairline rounded-lg overflow-hidden">
+  {/* Top meta */}
+  <div class="flex items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-hairline">
+    <span class="font-mono text-[10px] sm:text-[10.5px] uppercase tracking-[0.16em] text-mute">{event.competition}</span>
     {isLive ? (
-      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-red flex items-center gap-1.5">
+      <span class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-red">
         <span class="live-dot gb-pulse-fast" style="--dot: var(--color-red)"></span> Live
       </span>
     ) : (
-      <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-mute border border-hairline rounded-full px-2.5 py-1">
         {isUpcoming ? 'Upcoming' : 'Full time'}
       </span>
     )}
   </div>
 
-  {/* Scoreline */}
-  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
-    <div class="text-right">
-      <div class="text-3xl sm:text-4xl leading-none mb-1">{flagEmoji(event.homeCode ?? '')}</div>
-      <div class="font-headline font-black uppercase text-ink text-2xl sm:text-3xl leading-none">{event.homeTeam}</div>
+  {/* Scoreline — name inner, flag outer; score digits in side colours */}
+  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 px-4 sm:px-6 py-6 sm:py-7">
+    <div class="flex flex-col sm:flex-row items-center sm:justify-end gap-1.5 sm:gap-4">
+      <span class="font-headline font-black uppercase text-ink text-2xl sm:text-4xl md:text-5xl leading-none text-center sm:text-right">{event.homeTeam}</span>
+      <span class="text-3xl sm:text-4xl leading-none order-first sm:order-none">{flagEmoji(event.homeCode ?? '')}</span>
     </div>
 
-    <div class="text-center px-1">
+    <div class="flex items-center justify-center gap-2 sm:gap-4 px-1 sm:px-5">
       {hasScore ? (
-        <div class="font-headline font-black text-ink text-4xl sm:text-5xl leading-none tabular-nums">
-          {event.homeScore}<span class="text-mute px-1">–</span>{event.awayScore}
-        </div>
+        <>
+          <span class="font-headline font-black text-lime text-4xl sm:text-6xl leading-none tabular-nums">{event.homeScore}</span>
+          <span class="font-headline font-black text-hairline-strong text-2xl sm:text-4xl leading-none">–</span>
+          <span class="font-headline font-black text-red text-4xl sm:text-6xl leading-none tabular-nums">{event.awayScore}</span>
+        </>
       ) : (
-        <div class="font-headline font-black italic text-mute text-2xl">VS</div>
+        <span class="font-headline font-black italic text-mute text-xl sm:text-3xl leading-none">VS</span>
       )}
     </div>
 
-    <div class="text-left">
-      <div class="text-3xl sm:text-4xl leading-none mb-1">{flagEmoji(event.awayCode ?? '')}</div>
-      <div class="font-headline font-black uppercase text-ink text-2xl sm:text-3xl leading-none">{event.awayTeam}</div>
+    <div class="flex flex-col sm:flex-row items-center sm:justify-start gap-1.5 sm:gap-4">
+      <span class="text-3xl sm:text-4xl leading-none">{flagEmoji(event.awayCode ?? '')}</span>
+      <span class="font-headline font-black uppercase text-ink text-2xl sm:text-4xl md:text-5xl leading-none text-center sm:text-left">{event.awayTeam}</span>
     </div>
   </div>
 
-  {/* Meta */}
-  <div class="mt-5 pt-4 border-t border-hairline flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.1em] text-mute">
+  {/* Bottom meta */}
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 sm:px-6 py-3.5 border-t border-hairline bg-sunken font-mono text-[10.5px] uppercase tracking-[0.12em] text-mute">
     <span>{kickoffLabel}</span>
-    {event.venue && <span>· {event.venue}</span>}
+    {event.venue && (<><span class="text-hairline-strong">·</span><span>{event.venue}</span></>)}
     {event.goats.length > 0 && (
       <span class="flex items-center gap-1.5 ml-auto">
-        <span class="text-mute normal-case tracking-normal">Goats on the pitch:</span>
+        <span class="normal-case tracking-normal">Goats on the pitch:</span>
         {event.goats.map((g) => (
           <a href={`/goats/${g.slug}`} class="team-tag" style={`--tag:${g.accent}; --tag-fg:${textOn(g.accent)}`}>{g.shortName}</a>
         ))}

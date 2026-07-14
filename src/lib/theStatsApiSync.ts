@@ -60,6 +60,7 @@ export interface StatsApiSyncResult {
   lineupsAccepted: number;
   lineupsRejected: number;
   snapshots: number;
+  provisional: number;
   finalized: number;
   failures: number;
 }
@@ -380,14 +381,17 @@ function normalizeMoment(
   };
 }
 
-async function finalizeDurableMoments(
+export async function persistStatsApiMoments(
   query: Query,
   source: SourceRow,
   timeline: StatsApiTimeline,
   snapshotHash: string,
   now: Date,
+  verificationStatus: 'provisional' | 'confirmed',
 ) {
-  if (timeline.coverage !== 'full') throw new Error('Refusing to finalize a non-full timeline.');
+  if (verificationStatus === 'confirmed' && timeline.coverage !== 'full') {
+    throw new Error('Refusing to finalize a non-full timeline.');
+  }
   const homeTeamId = String(source.metadata.homeTeamId ?? '');
   const awayTeamId = String(source.metadata.awayTeamId ?? '');
   if (!homeTeamId || !awayTeamId) throw new Error('Match source lacks provider team IDs.');
@@ -423,7 +427,7 @@ async function finalizeDurableMoments(
        SELECT $2, event.provider_event_id, event.provider_sequence, event.period, $3,
          event.minute, event.extra, event.type, event.team, event.provider_team_id,
          event.provider_player_id, event.player_name, mapping.goat_slug, event.detail,
-         'confirmed', $4, $5
+         $6, $4, $5
        FROM incoming event
        LEFT JOIN goat_provider_players mapping
          ON mapping.provider = $2 AND mapping.provider_player_id = event.provider_player_id
@@ -439,7 +443,11 @@ async function finalizeDurableMoments(
          player_name = excluded.player_name,
          goat_slug = COALESCE(excluded.goat_slug, match_moments.goat_slug),
          detail = excluded.detail,
-         verification_status = 'confirmed',
+         verification_status = CASE
+           WHEN match_moments.verification_status = 'confirmed' AND $6 = 'provisional'
+             THEN 'confirmed'
+           ELSE $6
+         END,
          snapshot_hash = excluded.snapshot_hash,
          updated_at = excluded.updated_at
        RETURNING provider_event_id
@@ -447,22 +455,36 @@ async function finalizeDurableMoments(
        UPDATE match_moments existing
        SET verification_status = 'retracted', snapshot_hash = $4, updated_at = $5
        WHERE existing.match_id = $3 AND existing.provider = $2
+         AND ($6 = 'confirmed' OR existing.verification_status = 'provisional')
          AND NOT EXISTS (
            SELECT 1 FROM incoming WHERE incoming.provider_event_id = existing.provider_event_id
          )
        RETURNING existing.provider_event_id
      )
      SELECT
-       (SELECT count(*)::int FROM upserted) AS confirmed,
+       (SELECT count(*)::int FROM upserted) AS written,
        (SELECT count(*)::int FROM retracted) AS retracted`,
-    [JSON.stringify(databaseMoments), THE_STATS_API_PROVIDER, source.matchId, snapshotHash, now],
-  ) as Array<{ confirmed: number; retracted: number }>;
-  await query`
-    UPDATE match_timeline_state
-    SET mode = 'finalized', updated_at = ${now}
-    WHERE match_id = ${source.matchId}
-  `;
-  return { confirmed: Number(result?.confirmed ?? 0), retracted: Number(result?.retracted ?? 0) };
+    [JSON.stringify(databaseMoments), THE_STATS_API_PROVIDER, source.matchId, snapshotHash, now, verificationStatus],
+  ) as Array<{ written: number; retracted: number }>;
+  if (verificationStatus === 'confirmed') {
+    await query`
+      UPDATE match_timeline_state
+      SET mode = 'finalized', updated_at = ${now}
+      WHERE match_id = ${source.matchId}
+    `;
+  }
+  return { written: Number(result?.written ?? 0), retracted: Number(result?.retracted ?? 0) };
+}
+
+async function finalizeDurableMoments(
+  query: Query,
+  source: SourceRow,
+  timeline: StatsApiTimeline,
+  snapshotHash: string,
+  now: Date,
+) {
+  const result = await persistStatsApiMoments(query, source, timeline, snapshotHash, now, 'confirmed');
+  return { confirmed: result.written, retracted: result.retracted };
 }
 
 async function shouldFetchFinalTimeline(query: Query, matchId: string, now: Date) {
@@ -488,6 +510,7 @@ async function syncOneSource(
   let lineupAccepted = 0;
   let lineupRejected = 0;
   let snapshots = 0;
+  let provisional = 0;
   let finalized = 0;
 
   const insideLineupWindow = now.getTime() >= source.kickoff.getTime() - ACTIVE_BEFORE_MS;
@@ -516,11 +539,17 @@ async function syncOneSource(
   if (source.status === 'live') {
     const timeline = await providerCall(query, now, () => fetchStatsApiTimeline(source.providerMatchId, true, options));
     const snapshot = await persistTimelineSnapshot(query, source, timeline, 'shadow', now);
-    if (snapshot.accepted) snapshots += 1;
+    if (snapshot.accepted) {
+      snapshots += 1;
+      const moments = await persistStatsApiMoments(
+        query, source, timeline, snapshot.snapshotHash, now, 'provisional',
+      );
+      provisional += moments.written;
+    }
   } else if (source.status === 'finished' && await shouldFetchFinalTimeline(query, source.matchId, now)) {
     const timeline = await providerCall(query, now, () => fetchStatsApiTimeline(source.providerMatchId, false, options));
     const snapshot = await persistTimelineSnapshot(query, source, timeline, 'finalizing', now);
-    if (!snapshot.accepted) return { lineupAccepted, lineupRejected, snapshots, finalized };
+    if (!snapshot.accepted) return { lineupAccepted, lineupRejected, snapshots, provisional, finalized };
     snapshots += 1;
     const oldEnough = now.getTime() - source.kickoff.getTime() >= IMMEDIATE_BACKFILL_AGE_MS;
     const stable = snapshot.consecutiveIdentical >= 2
@@ -530,7 +559,7 @@ async function syncOneSource(
       finalized += 1;
     }
   }
-  return { lineupAccepted, lineupRejected, snapshots, finalized };
+  return { lineupAccepted, lineupRejected, snapshots, provisional, finalized };
 }
 
 export async function refreshTheStatsApiWorldCup(options: {
@@ -555,12 +584,12 @@ export async function refreshTheStatsApiWorldCup(options: {
   if (rows.length === 0) {
     return {
       outcome: 'skipped', matches: 0, scores: 0, lineupsAccepted: 0,
-      lineupsRejected: 0, snapshots: 0, finalized: 0, failures: 0,
+      lineupsRejected: 0, snapshots: 0, provisional: 0, finalized: 0, failures: 0,
     };
   }
   const result: StatsApiSyncResult = {
     outcome: 'updated', matches: rows.length, scores: 0, lineupsAccepted: 0,
-    lineupsRejected: 0, snapshots: 0, finalized: 0, failures: 0,
+    lineupsRejected: 0, snapshots: 0, provisional: 0, finalized: 0, failures: 0,
   };
   for (const source of rows) {
     try {
@@ -569,6 +598,7 @@ export async function refreshTheStatsApiWorldCup(options: {
       result.lineupsAccepted += synced.lineupAccepted;
       result.lineupsRejected += synced.lineupRejected;
       result.snapshots += synced.snapshots;
+      result.provisional += synced.provisional;
       result.finalized += synced.finalized;
     } catch (error) {
       result.failures += 1;

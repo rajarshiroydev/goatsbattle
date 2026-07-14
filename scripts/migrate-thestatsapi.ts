@@ -89,9 +89,10 @@ const statements = [
   `ALTER TABLE match_moments ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'confirmed'`,
   `ALTER TABLE match_moments ADD COLUMN IF NOT EXISTS snapshot_hash text`,
   `ALTER TABLE match_moments ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()`,
+  `ALTER TABLE match_moments DROP CONSTRAINT IF EXISTS match_moments_verification_ck`,
   `DO $$ BEGIN
      ALTER TABLE match_moments ADD CONSTRAINT match_moments_verification_ck
-       CHECK (verification_status IN ('confirmed', 'retracted', 'superseded'));
+       CHECK (verification_status IN ('provisional', 'confirmed', 'retracted', 'superseded'));
    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
   `CREATE TABLE IF NOT EXISTS goat_provider_players (
      goat_slug text NOT NULL REFERENCES entities(id) ON DELETE CASCADE,

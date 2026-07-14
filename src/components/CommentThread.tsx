@@ -35,7 +35,7 @@ interface CommentNode {
     minute: number;
     extra: number | null;
     type: string;
-    verificationStatus: 'confirmed' | 'retracted' | 'superseded';
+    verificationStatus: 'provisional' | 'confirmed' | 'retracted' | 'superseded';
   } | null;
   statTags: StatTag[];
 }
@@ -52,6 +52,8 @@ type Props = SubjectProps & {
   taggableGoats?: TaggableGoat[];
   /** Editorial starting points that focus the existing main composer. */
   prompts?: string[];
+  /** Section title shown beside the count (e.g. "The Debate"). Defaults to "Comments". */
+  title?: string;
 };
 
 type SortMode = 'top' | 'new';
@@ -70,7 +72,7 @@ function momentLabel(m: { minute: number; extra: number | null; type: string }):
   return `${min} ${MOMENT_TYPE_LABEL[m.type] ?? m.type.replace(/_/g, ' ')}`;
 }
 
-export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635', taggableGoats, prompts = [] }: Props) {
+export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635', taggableGoats, prompts = [], title }: Props) {
   // The subject drives the API query param and POST body (battle XOR match).
   const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId!)}`;
   const subjectBody: Record<string, string> = matchId ? { matchId } : { battleId: battleId! };
@@ -242,12 +244,10 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
     <div>
       {prompts.length > 0 && (
         <section class="mb-7" aria-labelledby="match-prompts-heading">
-          <div class="flex flex-col items-start sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-3 mb-3">
-            <div>
-              <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-lime">Start here</p>
-              <h2 id="match-prompts-heading" class="mt-1 font-headline font-black uppercase text-xl text-ink">Pick your angle</h2>
-            </div>
-            <span class="font-sans text-xs text-mute">Your comment stays in the main thread</span>
+          <div class="mb-3">
+            <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-lime">Start here</p>
+            <h2 id="match-prompts-heading" class="mt-1 font-headline font-black uppercase text-xl text-ink">Pick your angle</h2>
+            <p class="mt-1 font-sans text-xs text-mute">Tap a prompt to start — your comment stays in the main thread.</p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {prompts.map((prompt, index) => (
@@ -277,8 +277,15 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
             class="w-1 h-6 inline-block rounded-full shrink-0"
             style={`background:linear-gradient(${accentA}, ${accentB})`}
           />
-          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink">
-            <span class="tabular-nums">{count}</span> {count === 1 ? 'Comment' : 'Comments'}
+          <h2 class="font-headline font-black uppercase text-2xl md:text-3xl tracking-tight text-ink flex items-baseline gap-2.5">
+            {title ? (
+              <>
+                <span>{title}</span>
+                <span class="text-lime tabular-nums text-xl md:text-2xl">{count}</span>
+              </>
+            ) : (
+              <span><span class="tabular-nums">{count}</span> {count === 1 ? 'Comment' : 'Comments'}</span>
+            )}
           </h2>
         </div>
 
@@ -337,6 +344,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
             </div>
           )}
           <Composer
+            well
             placeholder={activePrompt ?? (activeMoment ? `Weigh in on ${activeMoment.label}…` : 'Add to the debate…')}
             avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}
             goats={taggableGoats}
@@ -538,18 +546,18 @@ function CommentItem({
             {node.author.username ? (
               <a
                 href={`/users/${node.author.username}`}
-                class="font-headline font-black uppercase text-[15px] text-ink hover:text-lime transition-colors"
+                class="font-sans font-semibold text-[13px] text-ink hover:text-lime transition-colors"
               >
-                {node.author.username}
+                @{node.author.username}
               </a>
             ) : (
-              <span class="font-headline font-black uppercase text-[15px] text-mute">{node.author.name}</span>
+              <span class="font-sans font-semibold text-[13px] text-mute">{node.author.name}</span>
             )}
-            <span class="font-mono text-[13px] text-mute">· {relativeTime(node.createdAt)}</span>
+            <span class="font-mono text-[11px] text-mute">· {relativeTime(node.createdAt)}</span>
           </div>
 
-          {/* Moment tag — links the comment to a point on the match timeline */}
-          {node.moment && node.moment.verificationStatus === 'confirmed' && (
+          {/* Moment tag — a citation chip linking the comment to a timeline point */}
+          {node.moment && (node.moment.verificationStatus === 'confirmed' || node.moment.verificationStatus === 'provisional') && (
             <button
               type="button"
               onClick={() =>
@@ -559,14 +567,16 @@ function CommentItem({
                   }),
                 )
               }
-              class="inline-flex items-center gap-1 mb-1.5 font-mono text-[11px] uppercase tracking-wider text-lime hover:underline"
+              class="inline-flex items-center gap-1.5 mb-2 rounded-md border border-lime/40 bg-lime/[0.07] px-2.5 py-1 hover:border-lime transition-colors"
               title="Highlight this moment on the timeline"
             >
-              ⚑ {momentLabel(node.moment)}
+              <span class="text-[11px] leading-none">🚩</span>
+              <span class="font-headline font-extrabold uppercase tracking-wide text-[12px] text-lime leading-none">{momentLabel(node.moment)}</span>
+              {node.moment.verificationStatus === 'provisional' && <span class="font-mono text-[9px] uppercase tracking-wider text-mute">· Live</span>}
             </button>
           )}
-          {node.moment && node.moment.verificationStatus !== 'confirmed' && (
-            <span class="inline-flex items-center gap-1 mb-1.5 font-mono text-[11px] uppercase tracking-wider text-red">
+          {node.moment && (node.moment.verificationStatus === 'retracted' || node.moment.verificationStatus === 'superseded') && (
+            <span class="inline-flex items-center gap-1.5 mb-2 rounded-md border border-red/40 bg-red/[0.07] px-2.5 py-1 font-headline font-extrabold uppercase tracking-wide text-[12px] text-red leading-none">
               Source corrected · {momentLabel(node.moment)}
             </span>
           )}
@@ -578,7 +588,7 @@ function CommentItem({
                 <a
                   key={`${t.goatSlug}-${t.statLabel}`}
                   href={`/goats/${t.goatSlug}`}
-                  class="inline-flex items-center gap-1 bg-canvas-soft border border-hairline rounded-sm px-2 py-0.5 font-mono text-[11px] text-ink hover:border-lime transition-colors"
+                  class="inline-flex items-center gap-1.5 bg-canvas-soft border border-hairline rounded-md px-2.5 py-1 font-mono text-[11px] text-ink hover:border-lime transition-colors"
                   title={`${t.goatShortName} — ${statText(t)} (from the stat sheet)`}
                 >
                   <span class="text-lime">⚡</span>
@@ -810,6 +820,7 @@ function Composer({
   autoFocus = false,
   goats,
   focusSignal = 0,
+  well = false,
 }: {
   placeholder: string;
   onSubmit: (body: string, statTags: StatTagInput[]) => Promise<boolean>;
@@ -819,6 +830,8 @@ function Composer({
   autoFocus?: boolean;
   goats?: TaggableGoat[];
   focusSignal?: number;
+  /** Render as a sunken well (design §5) — used for the main match/battle composer. */
+  well?: boolean;
 }) {
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
@@ -893,7 +906,7 @@ function Composer({
   return (
     <div class="flex gap-3">
       {avatar}
-      <div class="flex-1 min-w-0">
+      <div class={`flex-1 min-w-0 ${well ? 'bg-sunken border border-hairline rounded-md px-4 py-3.5 focus-within:border-lime/50 transition-colors' : ''}`}>
         <textarea
           ref={textareaRef}
           value={value}
@@ -905,7 +918,7 @@ function Composer({
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
             if (e.key === 'Escape') cancel();
           }}
-          class="w-full bg-transparent border-0 border-b border-hairline rounded-none px-0 py-2 text-ink font-sans text-[16px] leading-relaxed resize-none placeholder:text-mute focus:outline-none focus:border-lime transition-colors"
+          class={`w-full bg-transparent border-0 rounded-none px-0 text-ink font-sans text-[16px] leading-relaxed resize-none placeholder:text-mute focus:outline-none transition-colors ${well ? 'py-0' : 'border-b border-hairline py-2 focus:border-lime'}`}
         />
 
         {/* Pending stat tags */}
@@ -952,7 +965,7 @@ function Composer({
           </div>
         )}
 
-        <div class="flex justify-end items-center gap-2 mt-2">
+        <div class={`flex justify-end items-center gap-2 mt-3 ${well ? 'border-t border-hairline pt-3' : 'mt-2'}`}>
           {canTagStats && (
             <button
               onClick={() => setPickerOpen((o) => !o)}

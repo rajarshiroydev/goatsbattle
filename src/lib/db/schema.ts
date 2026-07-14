@@ -446,7 +446,7 @@ export const matchMoments = pgTable(
     ),
     verificationCk: check(
       'match_moments_verification_ck',
-      sql`${t.verificationStatus} IN ('confirmed', 'retracted', 'superseded')`,
+      sql`${t.verificationStatus} IN ('provisional', 'confirmed', 'retracted', 'superseded')`,
     ),
   })
 );

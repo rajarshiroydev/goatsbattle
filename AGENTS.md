@@ -66,6 +66,13 @@ Keep this list current. Each entry = symptom → cause → fix.
   durable — it re-splits on the next config restart. After touching these, clear
   `node_modules/.vite` once and restart. This is all dev-only; production/preview bundles
   Preact once via Rollup.
+- **`client:visible` on an island that renders `null` until async data never hydrates.**
+  Symptom: an island placed above the fold (e.g. `MatchTimelineRail`) never mounts / never
+  fetches, even on reload → Cause: its initial (SSR) render returns `null` while data loads,
+  so the placeholder has zero height and the `client:visible` IntersectionObserver never
+  fires → Fix: use `client:load` for such islands (or give the loading state a non-zero
+  min-height). Islands that render a visible "Loading…" placeholder (e.g. the Match Moments
+  list) can stay `client:visible`.
 - **Session islands must start `loading=true` for hydration.** `src/lib/useSession.ts` must
   NOT seed its initial `useState` from the shared module-level `cachedUser` — SSR always
   renders the `loading` placeholder (the session fetch only runs in an effect, never on the

@@ -48,6 +48,7 @@
     "db:migrate:reports:dev": "tsx --env-file=.env scripts/migrate-comment-reports.ts --target=development",
     "db:migrate:reports:prod": "tsx --env-file=.env.production scripts/migrate-comment-reports.ts --target=production --confirm-production",
     "db:smoke:reports:dev": "tsx --env-file=.env scripts/smoke-comment-reports.ts --target=development",
+    "db:smoke:live-moments:dev": "tsx --env-file=.env scripts/smoke-live-moments.ts --target=development",
     "db:sync:matches:dev": "tsx --env-file=.env scripts/sync-matches.ts --target=development",
     "db:import:world-cup:dev": "tsx --env-file=.env scripts/import-world-cup.ts --target=development",
     "db:import:world-cup:prod": "tsx --env-file=.env.production scripts/import-world-cup.ts --target=production --confirm-production",
