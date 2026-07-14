@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../lib/db';
-import { entities, matches, matchGoats } from '../../lib/db/schema';
+import { entities, matches, matchGoats, matchTimelineState } from '../../lib/db/schema';
+import { deriveLiveMatchClock } from '../../lib/liveMatchClock';
 import { worldCup2026Fixtures } from '../../data/worldCup2026';
 
 export const prerender = false;
@@ -23,8 +24,11 @@ export const GET: APIRoute = async () => {
       kickoff: matches.kickoff,
       status: matches.status,
       lastSyncedAt: matches.lastSyncedAt,
+      timelineLatestEvent: sql<unknown>`${matchTimelineState.events} -> -1`,
+      timelineProviderUpdatedAt: matchTimelineState.providerUpdatedAt,
     })
     .from(matches)
+    .leftJoin(matchTimelineState, eq(matchTimelineState.matchId, matches.id))
     .where(inArray(matches.id, featuredIds))
     .orderBy(asc(matches.kickoff));
   const participation = await db
@@ -47,11 +51,18 @@ export const GET: APIRoute = async () => {
     matches: remaining.map((row) => {
       const kickoff = row.kickoff.getTime();
       const inPollingWindow = now >= kickoff - 60 * 60 * 1_000 && now <= kickoff + 4 * 60 * 60 * 1_000;
+      const { timelineLatestEvent, timelineProviderUpdatedAt, ...match } = row;
       return {
-        ...row,
+        ...match,
         kickoff: row.kickoff.toISOString(),
         lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
         delayed: inPollingWindow && (!row.lastSyncedAt || now - row.lastSyncedAt.getTime() > 3 * 60 * 1_000),
+        matchClock: deriveLiveMatchClock({
+          status: row.status,
+          latestEvent: timelineLatestEvent,
+          providerUpdatedAt: timelineProviderUpdatedAt,
+          now,
+        }),
         goats: (goatsByMatch.get(row.id) ?? []).map(({ slug, shortName, team }) => ({ slug, shortName, team })),
       };
     }),

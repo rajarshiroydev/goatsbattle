@@ -66,6 +66,11 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
               </>
             ) : <span class="font-headline font-black italic text-mute text-xl sm:text-3xl leading-none">VS</span>}
           </div>
+          {match.status === 'live' && match.matchClock && (
+            <span class="font-mono text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-lime" title="Approximate live minute from TheStatsAPI timeline">
+              {match.matchClock}
+            </span>
+          )}
           {match.homePenaltyScore !== null && match.homePenaltyScore !== undefined
             && match.awayPenaltyScore !== null && match.awayPenaltyScore !== undefined
             && <span class="font-mono text-[10px] uppercase tracking-wider text-mute whitespace-nowrap">{match.homePenaltyScore}–{match.awayPenaltyScore} pens</span>}

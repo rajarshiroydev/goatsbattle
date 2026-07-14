@@ -19,6 +19,7 @@ export interface WorldCupHubMatch {
   kickoff: string;
   venue: string;
   delayed?: boolean;
+  matchClock?: string | null;
   goats?: Array<{ slug: string; shortName: string; team: string | null }>;
 }
 
@@ -59,7 +60,7 @@ function MatchRow({ match, now, featured = false }: { match: WorldCupHubMatch; n
       <div class="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
         <span>Match {match.matchNumber} · {STAGE_LABEL[match.stage] ?? match.stage}</span>
         {match.status === 'live' ? (
-          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live</span>
+          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live{match.matchClock ? ` · ${match.matchClock}` : ''}</span>
         ) : match.delayed ? <span class="text-red">Updates delayed</span> : <span>{remaining ?? (match.status === 'finished' ? 'Full time' : time)}</span>}
       </div>
       <div class={`mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 ${featured ? 'text-2xl' : 'text-lg'}`}>
