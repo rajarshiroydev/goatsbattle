@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e7e1;font-family:"DM Sans",system-ui,sans-serif}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+@keyframes gb-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Match thread — revamp of The Floor match page · timeline lifted into the scoreboard, moments kept on the right</span></div>
+<div class="dv-opts">
+
+<!-- ═══════════════ 4a — MATCH THREAD ═══════════════ -->
+<div class="dv-opt" id="4a">
+<div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Match — /floor/argentina-croatia · scoreboard + full-width timeline, debate left, moments right</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="4a Match">
+
+  <!-- nav -->
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <div style="padding:20px 32px 30px">
+
+    <!-- back -->
+    <span style="display:inline-flex;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96;cursor:pointer;margin-bottom:16px" style-hover="color:#c8ff00">← The Floor</span>
+
+    <!-- ═══ SCOREBOARD + TIMELINE ═══ -->
+    <div style="background:#161618;border:1px solid #252528;border-radius:8px;overflow:hidden">
+
+      <!-- top meta row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #252528">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">World Cup 2022 · Final</span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:3px 10px">Full time</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">Goat on the pitch</span>
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:11px;text-transform:uppercase;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:2px 8px">⚽ Messi</span>
+        </div>
+      </div>
+
+      <!-- score line -->
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:26px 24px 22px">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px">
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:52px;line-height:1;text-transform:uppercase;color:#f0f0f2">Argentina</span>
+          <span style="font-size:38px;line-height:1">🇦🇷</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:0 30px">
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:66px;line-height:1;color:#c8ff00">3</span>
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;line-height:1;color:#3a3a3e">–</span>
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:66px;line-height:1;color:#ff2d55">0</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <span style="font-size:38px;line-height:1">🇭🇷</span>
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:52px;line-height:1;text-transform:uppercase;color:#f0f0f2">Croatia</span>
+        </div>
+      </div>
+
+      <!-- ═══ FULL-WIDTH TIMELINE ═══ -->
+      <div style="padding:8px 40px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:0.16em;color:#c8ff00">▲ Argentina</span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">Match timeline</span>
+        </div>
+
+        <div style="position:relative;height:104px">
+          <!-- rail -->
+          <div style="position:absolute;left:0;right:0;top:52px;height:2px;background:#3a3a3e"></div>
+          <!-- endpoints -->
+          <div style="position:absolute;left:0;top:48px;width:10px;height:10px;border-radius:99px;background:#c8ff00"></div>
+          <div style="position:absolute;right:0;top:48px;width:10px;height:10px;border-radius:99px;background:#ff2d55"></div>
+          <!-- half-time divider -->
+          <div style="position:absolute;left:50%;top:40px;height:24px;width:1px;background:#3a3a3e;border-left:1px dashed #4a4a50"></div>
+          <div style="position:absolute;left:50%;top:24px;transform:translateX(-50%);font-family:ui-monospace,Menlo,monospace;font-size:8.5px;text-transform:uppercase;letter-spacing:0.14em;color:#5a5a62">HT</div>
+
+          <!-- ARGENTINA goals (above rail) -->
+          <div style="position:absolute;left:35.8%;top:16px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px">
+            <span style="font-family:'Barlow Condensed';font-weight:800;font-size:12px;color:#c8ff00">34'</span>
+            <span style="width:22px;height:22px;border-radius:99px;background:#c8ff00;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 0 0 4px rgba(200,255,0,0.12)">⚽</span>
+          </div>
+          <div style="position:absolute;left:41%;top:16px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px">
+            <span style="font-family:'Barlow Condensed';font-weight:800;font-size:12px;color:#c8ff00">39'</span>
+            <span style="width:22px;height:22px;border-radius:99px;background:#c8ff00;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 0 0 4px rgba(200,255,0,0.12)">⚽</span>
+          </div>
+          <div style="position:absolute;left:72.6%;top:16px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px">
+            <span style="font-family:'Barlow Condensed';font-weight:800;font-size:12px;color:#c8ff00">69'</span>
+            <span style="width:22px;height:22px;border-radius:99px;background:#c8ff00;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 0 0 4px rgba(200,255,0,0.12)">⚽</span>
+          </div>
+
+          <!-- ARGENTINA cards (small ticks just above rail) -->
+          <div style="position:absolute;left:71.6%;top:40px;transform:translateX(-50%);width:9px;height:11px;border-radius:1px;background:#f5c518"></div>
+          <div style="position:absolute;left:74.7%;top:40px;transform:translateX(-50%);width:9px;height:11px;border-radius:1px;background:#f5c518"></div>
+
+          <!-- CROATIA cards (below rail) -->
+          <div style="position:absolute;left:33%;top:63px;transform:translateX(-50%);width:9px;height:11px;border-radius:1px;background:#f5c518"></div>
+          <div style="position:absolute;left:35.2%;top:63px;transform:translateX(-50%);width:9px;height:11px;border-radius:1px;background:#f5c518"></div>
+          <div style="position:absolute;left:34%;top:80px;transform:translateX(-50%);font-family:'Barlow Condensed';font-weight:800;font-size:12px;color:#ff2d55">32'</div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:-4px">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:0.16em;color:#ff2d55">▼ Croatia</span>
+          <div style="display:flex;align-items:center;gap:16px">
+            <span style="display:flex;align-items:center;gap:5px;font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96"><span style="width:9px;height:9px;border-radius:99px;background:#c8ff00"></span>Goal</span>
+            <span style="display:flex;align-items:center;gap:5px;font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96"><span style="width:8px;height:10px;border-radius:1px;background:#f5c518"></span>Card</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- bottom meta -->
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 24px;border-top:1px solid #252528;background:#0d0d0f">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.12em;color:#8c8c96">Wed · Dec 18 2022</span>
+        <span style="color:#3a3a3e">·</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.12em;color:#8c8c96">Lusail Iconic Stadium</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:99px;background:#c8ff00;animation:gb-pulse 2s infinite"></span><span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#8c8c96">1,204 fans on this thread</span></span>
+      </div>
+    </div>
+
+    <!-- ═══ DEBATE (left) + MOMENTS (right) ═══ -->
+    <div style="display:grid;grid-template-columns:1fr 348px;gap:24px;margin-top:24px">
+
+      <!-- LEFT: THE DEBATE -->
+      <div>
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:16px">
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;text-transform:uppercase;line-height:1;color:#f0f0f2">The Debate</span>
+          <span style="font-family:'Barlow Condensed';font-weight:900;font-size:16px;color:#c8ff00">4</span>
+          <div style="display:flex;gap:6px;margin-left:auto">
+            <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#0d0d0f;background:#c8ff00;border-radius:99px;padding:4px 13px">Top</span>
+            <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 13px;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Newest</span>
+          </div>
+        </div>
+
+        <!-- composer -->
+        <div style="background:#0d0d0f;border:1px solid #c8ff0044;border-radius:6px;padding:14px 16px;background-image:linear-gradient(140deg,rgba(200,255,0,0.05),transparent 60%)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Messi</span>
+            <span style="font-size:14px;color:#8c8c96">Add to the debate…</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid #252528">
+            <span style="display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.1em;color:#c8ff00;cursor:pointer" style-hover="color:#f0f0f2">⚡ Cite a stat</span>
+            <span style="display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.1em;color:#c8ff00;cursor:pointer" style-hover="color:#f0f0f2">🚩 Tag a moment</span>
+            <span style="margin-left:auto;font-family:'Barlow Condensed';font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:7px 20px;cursor:pointer" style-hover="background:#a3cc00">Post</span>
+          </div>
+        </div>
+
+        <!-- comments -->
+        <div style="display:flex;flex-direction:column;gap:0;margin-top:8px">
+
+          <!-- comment 1 -->
+          <div style="display:flex;gap:14px;padding:18px 0;border-bottom:1px solid #1c1c1f">
+            <span style="width:38px;height:38px;border-radius:99px;background:#c8ff00;color:#0d0d0f;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:900;font-size:16px;flex:none">R</span>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:2px 6px;text-transform:uppercase">Team Messi</span>
+                <span style="font-size:13px;font-weight:600;color:#f0f0f2">@rajarshiroy</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">6h</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:#161618;border:1px solid #252528;border-radius:6px;padding:6px 11px">
+                <span style="font-size:11px">⚡</span>
+                <span style="font-size:12.5px;font-weight:600;color:#f0f0f2">Álvarez</span>
+                <span style="color:#3a3a3e">·</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">Semi-final goals · 3</span>
+              </div>
+              <div style="font-size:15px;line-height:1.5;color:#f0f0f2;margin-top:12px">Two of these were his. The kid ran the whole tournament — and this final was the coronation. Case closed.</div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:12px">
+                <span style="display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;cursor:pointer">▲ 214</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Reply</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Share</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- comment 2 -->
+          <div style="display:flex;gap:14px;padding:18px 0;border-bottom:1px solid #1c1c1f">
+            <span style="width:38px;height:38px;border-radius:99px;background:#2e2e33;color:#f0f0f2;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:900;font-size:16px;flex:none">M</span>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:2px 6px;text-transform:uppercase">Team Messi</span>
+                <span style="font-size:13px;font-weight:600;color:#f0f0f2">@laminexpected</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">6h</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:rgba(200,255,0,0.07);border:1px solid #c8ff0044;border-radius:6px;padding:6px 11px;cursor:pointer" style-hover="border-color:#c8ff00">
+                <span style="font-size:11px">🚩</span>
+                <span style="font-family:'Barlow Condensed';font-weight:800;font-size:12px;text-transform:uppercase;color:#c8ff00">69' Goal</span>
+                <span style="color:#c8ff0055">·</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">Álvarez solo run</span>
+              </div>
+              <div style="font-size:15px;line-height:1.5;color:#f0f0f2;margin-top:12px">This was the best single-run goal of the entire World Cup. Picked it up in his own half and just kept going.</div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:12px">
+                <span style="display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;cursor:pointer">▲ 188</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Reply</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Share</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- comment 3 -->
+          <div style="display:flex;gap:14px;padding:18px 0;border-bottom:1px solid #1c1c1f">
+            <span style="width:38px;height:38px;border-radius:99px;background:#2e2e33;color:#f0f0f2;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:900;font-size:16px;flex:none">K</span>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#ff2d55;border-radius:2px;padding:2px 6px;text-transform:uppercase">Team CR7</span>
+                <span style="font-size:13px;font-weight:600;color:#f0f0f2">@vatreni_till_i_die</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">5h</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;background:rgba(255,45,85,0.07);border:1px solid #ff2d5544;border-radius:6px;padding:6px 11px;cursor:pointer" style-hover="border-color:#ff2d55">
+                <span style="font-size:11px">🚩</span>
+                <span style="font-family:'Barlow Condensed';font-weight:800;font-size:12px;text-transform:uppercase;color:#ff2d55">34' Penalty</span>
+                <span style="color:#ff2d5555">·</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">soft call?</span>
+              </div>
+              <div style="font-size:15px;line-height:1.5;color:#f0f0f2;margin-top:12px">3–0 flatters it. Take away the soft penalty and this is a real game at the hour mark. Livaković was the best keeper of the tournament.</div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:12px">
+                <span style="display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;cursor:pointer">▲ 96</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Reply</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Share</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- comment 4 -->
+          <div style="display:flex;gap:14px;padding:18px 0">
+            <span style="width:38px;height:38px;border-radius:99px;background:#2e2e33;color:#f0f0f2;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed';font-weight:900;font-size:16px;flex:none">D</span>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:2px 6px;text-transform:uppercase">Team Messi</span>
+                <span style="font-size:13px;font-weight:600;color:#f0f0f2">@diegos_heir</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">4h</span>
+              </div>
+              <div style="font-size:15px;line-height:1.5;color:#f0f0f2;margin-top:12px">The one trophy that was missing. This is the night the GOAT debate ended for a lot of people. 🐐</div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:12px">
+                <span style="display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;cursor:pointer">▲ 341</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Reply</span>
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Share</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT: MATCH MOMENTS -->
+      <div style="background:#161618;border:1px solid #252528;border-radius:8px;padding:18px 18px 8px;align-self:start">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.16em;color:#f0f0f2">Match Moments</span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">7 events</span>
+        </div>
+
+        <!-- moment: 32 KOV yellow -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c1f;cursor:pointer" style-hover="background:rgba(255,45,85,0.04)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#ff2d55">32'</span>
+          <span style="width:12px;height:15px;border-radius:2px;background:#f5c518;margin-top:1px"></span>
+          <div><span style="font-size:13.5px;font-weight:600;color:#f0f0f2">Mateo Kovačić</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#8c8c96;margin-top:2px">Yellow · foul</div></div>
+        </div>
+        <!-- 32 LIV yellow -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c1f;cursor:pointer" style-hover="background:rgba(255,45,85,0.04)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#ff2d55">32'</span>
+          <span style="width:12px;height:15px;border-radius:2px;background:#f5c518;margin-top:1px"></span>
+          <div><span style="font-size:13.5px;font-weight:600;color:#f0f0f2">Dominik Livaković</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#8c8c96;margin-top:2px">Yellow · dissent</div></div>
+        </div>
+        <!-- 34 Messi goal -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c1f;cursor:pointer" style-hover="background:rgba(200,255,0,0.05)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#c8ff00">34'</span>
+          <span style="width:16px;height:16px;border-radius:99px;background:#c8ff00;display:flex;align-items:center;justify-content:center;font-size:9px;margin-top:1px">⚽</span>
+          <div><span style="font-size:13.5px;font-weight:700;color:#f0f0f2">L. Messi</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#c8ff00;margin-top:2px">Goal · penalty · 1–0</div></div>
+        </div>
+        <!-- 39 Alvarez goal -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c1f;cursor:pointer" style-hover="background:rgba(200,255,0,0.05)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#c8ff00">39'</span>
+          <span style="width:16px;height:16px;border-radius:99px;background:#c8ff00;display:flex;align-items:center;justify-content:center;font-size:9px;margin-top:1px">⚽</span>
+          <div><span style="font-size:13.5px;font-weight:700;color:#f0f0f2">J. Álvarez</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#c8ff00;margin-top:2px">Goal · counter · 2–0</div></div>
+        </div>
+        <!-- HALF TIME -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1c1c1f">
+          <span style="flex:1;height:1px;background:#252528"></span>
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.16em;color:#5a5a62">Half time</span>
+          <span style="flex:1;height:1px;background:#252528"></span>
+        </div>
+        <!-- 68 Romero yellow -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c1f;cursor:pointer" style-hover="background:rgba(200,255,0,0.05)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#c8ff00">68'</span>
+          <span style="width:12px;height:15px;border-radius:2px;background:#f5c518;margin-top:1px"></span>
+          <div><span style="font-size:13.5px;font-weight:600;color:#f0f0f2">Cristian Romero</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#8c8c96;margin-top:2px">Yellow · foul</div></div>
+        </div>
+        <!-- 69 Alvarez goal -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;border-bottom:1px solid #1c1c1f;cursor:pointer" style-hover="background:rgba(200,255,0,0.05)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#c8ff00">69'</span>
+          <span style="width:16px;height:16px;border-radius:99px;background:#c8ff00;display:flex;align-items:center;justify-content:center;font-size:9px;margin-top:1px">⚽</span>
+          <div><span style="font-size:13.5px;font-weight:700;color:#f0f0f2">J. Álvarez</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#c8ff00;margin-top:2px">Goal · solo run · 3–0</div></div>
+        </div>
+        <!-- 71 Otamendi yellow -->
+        <div style="display:grid;grid-template-columns:34px 18px 1fr;align-items:start;gap:10px;padding:12px 0;cursor:pointer" style-hover="background:rgba(200,255,0,0.05)">
+          <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;color:#c8ff00">71'</span>
+          <span style="width:12px;height:15px;border-radius:2px;background:#f5c518;margin-top:1px"></span>
+          <div><span style="font-size:13.5px;font-weight:600;color:#f0f0f2">Nicolás Otamendi</span><div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#8c8c96;margin-top:2px">Yellow · dissent</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">GOATSBattle — all pages in the finalised design language · spec in DESIGN-GUIDE.md</span></div>
+<div class="dv-opts">
+
+<!-- ═══════════════ 3h — LANDING ═══════════════ -->
+<div class="dv-opt" id="3h">
+<div class="dv-olabel"><a class="dv-oid" href="#3h">3h</a>Landing — / · Stadium Gate: slim hero + marquee carousel, The Floor below the fold</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3h Landing">
+
+  <!-- nav -->
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px" style-hover="color:#f0f0f2;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px" style-hover="color:#f0f0f2;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <!-- slim hero -->
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:40px;padding:44px 32px 40px;background:radial-gradient(ellipse 80% 60% at 20% 120%, rgba(200,255,0,0.08), transparent 60%);border-bottom:1px solid #252528">
+    <div>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:76px;line-height:0.88;text-transform:uppercase;color:#f0f0f2">Who's the <span style="color:#c8ff00">Goat?</span></div>
+      <p style="margin:16px 0 0;font-size:16px;line-height:1.55;color:#b6b6c0;max-width:420px">Vote across four arenas, then take it to The Floor — where the world argues it out, one take at a time.</p>
+      <div style="display:flex;gap:10px;margin-top:22px">
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:12px 24px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Join the floor ↓</span>
+        <span style="font-family:'Barlow Condensed';font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:0.06em;color:#f0f0f2;border:1px solid #3a3a3e;padding:12px 24px;border-radius:2px;cursor:pointer" style-hover="border-color:#c8ff00;color:#c8ff00">Browse arenas</span>
+      </div>
+    </div>
+    <!-- happening-now carousel -->
+    <div style="align-self:center;display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+        <span style="width:7px;height:7px;border-radius:99px;background:#c8ff00;animation:gb-pulse 2s infinite"></span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:#c8ff00">Happening now</span>
+      </div>
+      <div style="background:#161618;border:1px solid #252528;border-radius:6px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.5)">
+        <div style="transition:opacity 0.28s ease;opacity:{{ mbOpacity }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #252528">
+            <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">Marquee battle</span>
+            <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:0.16em;color:{{ mbColor }}">{{ mbIcon }} {{ mbArena }}</span>
+          </div>
+          <div style="padding:18px 16px 16px">
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px">
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed';font-weight:900;font-size:27px;text-transform:uppercase;line-height:1;color:#f0f0f2;white-space:nowrap">{{ mbLeft }}</div>
+                <div style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;line-height:1;color:#c8ff00;margin-top:6px">{{ mbLeftPct }}%</div>
+              </div>
+              <span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:20px;color:#8c8c96">VS</span>
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed';font-weight:900;font-size:27px;text-transform:uppercase;line-height:1;color:#f0f0f2;white-space:nowrap">{{ mbRight }}</div>
+                <div style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;line-height:1;color:#ff2d55;margin-top:6px">{{ mbRightPct }}%</div>
+              </div>
+            </div>
+            <div style="display:flex;height:5px;border-radius:99px;overflow:hidden;margin-top:14px;background:#252528">
+              <div style="width:{{ mbLeftPct }}%;background:#c8ff00;transition:width 0.4s ease"></div>
+              <div style="flex:1;background:#ff2d55"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:10px">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">{{ mbVotes }} votes</span>
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;cursor:pointer" style-hover="color:#f0f0f2">Cast yours →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;gap:7px">
+        <sc-for list="{{ mbDots }}" as="dot" hint-placeholder-count="4">
+          <span onClick="{{ dot.go }}" style="width:{{ dot.w }}px;height:6px;border-radius:99px;background:{{ dot.bg }};cursor:pointer;transition:all 0.3s ease"></span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE FLOOR header -->
+  <div style="display:flex;align-items:center;gap:16px;padding:22px 32px 0">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:30px;text-transform:uppercase;color:#f0f0f2">The Floor</span>
+    <div style="display:flex;gap:6px;margin-left:8px">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#0d0d0f;background:#c8ff00;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none">Hot</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">New</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Live matches</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">My goats</span>
+    </div>
+    <span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">3,412 fans on the floor</span>
+  </div>
+
+  <!-- floor stream: full-width rows -->
+  <div style="padding:16px 32px 28px;display:flex;flex-direction:column;gap:10px">
+    <!-- row 1: expanded with inline reply -->
+    <div style="background:#161618;border:1px solid #3a3a3e;border-radius:6px;padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase">Team Messi</span>
+        <span style="font-size:13px;font-weight:600;color:#f0f0f2">@tikitaka_10</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96;white-space:nowrap">⚽ Messi vs Ronaldo · 12m</span>
+        <span style="display:flex;align-items:center;gap:5px;margin-left:auto"><span style="color:#c8ff00;font-size:12px">▲</span><span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#f0f0f2">1,204</span></span>
+      </div>
+      <div style="font-size:15px;font-weight:600;line-height:1.45;color:#f0f0f2;margin-top:10px">You can't compare eras on goals alone. Messi has more assists than Ronaldo has open-play goals since 2015. Playmaking IS greatness.</div>
+      <div style="display:flex;gap:14px;margin-top:12px">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;white-space:nowrap">💬 214 replies</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;white-space:nowrap">Counter this take →</span>
+      </div>
+      <!-- inline zero-friction reply -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;background:#0d0d0f;border:1px solid #252528;border-radius:6px;padding:9px 12px">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#ff2d55;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team CR7</span>
+        <span style="font-size:13px;color:#8c8c96;flex:1">Your side is set — type your counter…</span>
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:13px;text-transform:uppercase;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:5px 14px;cursor:pointer" style-hover="background:#a3cc00">Post</span>
+      </div>
+    </div>
+    <!-- row 2 -->
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#2E7DD1;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Sachin</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Bradman never faced reverse swing, doosras, or a World Cup. Volume + variety &gt; average.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 96</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 847</span>
+    </div>
+    <!-- row 3 -->
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#E8202A;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Senna</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Stats crown Hamilton, but nobody who watched Donington '93 calls anyone else the GOAT.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 158</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 1,092</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════ 3a — THE FLOOR ═══════════════ -->
+<div class="dv-opt" id="3a">
+<div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>The Floor — /floor · the full take stream</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3a The Floor">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:16px;padding:26px 32px 0">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:44px;text-transform:uppercase;line-height:1;color:#f0f0f2">The Floor</span>
+    <div style="display:flex;gap:6px;margin-left:8px">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#0d0d0f;background:#c8ff00;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none">Hot</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">New</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Live matches</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">My goats</span>
+    </div>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:99px;background:#c8ff00;animation:gb-pulse 2s infinite"></span><span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">3,412 fans on the floor</span></span>
+  </div>
+
+  <div style="padding:18px 32px 30px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:12px;background:#161618;border:1px solid #252528;border-radius:6px;padding:12px 16px">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Messi</span>
+      <span style="flex:1;font-size:14px;color:#8c8c96">Defend your GOAT…</span>
+      <span style="font-family:'Barlow Condensed';font-weight:800;font-size:13px;text-transform:uppercase;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:6px 16px;cursor:pointer" style-hover="background:#a3cc00">Post</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-left:2px solid #ff2d55;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e;border-left-color:#ff2d55">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#ff2d55;text-transform:uppercase;flex:none">● Live</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">El Clásico match thread — 2nd half, 1–1. GOAT résumé night?</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">4.2k watching</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">Jump in →</span>
+    </div>
+
+    <div style="background:#161618;border:1px solid #3a3a3e;border-radius:6px;padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase">Team Messi</span>
+        <span style="font-size:13px;font-weight:600;color:#f0f0f2">@tikitaka_10</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96;white-space:nowrap">⚽ Messi vs Ronaldo · 12m</span>
+        <span style="display:flex;align-items:center;gap:5px;margin-left:auto"><span style="color:#c8ff00;font-size:12px">▲</span><span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#f0f0f2">1,204</span></span>
+      </div>
+      <div style="font-size:15px;font-weight:600;line-height:1.45;color:#f0f0f2;margin-top:10px">You can't compare eras on goals alone. Messi has more assists than Ronaldo has open-play goals since 2015. Playmaking IS greatness.</div>
+      <div style="display:flex;gap:14px;margin-top:12px">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;white-space:nowrap">💬 214 replies</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;white-space:nowrap">Counter this take →</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;background:#0d0d0f;border:1px solid #252528;border-radius:6px;padding:9px 12px">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#ff2d55;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team CR7</span>
+        <span style="font-size:13px;color:#8c8c96;flex:1">Your side is set — type your counter…</span>
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:13px;text-transform:uppercase;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:5px 14px;cursor:pointer" style-hover="background:#a3cc00">Post</span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#2E7DD1;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Sachin</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Bradman never faced reverse swing, doosras, or a World Cup. Volume + variety &gt; average.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 96</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 847</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#E8202A;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Senna</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Stats crown Hamilton, but nobody who watched Donington '93 calls anyone else the GOAT.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 158</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 1,092</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#22A06B;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Fed</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Slam counts age; the 2017 AO final doesn't. Peak beauty is part of greatness.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 61</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 512</span>
+    </div>
+    <div style="align-self:center;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:7px 18px;cursor:pointer;margin-top:6px" style-hover="color:#f0f0f2;border-color:#3a3a3e">Load more takes ↓</span>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ 3b — ARENAS ═══════════════ -->
+<div class="dv-opt" id="3b">
+<div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Arenas — /arenas · four chapters, marquee battle in each</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3b Arenas">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <div style="display:flex;align-items:baseline;gap:16px;padding:26px 32px 0">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:44px;text-transform:uppercase;line-height:1;color:#f0f0f2">Pick your arena</span>
+    <span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">4 arenas · 64 goats · 1.2M votes</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:20px 32px 30px">
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;padding:22px;cursor:pointer;background-image:linear-gradient(140deg,rgba(198,255,0,0.07),transparent 55%)" style-hover="border-color:#C6FF00">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;text-transform:uppercase;color:#f0f0f2">Football</span><span style="font-size:22px">⚽</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:#C6FF00">● 18 goats · 3 live</span></div>
+      <div style="margin-top:16px;background:#0d0d0f;border:1px solid #252528;border-radius:6px;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">Marquee</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#8c8c96">214k votes</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Messi</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#c8ff00">52</span><span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:13px;color:#8c8c96">VS</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#ff2d55">48</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Ronaldo</span></div>
+        <div style="display:flex;height:4px;border-radius:99px;overflow:hidden;margin-top:10px;background:#252528"><div style="width:52%;background:#c8ff00"></div><div style="width:48%;background:#ff2d55"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;margin-top:14px"><span style="font-size:13px;color:#8c8c96">The beautiful game's eternal argument.</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#C6FF00">Enter →</span></div>
+    </div>
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;padding:22px;cursor:pointer;background-image:linear-gradient(140deg,rgba(46,125,209,0.08),transparent 55%)" style-hover="border-color:#2E7DD1">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;text-transform:uppercase;color:#f0f0f2">Cricket</span><span style="font-size:22px">🏏</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:#2E7DD1">● 16 goats · 1 live</span></div>
+      <div style="margin-top:16px;background:#0d0d0f;border:1px solid #252528;border-radius:6px;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">Marquee</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#8c8c96">96k votes</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Bradman</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#c8ff00">45</span><span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:13px;color:#8c8c96">VS</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#ff2d55">55</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Tendulkar</span></div>
+        <div style="display:flex;height:4px;border-radius:99px;overflow:hidden;margin-top:10px;background:#252528"><div style="width:45%;background:#c8ff00"></div><div style="width:55%;background:#ff2d55"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;margin-top:14px"><span style="font-size:13px;color:#8c8c96">Willow, leather, and a century of legends.</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#2E7DD1">Enter →</span></div>
+    </div>
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;padding:22px;cursor:pointer;background-image:linear-gradient(140deg,rgba(34,160,107,0.08),transparent 55%)" style-hover="border-color:#22A06B">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;text-transform:uppercase;color:#f0f0f2">Tennis</span><span style="font-size:22px">🎾</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:#22A06B">● 15 goats · 2 live</span></div>
+      <div style="margin-top:16px;background:#0d0d0f;border:1px solid #252528;border-radius:6px;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">Marquee</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#8c8c96">131k votes</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Nadal</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#c8ff00">47</span><span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:13px;color:#8c8c96">VS</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#ff2d55">53</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Federer</span></div>
+        <div style="display:flex;height:4px;border-radius:99px;overflow:hidden;margin-top:10px;background:#252528"><div style="width:47%;background:#c8ff00"></div><div style="width:53%;background:#ff2d55"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;margin-top:14px"><span style="font-size:13px;color:#8c8c96">The Big Three and the ghosts of Slams past.</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#22A06B">Enter →</span></div>
+    </div>
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;padding:22px;cursor:pointer;background-image:linear-gradient(140deg,rgba(232,32,42,0.08),transparent 55%)" style-hover="border-color:#E8202A">
+      <div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:34px;text-transform:uppercase;color:#f0f0f2">Formula 1</span><span style="font-size:22px">🏎️</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:#E8202A">● 15 goats · 1 live</span></div>
+      <div style="margin-top:16px;background:#0d0d0f;border:1px solid #252528;border-radius:6px;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">Marquee</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#8c8c96">88k votes</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Hamilton</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#c8ff00">51</span><span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:13px;color:#8c8c96">VS</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:15px;color:#ff2d55">49</span><span style="font-family:'Barlow Condensed';font-weight:900;font-size:20px;text-transform:uppercase;color:#f0f0f2">Verstappen</span></div>
+        <div style="display:flex;height:4px;border-radius:99px;overflow:hidden;margin-top:10px;background:#252528"><div style="width:51%;background:#c8ff00"></div><div style="width:49%;background:#ff2d55"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;margin-top:14px"><span style="font-size:13px;color:#8c8c96">Twenty drivers, one throne, zero agreement.</span><span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#E8202A">Enter →</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ 3c — GOATS ═══════════════ -->
+<div class="dv-opt" id="3c">
+<div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Goats — /goats · filterable directory of every contender</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3c Goats">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:16px;padding:26px 32px 0">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:44px;text-transform:uppercase;line-height:1;color:#f0f0f2">The Goats</span>
+    <div style="display:flex;gap:6px;margin-left:8px">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#0d0d0f;background:#c8ff00;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none">All</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#C6FF00;border:1px solid #C6FF0044;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="border-color:#C6FF00">⚽ Football</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#2E7DD1;border:1px solid #2E7DD144;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="border-color:#2E7DD1">🏏 Cricket</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#22A06B;border:1px solid #22A06B44;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="border-color:#22A06B">🎾 Tennis</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#E8202A;border:1px solid #E8202A44;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="border-color:#E8202A">🏎️ F1</span>
+    </div>
+    <span style="margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">64 goats · sorted by votes</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 32px 30px">
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#C6FF00">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(198,255,0,0.07);user-select:none">01</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase">⚽ Football</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Lionel<br>Messi</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Argentina · 8× Ballon d'Or</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">341,208 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">68% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#C6FF00">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">02</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase">⚽ Football</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Cristiano<br>Ronaldo</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Portugal · 900+ career goals</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">318,914 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">64% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#22A06B">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">03</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#22A06B;border-radius:2px;padding:2px 6px;text-transform:uppercase">🎾 Tennis</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Roger<br>Federer</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Switzerland · 20 Slams</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">228,471 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">61% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#2E7DD1">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">04</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#2E7DD1;border-radius:2px;padding:2px 6px;text-transform:uppercase">🏏 Cricket</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Sachin<br>Tendulkar</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">India · 100 intl. centuries</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">214,830 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">59% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#E8202A">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">05</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#E8202A;border-radius:2px;padding:2px 6px;text-transform:uppercase">🏎️ F1</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Lewis<br>Hamilton</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Britain · 7 world titles</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">198,442 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">57% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#22A06B">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">06</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#22A06B;border-radius:2px;padding:2px 6px;text-transform:uppercase">🎾 Tennis</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Rafael<br>Nadal</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Spain · 14× Roland Garros</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">186,110 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">55% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#2E7DD1">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">07</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#2E7DD1;border-radius:2px;padding:2px 6px;text-transform:uppercase">🏏 Cricket</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Don<br>Bradman</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Australia · 99.94 average</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">171,554 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">54% win rate</span>
+      </div>
+    </div>
+    <div style="position:relative;background:#161618;border:1px solid #252528;border-radius:6px;padding:18px;overflow:hidden;cursor:pointer" style-hover="border-color:#E8202A">
+      <div style="position:absolute;top:-18px;right:-6px;font-family:'Barlow Condensed';font-weight:900;font-size:96px;line-height:1;color:rgba(240,240,242,0.05);user-select:none">08</div>
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#E8202A;border-radius:2px;padding:2px 6px;text-transform:uppercase">🏎️ F1</span>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:32px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Ayrton<br>Senna</div>
+      <div style="font-size:12px;color:#8c8c96;margin-top:8px">Brazil · Rain master</div>
+      <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#8c8c96">164,209 votes</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#c8ff00">53% win rate</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ 3d — RANKINGS ═══════════════ -->
+<div class="dv-opt" id="3d">
+<div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>Rankings — /rankings · arena-tabbed leaderboard</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3d Rankings">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:16px;padding:26px 32px 0">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:44px;text-transform:uppercase;line-height:1;color:#f0f0f2">Rankings</span>
+    <div style="display:flex;gap:6px;margin-left:8px">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#0d0d0f;background:#c8ff00;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none">⚽ Football</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">🏏 Cricket</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">🎾 Tennis</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:5px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">🏎️ F1</span>
+    </div>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:99px;background:#c8ff00;animation:gb-pulse 2s infinite"></span><span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">Updates live · 682,414 votes</span></span>
+  </div>
+
+  <div style="padding:20px 32px 30px">
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:56px 1fr 130px 110px 90px 90px;padding:11px 18px;border-bottom:1px solid #252528;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">
+        <span>Rank</span><span>Goat</span><span style="text-align:right">Votes</span><span style="text-align:right">Win rate</span><span style="text-align:right">Trend</span><span style="text-align:right"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:56px 1fr 130px 110px 90px 90px;align-items:center;padding:14px 18px;border-bottom:1px solid #252528;background:linear-gradient(90deg,rgba(198,255,0,0.06),transparent 40%);cursor:pointer" style-hover="background:linear-gradient(90deg,rgba(198,255,0,0.1),transparent 50%)">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;color:#c8ff00">01</span>
+        <span style="display:flex;align-items:center;gap:10px"><span style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;text-transform:uppercase;color:#f0f0f2">Messi</span><span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#c8ff00;border:1px solid #c8ff0044;border-radius:99px;padding:2px 9px;white-space:nowrap;flex:none">Reigning goat</span></span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#f0f0f2">341,208</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:20px;color:#c8ff00">68%</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#c8ff00">▲ 0.4</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#c8ff00">Profile →</span>
+      </div>
+      <div style="display:grid;grid-template-columns:56px 1fr 130px 110px 90px 90px;align-items:center;padding:14px 18px;border-bottom:1px solid #252528;cursor:pointer" style-hover="background:#1a1a1d">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;color:#b6b6c0">02</span>
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;text-transform:uppercase;color:#f0f0f2">Ronaldo</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#f0f0f2">318,914</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:20px;color:#f0f0f2">64%</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#ff2d55">▼ 0.4</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#c8ff00">Profile →</span>
+      </div>
+      <div style="display:grid;grid-template-columns:56px 1fr 130px 110px 90px 90px;align-items:center;padding:14px 18px;border-bottom:1px solid #252528;cursor:pointer" style-hover="background:#1a1a1d">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;color:#b6b6c0">03</span>
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;text-transform:uppercase;color:#f0f0f2">Pelé</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#f0f0f2">201,553</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:20px;color:#f0f0f2">52%</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#c8ff00">▲ 0.1</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#c8ff00">Profile →</span>
+      </div>
+      <div style="display:grid;grid-template-columns:56px 1fr 130px 110px 90px 90px;align-items:center;padding:14px 18px;border-bottom:1px solid #252528;cursor:pointer" style-hover="background:#1a1a1d">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;color:#8c8c96">04</span>
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;text-transform:uppercase;color:#f0f0f2">Maradona</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#f0f0f2">188,340</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:20px;color:#f0f0f2">49%</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#8c8c96">— 0.0</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#c8ff00">Profile →</span>
+      </div>
+      <div style="display:grid;grid-template-columns:56px 1fr 130px 110px 90px 90px;align-items:center;padding:14px 18px;cursor:pointer" style-hover="background:#1a1a1d">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:22px;color:#8c8c96">05</span>
+        <span style="font-family:'Barlow Condensed';font-weight:800;font-size:24px;text-transform:uppercase;color:#f0f0f2">Cruyff</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#f0f0f2">122,077</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:20px;color:#f0f0f2">44%</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#c8ff00">▲ 0.2</span>
+        <span style="text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;cursor:pointer" style-hover="color:#c8ff00">Profile →</span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:14px">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:7px 18px;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Show all 18 →</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ 3e — FACE OFF ═══════════════ -->
+<div class="dv-opt" id="3e">
+<div class="dv-olabel"><a class="dv-oid" href="#3e">3e</a>Face Off — /faceoff · pick any two, then hit Battle</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3e Face Off">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <div style="text-align:center;padding:34px 32px 6px">
+    <div style="font-family:'Barlow Condensed';font-weight:900;font-size:52px;text-transform:uppercase;line-height:0.95;color:#f0f0f2">Face <span style="color:#c8ff00">Off</span></div>
+    <div style="font-size:15px;color:#b6b6c0;margin-top:8px">Pick any two. Settle it in the arena.</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 90px 1fr;align-items:stretch;gap:0;padding:22px 32px 8px">
+    <div style="background:#161618;border:1px solid #c8ff0055;border-radius:6px;padding:24px;background-image:linear-gradient(160deg,rgba(198,255,0,0.07),transparent 60%)">
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#c8ff00">Fighter one</div>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:52px;text-transform:uppercase;line-height:0.9;color:#f0f0f2;margin-top:14px">Lionel<br><span style="color:#c8ff00">Messi</span></div>
+      <div style="font-size:13px;color:#8c8c96;margin-top:10px">⚽ Football · 341,208 votes · 68% win rate</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:18px;padding-top:14px;border-top:1px solid #252528">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Pelé</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Maradona</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Federer</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Bradman</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#c8ff00;border:1px solid #c8ff0044;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="border-color:#c8ff00">Swap →</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center">
+      <div style="width:64px;height:64px;border-radius:99px;background:#0d0d0f;border:1px solid #3a3a3e;display:flex;align-items:center;justify-content:center"><span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:24px;color:#f0f0f2">VS</span></div>
+    </div>
+    <div style="background:#161618;border:1px solid #ff2d5555;border-radius:6px;padding:24px;background-image:linear-gradient(200deg,rgba(255,45,85,0.07),transparent 60%);text-align:right">
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.18em;color:#ff2d55">Fighter two</div>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:52px;text-transform:uppercase;line-height:0.9;color:#f0f0f2;margin-top:14px">Cristiano<br><span style="color:#ff2d55">Ronaldo</span></div>
+      <div style="font-size:13px;color:#8c8c96;margin-top:10px">⚽ Football · 318,914 votes · 64% win rate</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:18px;padding-top:14px;border-top:1px solid #252528;justify-content:flex-end">
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Nadal</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Hamilton</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Tendulkar</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">Senna</span>
+        <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#ff2d55;border:1px solid #ff2d5544;border-radius:99px;padding:4px 11px;white-space:nowrap;flex:none;cursor:pointer" style-hover="border-color:#ff2d55">Swap →</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 32px 34px">
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:0.08em;background:#c8ff00;color:#0d0d0f;padding:14px 44px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Battle ⚔</span>
+    <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96">Cross-arena battles allowed · 12,408 face-offs today</span>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ 3f — BATTLE (from 1c) ═══════════════ -->
+<div class="dv-opt" id="3f">
+<div class="dv-olabel"><a class="dv-oid" href="#3f">3f</a>Battle — /battle/:id · split arena, landed from Face Off</div>
+<div class="dv-card" style="width:1120px;background:#0a0a0c" data-screen-label="3f Battle">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #1f1f24">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;gap:4px">
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">The Floor</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Goats</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Arenas</span>
+      <span style="font-size:14px;font-weight:500;color:#b6b6c0;padding:7px 13px;border-radius:6px;cursor:pointer" style-hover="color:#f0f0f2;background:#161618">Rankings</span>
+      <span style="font-size:14px;font-weight:500;color:#c8ff00;padding:7px 13px;border-radius:6px;background:#161618">Face Off</span>
+    </div>
+    <span style="font-family:'Barlow Condensed';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;background:#c8ff00;color:#0d0d0f;padding:8px 18px;border-radius:2px;cursor:pointer" style-hover="background:#a3cc00">Play Now</span>
+  </div>
+
+  <!-- split hero (1c) -->
+  <div style="position:relative;display:grid;grid-template-columns:1fr 1fr;min-height:440px;overflow:hidden">
+    <div style="position:relative;background:linear-gradient(160deg,#141608 0%,#0a0a0c 70%);border-right:1px solid #1f1f24;display:flex;flex-direction:column;justify-content:flex-end;padding:36px;cursor:pointer" style-hover="background:linear-gradient(160deg,#1d2108 0%,#0e0f0a 70%)">
+      <div style="position:absolute;top:28px;left:36px;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.2em;color:#c8ff00">The Champion · 52%</div>
+      <div style="position:absolute;top:20px;right:-30px;font-family:'Barlow Condensed';font-weight:900;font-size:220px;line-height:1;color:rgba(200,255,0,0.06);user-select:none">10</div>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:88px;line-height:0.85;text-transform:uppercase;color:#f0f0f2">Lionel<br><span style="color:#c8ff00">Messi</span></div>
+      <div style="margin-top:14px;font-size:14px;color:#b6b6c0">Argentina · 8× Ballon d'Or · World Champion</div>
+      <span style="display:inline-flex;align-self:flex-start;margin-top:22px;font-family:'Barlow Condensed';font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:0.08em;background:#c8ff00;color:#0a0a0c;padding:12px 26px;border-radius:2px" style-hover="background:#a3cc00">Vote Messi</span>
+    </div>
+    <div style="position:relative;background:linear-gradient(200deg,#170a0e 0%,#0a0a0c 70%);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;text-align:right;padding:36px;cursor:pointer" style-hover="background:linear-gradient(200deg,#210b11 0%,#0f0a0c 70%)">
+      <div style="position:absolute;top:28px;right:36px;font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.2em;color:#ff2d55">The Challenger · 48%</div>
+      <div style="position:absolute;top:20px;left:-20px;font-family:'Barlow Condensed';font-weight:900;font-size:220px;line-height:1;color:rgba(255,45,85,0.06);user-select:none">7</div>
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:88px;line-height:0.85;text-transform:uppercase;color:#f0f0f2">Cristiano<br><span style="color:#ff2d55">Ronaldo</span></div>
+      <div style="margin-top:14px;font-size:14px;color:#b6b6c0">Portugal · 5× Ballon d'Or · 900+ career goals</div>
+      <span style="display:inline-flex;margin-top:22px;font-family:'Barlow Condensed';font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:0.08em;background:transparent;color:#ff2d55;border:1px solid #ff2d55;padding:12px 26px;border-radius:2px" style-hover="background:#ff2d55;color:#0a0a0c">Vote Ronaldo</span>
+    </div>
+    <div style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:99px;background:#0a0a0c;border:1px solid #3a3a3e;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(0,0,0,0.8)">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:30px;color:#f0f0f2">VS</span>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:4px;display:flex">
+      <div style="width:52%;background:#c8ff00"></div><div style="width:48%;background:#ff2d55"></div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:18px;padding:14px 32px;border-top:1px solid #1f1f24;border-bottom:1px solid #1f1f24;background:#0e0e11">
+    <span style="width:7px;height:7px;border-radius:99px;background:#c8ff00;animation:gb-pulse 2s infinite;flex:none"></span>
+    <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">214,382 votes · 4.8k takes · vote to unlock the floor</span>
+  </div>
+
+  <!-- tale of the tape -->
+  <div style="padding:28px 32px 8px">
+    <div style="font-family:'Barlow Condensed';font-weight:900;font-size:28px;text-transform:uppercase;color:#f0f0f2;margin-bottom:14px">Tale of the tape</div>
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;padding:13px 22px;border-bottom:1px solid #252528">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#c8ff00">8</span>
+        <span style="text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">Ballon d'Or</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#f0f0f2">5</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;padding:13px 22px;border-bottom:1px solid #252528">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#f0f0f2">821</span>
+        <span style="text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">Career goals</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#ff2d55">910</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;padding:13px 22px;border-bottom:1px solid #252528">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#c8ff00">377</span>
+        <span style="text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">Assists</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#f0f0f2">257</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 200px 1fr;align-items:center;padding:13px 22px">
+        <span style="font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#f0f0f2">1</span>
+        <span style="text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:#8c8c96">World Cup / Euro</span>
+        <span style="text-align:right;font-family:'Barlow Condensed';font-weight:900;font-size:24px;color:#f0f0f2">1</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- battle floor -->
+  <div style="padding:24px 32px 30px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:28px;text-transform:uppercase;color:#f0f0f2">The floor</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;margin-left:auto">4,812 takes on this battle</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(198,255,0,0.06);border:1px solid #c8ff0044;border-radius:6px;padding:10px 12px">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Messi</span>
+      <span style="font-size:13px;color:#8c8c96;flex:1">You're with Messi — defend him…</span>
+      <span style="font-family:'Barlow Condensed';font-weight:800;font-size:13px;text-transform:uppercase;color:#0d0d0f;background:#c8ff00;border-radius:2px;padding:5px 14px;cursor:pointer" style-hover="background:#a3cc00">Post take</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#0d0d0f;background:#C6FF00;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team Messi</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Eight Ballons d'Or with one club system change. Consistency is the argument.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 78</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 940</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;background:#161618;border:1px solid #252528;border-radius:6px;padding:13px 18px;cursor:pointer" style-hover="border-color:#3a3a3e">
+      <span style="font-family:'Barlow Condensed';font-weight:900;font-size:10px;color:#f0f0f2;background:#ff2d55;border-radius:2px;padding:2px 6px;text-transform:uppercase;flex:none">Team CR7</span>
+      <span style="font-size:14px;font-weight:600;color:#f0f0f2;flex:1">Three leagues, five UCLs, international trophy first. Ronaldo proved it everywhere.</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96;flex:none">💬 64</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#c8ff00;flex:none">▲ 871</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ 3g — CHAMPION MODE ═══════════════ -->
+<div class="dv-opt" id="3g">
+<div class="dv-olabel"><a class="dv-oid" href="#3g">3g</a>Champion Mode — /play · the quick-fire gauntlet behind "Play Now"</div>
+<div class="dv-card" style="width:1120px;background:#0d0d0f" data-screen-label="3g Champion Mode">
+  <div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 32px;border-bottom:1px solid #252528">
+    <span style="font-family:'Barlow Condensed';font-weight:900;font-size:21px;text-transform:uppercase;color:#f0f0f2">GOATS<span style="color:#c8ff00">BATTLE</span></span>
+    <div style="display:flex;align-items:center;gap:18px">
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#c8ff00;white-space:nowrap">🔥 Streak · 6</span>
+      <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:#8c8c96;white-space:nowrap">Round 7 / 10</span>
+    </div>
+    <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#8c8c96;border:1px solid #252528;border-radius:99px;padding:6px 14px;white-space:nowrap;flex:none;cursor:pointer" style-hover="color:#f0f0f2;border-color:#3a3a3e">✕ Exit</span>
+  </div>
+  <div style="display:flex;height:4px;background:#252528"><div style="width:70%;background:#c8ff00"></div></div>
+
+  <div style="text-align:center;padding:36px 32px 0">
+    <div style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.2em;color:#c8ff00">Champion Mode · 🎾 Tennis</div>
+    <div style="font-family:'Barlow Condensed';font-weight:900;font-size:46px;text-transform:uppercase;line-height:0.95;color:#f0f0f2;margin-top:12px">Who takes it?</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 90px 1fr;align-items:stretch;padding:26px 120px 10px">
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;padding:30px;text-align:center;cursor:pointer;background-image:linear-gradient(180deg,rgba(198,255,0,0.05),transparent)" style-hover="border-color:#c8ff00">
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:54px;text-transform:uppercase;line-height:0.9;color:#f0f0f2">Roger<br><span style="color:#c8ff00">Federer</span></div>
+      <div style="font-size:13px;color:#8c8c96;margin-top:12px">20 Slams · 310 weeks №1</div>
+      <span style="display:inline-flex;margin-top:20px;font-family:'Barlow Condensed';font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.08em;background:#c8ff00;color:#0d0d0f;padding:11px 30px;border-radius:2px" style-hover="background:#a3cc00">Pick Federer</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center">
+      <div style="width:60px;height:60px;border-radius:99px;background:#0d0d0f;border:1px solid #3a3a3e;display:flex;align-items:center;justify-content:center"><span style="font-family:'Barlow Condensed';font-weight:900;font-style:italic;font-size:22px;color:#f0f0f2">VS</span></div>
+    </div>
+    <div style="background:#161618;border:1px solid #252528;border-radius:6px;padding:30px;text-align:center;cursor:pointer;background-image:linear-gradient(180deg,rgba(255,45,85,0.05),transparent)" style-hover="border-color:#ff2d55">
+      <div style="font-family:'Barlow Condensed';font-weight:900;font-size:54px;text-transform:uppercase;line-height:0.9;color:#f0f0f2">Novak<br><span style="color:#ff2d55">Djokovic</span></div>
+      <div style="font-size:13px;color:#8c8c96;margin-top:12px">24 Slams · 428 weeks №1</div>
+      <span style="display:inline-flex;margin-top:20px;font-family:'Barlow Condensed';font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:0.08em;color:#ff2d55;border:1px solid #ff2d55;padding:11px 30px;border-radius:2px" style-hover="background:#ff2d55;color:#0d0d0f">Pick Djokovic</span>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;gap:24px;padding:14px 32px 34px">
+    <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#8c8c96;cursor:pointer" style-hover="color:#f0f0f2">Skip this one →</span>
+    <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8c8c96">+5 points per pick · finish to crown your champion</span>
+  </div>
+</div>
+</div>
+
+
+
+</div>
+<p class="dv-next">The full spec lives in DESIGN-GUIDE.md — ready to hand to Claude Code.</p>
+</section>
+
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { i: 0, visible: true };
+
+  battles = [
+    { arena: "Football", icon: "⚽", color: "#C6FF00", left: "Messi", right: "Ronaldo", leftPct: 52, votes: "214,382" },
+    { arena: "Formula 1", icon: "🏎️", color: "#E8202A", left: "Hamilton", right: "Verstappen", leftPct: 51, votes: "88,410" },
+    { arena: "Tennis", icon: "🎾", color: "#22A06B", left: "Nadal", right: "Federer", leftPct: 47, votes: "131,092" },
+    { arena: "Cricket", icon: "🏏", color: "#2E7DD1", left: "Bradman", right: "Tendulkar", leftPct: 45, votes: "96,733" }
+  ];
+
+  componentDidMount() {
+    this._timer = setInterval(() => this.advance((this.state.i + 1) % this.battles.length), 3500);
+  }
+  componentWillUnmount() { clearInterval(this._timer); }
+
+  advance(next) {
+    this.setState({ visible: false });
+    setTimeout(() => this.setState({ i: next, visible: true }), 280);
+  }
+
+  goTo(idx) {
+    if (idx === this.state.i) return;
+    clearInterval(this._timer);
+    this._timer = setInterval(() => this.advance((this.state.i + 1) % this.battles.length), 3500);
+    this.advance(idx);
+  }
+
+  renderVals() {
+    const b = this.battles[this.state.i];
+    return {
+      mbArena: b.arena, mbIcon: b.icon, mbColor: b.color,
+      mbLeft: b.left, mbRight: b.right,
+      mbLeftPct: b.leftPct, mbRightPct: 100 - b.leftPct,
+      mbVotes: b.votes,
+      mbOpacity: this.state.visible ? 1 : 0,
+      mbDots: this.battles.map((_, idx) => ({
+        w: idx === this.state.i ? 22 : 6,
+        bg: idx === this.state.i ? "#c8ff00" : "#3a3a3e",
+        go: () => this.goTo(idx)
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
