@@ -6,7 +6,8 @@
  * Run with:  npm run db:migrate:stat-tags
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const statements = [
   `CREATE TABLE IF NOT EXISTS comment_stat_tags (
@@ -29,7 +30,4 @@ async function main() {
   console.log('\n✓ Stat-tags migration applied.');
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'stat-tags migration' }, main).catch(exitOnDatabaseError);

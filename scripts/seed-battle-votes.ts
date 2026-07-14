@@ -12,10 +12,11 @@
  * Run with:  npm run db:seed:votes   (loads .env via --env-file)
  */
 import { and, eq, sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
 import { allBattlePairs } from '../src/data';
 import { getBattleId } from '../src/lib/battle';
 import { battles } from '../src/lib/db/schema';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 /** Deterministic 32-bit hash of a string (FNV-1a). */
 function hash(str: string): number {
@@ -77,7 +78,7 @@ async function main() {
   console.log(`\n✓ Done. ${row.count} battles now have votes.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({
+  operation: 'fabricated battle-vote seed',
+  allowedTargets: ['development'],
+}, main).catch(exitOnDatabaseError);

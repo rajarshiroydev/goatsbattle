@@ -31,6 +31,11 @@ export const commentVoteBodySchema = z.object({
   commentId: positiveIdSchema,
   remove: z.boolean().optional().default(false),
 }).strict();
+export const commentReportBodySchema = z.object({
+  commentId: positiveIdSchema,
+  reason: z.enum(['spam', 'harassment', 'hate', 'privacy', 'misinformation', 'other']),
+  details: z.string().trim().max(1000).optional(),
+}).strict();
 
 export type ParseBodyResult<T> =
   | { ok: true; data: T }

@@ -3,19 +3,30 @@ import Layout from '../layouts/Layout.astro';
 import MarqueeCarousel from '../components/MarqueeCarousel.tsx';
 import type { MarqueeBattle } from '../components/MarqueeCarousel.tsx';
 import EventRow from '../components/EventRow.astro';
-import { getHomeBattleData, getFloorEvents, getLiveEventCount } from '../lib/queries';
-import { FLOOR_FILTERS } from '../lib/floor';
+import { getStaticBattleSummaries } from '../lib/staticCatalog';
+import { worldCup2026Fixtures } from '../data/worldCup2026';
+import { FLOOR_FILTERS } from '../lib/floorFilters';
 import { arenaLabel, arenaEmoji, getArena } from '../data/arenas';
-import { compactNumber } from '../lib/format';
+import { flagEmoji } from '../lib/format';
 
-// Live scoreboard — read the latest tallies + top match debates on every request.
-export const prerender = false;
-
-const [{ mostVoted, totalVotes }, events, liveCount] = await Promise.all([
-  getHomeBattleData(6),
-  getFloorEvents({ filter: 'top', userId: Astro.locals.user?.id ?? null, limit: 4 }),
-  getLiveEventCount(),
-]);
+// Static-first launch shell. Mutable tallies remain in the battle/profile
+// islands; anonymous homepage traffic never invokes the Worker.
+const mostVoted = getStaticBattleSummaries('football').slice(0, 6);
+const remainingMatches = worldCup2026Fixtures.filter((fixture) => fixture.matchNumber >= 101);
+const nextMatch = remainingMatches.find((fixture) => fixture.status === 'scheduled') ?? remainingMatches[0];
+if (!nextMatch) throw new Error('No World Cup knockout fixtures are available for the homepage hero.');
+const nextMatchStage = nextMatch.stage
+  .replace(/-/g, ' ')
+  .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const nextMatchKickoff = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'UTC',
+  timeZoneName: 'short',
+}).format(new Date(nextMatch.kickoff));
 
 // Marquee cards for the "Happening Now" carousel (left = lime, right = red).
 const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
@@ -35,70 +46,69 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
   active: f.key === 'top', // "Top" leads the preview (matches the fetch above)
 }));
 
-// Scoreboard ticker between the hero and the floor — live scorelines woven
-// with a few evergreen call-outs. Duplicated in the track for a seamless loop.
-const ticker: string[] = [
-  ...marquee.map((b) => `${b.arenaEmoji} ${b.leftName} ${b.leftPct}% ▸ ${b.rightName}`),
-  totalVotes > 0 ? `${compactNumber(totalVotes)} votes counted` : 'Voting is live',
-  'Settle the debate',
-  "Who's your GOAT?",
-  'The floor is open',
-];
 ---
 
 <Layout>
-
-  <!-- ══════════════════════════════════════════
-       SLIM HERO + "HAPPENING NOW" CAROUSEL (3h)
-  ══════════════════════════════════════════ -->
   <section class="border-b border-hairline overflow-x-clip"
-    style="background: radial-gradient(ellipse 80% 60% at 20% 120%, rgba(200,255,0,0.08), transparent 60%)">
+    style="background: radial-gradient(ellipse 80% 75% at 18% 115%, rgba(200,255,0,0.11), transparent 62%)">
     <div class="page-container py-11">
-      <div class="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-10 items-center">
-
+      <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-12 items-center">
         <div>
-          <h1 class="font-headline font-black uppercase text-ink leading-[0.88] tracking-tight"
-            style="font-size: clamp(3.25rem, 8vw, 76px)">
-            Who's the <span class="text-lime">Goat?</span>
+          <span class="chip chip-active">World Cup 2026 · Match {nextMatch.matchNumber}</span>
+          <h1 class="mt-4 font-headline font-black uppercase text-ink leading-[0.88] tracking-tight text-[clamp(3rem,7.5vw,72px)]">
+            The world is on <span class="text-lime">the floor.</span>
           </h1>
           <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-md">
-            Vote across four arenas, then take it to The Floor — where the world argues it out, one take at a time.
+            Follow all 104 matches, then make the case in the main match thread. The {nextMatchStage.toLowerCase()} is ready for your take.
           </p>
           <div class="mt-6 flex flex-wrap gap-2.5">
-            <a href="#floor" class="btn btn-primary text-base px-6 py-3">Join the floor ↓</a>
-            <a href="/arenas" class="btn btn-secondary text-base px-6 py-3">Browse arenas</a>
+            <a href={`/floor/${nextMatch.id}`} class="btn btn-primary text-base px-6 py-3">Join the discussion</a>
+            <a href="/world-cup" class="btn btn-secondary text-base px-6 py-3">View all 104 matches</a>
           </div>
         </div>
 
-        <div class="w-full max-w-[440px] mx-auto lg:mr-0 lg:ml-auto">
-          <MarqueeCarousel client:load battles={marquee} />
-        </div>
-
+        <a href={`/floor/${nextMatch.id}`} class="block bg-canvas-soft border border-hairline rounded-lg p-5 sm:p-6 hover:border-hairline-strong transition-colors">
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">{nextMatchStage} · Upcoming</span>
+            <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">Discuss →</span>
+          </div>
+          <div class="mt-7 grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+            <div class="text-center min-w-0">
+              <span class="text-3xl" aria-hidden="true">{flagEmoji(nextMatch.homeCode ?? '')}</span>
+              <p class="mt-2 font-headline font-black uppercase text-xl sm:text-2xl text-ink truncate">{nextMatch.homeTeam}</p>
+            </div>
+            <span class="font-headline font-black italic text-2xl text-mute">vs</span>
+            <div class="text-center min-w-0">
+              <span class="text-3xl" aria-hidden="true">{flagEmoji(nextMatch.awayCode ?? '')}</span>
+              <p class="mt-2 font-headline font-black uppercase text-xl sm:text-2xl text-ink truncate">{nextMatch.awayTeam}</p>
+            </div>
+          </div>
+          <div class="mt-7 pt-4 border-t border-hairline text-center">
+            <p class="font-mono text-xs uppercase tracking-[0.1em] text-body">{nextMatchKickoff}</p>
+            <p class="mt-1 font-sans text-xs text-mute">{nextMatch.venue}</p>
+          </div>
+        </a>
       </div>
     </div>
   </section>
 
-  <!-- ══════════════════════════════════════════
-       SCOREBOARD TICKER — live scorelines marquee
-  ══════════════════════════════════════════ -->
-  <section class="marquee border-b border-hairline bg-canvas-soft overflow-hidden">
-    <div class="marquee-track flex items-center whitespace-nowrap py-2.5">
-      {[0, 1].map((dup) => (
-        <div class="marquee-group flex items-center shrink-0" aria-hidden={dup === 1 ? 'true' : undefined}>
-          {ticker.map((item) => (
-            <span class="flex items-center">
-              <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-body px-6">{item}</span>
-              <span class="w-1 h-1 rounded-full bg-lime shrink-0"></span>
-            </span>
-          ))}
+  <section class="border-b border-hairline bg-canvas-soft py-8">
+    <div class="page-container grid grid-cols-1 lg:grid-cols-[0.7fr_1.3fr] gap-6 lg:gap-10 items-center">
+      <div>
+        <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">Evergreen football</span>
+        <h2 class="mt-2 font-headline font-black uppercase text-3xl text-ink">The GOAT debate continues</h2>
+        <p class="mt-2 font-sans text-sm leading-relaxed text-body">Vote on football's defining head-to-heads, or see where every legend ranks.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <a href="/rankings/football" class="btn btn-primary text-sm px-5 py-2.5">Football rankings</a>
+          <a href="/arenas" class="btn btn-secondary text-sm px-5 py-2.5">Other arenas</a>
         </div>
-      ))}
+      </div>
+      <div class="w-full min-w-0">
+        <MarqueeCarousel client:load battles={marquee} />
+      </div>
     </div>
   </section>
 
-  <!-- ══════════════════════════════════════════
-       THE FLOOR — global take stream (preview)
-  ══════════════════════════════════════════ -->
   <section id="floor" class="pt-[22px] pb-8 scroll-mt-[60px]">
     <div class="page-container">
 
@@ -110,51 +120,29 @@ const ticker: string[] = [
             <a href={c.href} class:list={['chip', c.active && 'chip-active']}>{c.label}</a>
           ))}
         </div>
-        {liveCount > 0 && (
-          <span class="ml-auto flex items-center gap-2">
-            <span class="live-dot"></span>
-            <span class="font-mono text-[11px] text-mute whitespace-nowrap">{liveCount} live now</span>
-          </span>
-        )}
       </div>
 
       <!-- Stream -->
       <div class="mt-4 flex flex-col gap-2.5">
-        {events.length > 0 ? (
-          <>
-            {events.map((event) => <EventRow event={event} />)}
-            <a href="/floor"
-              class="self-center mt-1.5 chip">Enter the floor ↓</a>
-          </>
-        ) : (
-          <div class="bg-canvas-soft border border-hairline rounded-md px-6 py-10 text-center">
-            <p class="font-headline font-black uppercase text-2xl text-ink">The floor is open</p>
-            <p class="mt-2 font-sans text-body">Match debates are coming to the floor — check back soon.</p>
-            <a href="/goats" class="btn btn-primary text-sm px-6 py-2.5 mt-5">Browse goats</a>
-          </div>
-        )}
+        {remainingMatches.map((event) => <EventRow event={{
+          id: event.id,
+          competition: 'World Cup 2026',
+          kickoff: new Date(event.kickoff),
+          homeTeam: event.homeTeam,
+          awayTeam: event.awayTeam,
+          homeCode: event.homeCode,
+          awayCode: event.awayCode,
+          homeScore: event.homeScore,
+          awayScore: event.awayScore,
+          status: event.status,
+          venue: event.venue,
+          goats: [],
+          commentCount: 0,
+        }} />)}
+        <a href="/world-cup" class="self-center mt-1.5 chip">Open the World Cup hub ↓</a>
       </div>
 
     </div>
   </section>
-
-  <style>
-    /* Seamless scoreboard scroll — two identical groups slide left by half the
-       track width, so the loop point is invisible. */
-    .marquee-track {
-      width: max-content;
-      animation: gb-marquee 45s linear infinite;
-    }
-    .marquee:hover .marquee-track {
-      animation-play-state: paused;
-    }
-    @keyframes gb-marquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .marquee-track { animation: none; }
-    }
-  </style>
 
 </Layout>

@@ -28,7 +28,7 @@ const resolveSubject = (battle: string | null, match: string | null): CommentSub
 };
 
 /** GET ?battle=slug | ?match=id → flat list of the subject's comments (public read). */
-export const GET: APIRoute = async ({ url, request, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
   const battle = url.searchParams.get('battle');
   const match = url.searchParams.get('match');
   if ((battle && !slugSchema.safeParse(battle).success) || (match && !slugSchema.safeParse(match).success)) {
@@ -37,10 +37,12 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
   const subject = resolveSubject(battle, match);
   if (!subject) return json({ error: 'exactly one of battle/match query param required' }, 400);
 
-  // Lightweight anti-abuse ceiling for the public read (keyed by client IP).
-  const rl = await rateLimit(`comments:read:${hashIp(getClientIp(request.headers))}`, { max: 60 });
+  const rl = await rateLimit(`comments:read:${hashIp(getClientIp(request.headers))}`, { max: 120 });
   if (!rl.ok) {
-    return json({ error: 'Too many requests — slow down.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+    return json({ error: 'Too many requests.' }, 429, {
+      'Retry-After': String(rl.retryAfter),
+      'Cache-Control': 'private, no-store',
+    });
   }
 
   const list = await listComments(subject, locals.user?.id ?? null);

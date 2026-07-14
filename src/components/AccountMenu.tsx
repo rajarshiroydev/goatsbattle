@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { authClient } from '../lib/authClient';
 import { useSession } from '../lib/useSession';
-import { openAuthModal, emitSessionChanged } from '../lib/authModal';
+import { clearSessionHint, openAuthModal, emitSessionChanged } from '../lib/authModal';
 
 export default function AccountMenu() {
   const { user, loading } = useSession();
@@ -19,6 +19,7 @@ export default function AccountMenu() {
 
   async function logout() {
     await authClient.signOut();
+    clearSessionHint();
     emitSessionChanged();
     setOpen(false);
   }

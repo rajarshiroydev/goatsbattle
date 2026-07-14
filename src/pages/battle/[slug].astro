@@ -9,6 +9,7 @@ import RadarChart from '../../components/RadarChart.astro';
 import TrophyTimeline from '../../components/TrophyTimeline.astro';
 import VoteWidget from '../../components/VoteWidget.tsx';
 import CommentThread from '../../components/CommentThread.tsx';
+import { shareBattleSlugs } from '../../data/shareBattles';
 
 export function getStaticPaths() {
   return allBattlePairs.map(([a, b]) => ({
@@ -43,7 +44,7 @@ const taggableGoats = taggableGoatsForArena(entityA.arena, [entityA.slug, entity
 const relatedA = getBattlesForEntity(slugA, { exclude: slugB, limit: 4 });
 const relatedB = getBattlesForEntity(slugB, { exclude: slugA, limit: 4 });
 
-const ogImage = `/og/battle/${canonical}.png`;
+const ogImage = shareBattleSlugs.has(canonical) ? `/og/battle/${canonical}.png` : undefined;
 const arena = entityA.arena;
 const catLabel = arenaLabel(arena);
 

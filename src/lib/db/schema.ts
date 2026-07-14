@@ -6,12 +6,35 @@ import {
   timestamp,
   serial,
   boolean,
+  jsonb,
   index,
   uniqueIndex,
   primaryKey,
   check,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
+
+/**
+ * Persistent safety marker for destructive or data-changing CLI operations.
+ * A database is initialized exactly once as development or production; scripts
+ * refuse to run when their explicit target does not match this row.
+ */
+export const deploymentEnvironment = pgTable(
+  'deployment_environment',
+  {
+    id: integer('id').primaryKey(),
+    environment: text('environment').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    singletonCk: check('deployment_environment_singleton_ck', sql`${t.id} = 1`),
+    environmentCk: check(
+      'deployment_environment_name_ck',
+      sql`${t.environment} IN ('development', 'production')`,
+    ),
+  }),
+);
 
 /**
  * Auth tables (better-auth). Column layout mirrors better-auth's expected
@@ -118,7 +141,7 @@ export const battles = pgTable('battles', {
  * static unique index, since the window rolls). `ipHash` (SHA-256 of ip + server
  * salt) is retained as a secondary anti-abuse signal. `userId` is nullable so
  * historic anonymous rows stay valid. `choice` stores the entity id voted for;
- * `country` comes from the Vercel geo header.
+ * `country` comes from Cloudflare request metadata.
  */
 export const votes = pgTable(
   'votes',
@@ -217,6 +240,11 @@ export const matches = pgTable(
   {
     id: text('id').primaryKey(), // readable slug, e.g. "argentina-vs-egypt-2026-06-15"
     externalId: text('external_id').unique(), // API-Football fixture id (future sync)
+    provider: text('provider'),
+    providerFixtureId: text('provider_fixture_id'),
+    tournamentStage: text('tournament_stage'),
+    sourceStatus: text('source_status').notNull().default('canonical'),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     arena: text('arena').notNull().default('football'),
     competition: text('competition').notNull(),
     homeTeam: text('home_team').notNull(),
@@ -225,6 +253,8 @@ export const matches = pgTable(
     awayCode: text('away_code'),
     homeScore: integer('home_score'),
     awayScore: integer('away_score'),
+    homePenaltyScore: integer('home_penalty_score'),
+    awayPenaltyScore: integer('away_penalty_score'),
     kickoff: timestamp('kickoff', { withTimezone: true }).notNull(),
     status: text('status').notNull().default('finished'), // scheduled | live | finished
     venue: text('venue'),
@@ -233,7 +263,147 @@ export const matches = pgTable(
   (t) => ({
     statusIdx: index('matches_status_idx').on(t.status),
     kickoffIdx: index('matches_kickoff_idx').on(t.kickoff),
+    providerFixtureUniq: uniqueIndex('matches_provider_fixture_uniq').on(
+      t.provider,
+      t.providerFixtureId,
+    ),
   })
+);
+
+/** Multiple provider identities can belong to one canonical match. The match
+ * row keeps the public route and FIFA schedule; this table owns external IDs. */
+export const matchSources = pgTable(
+  'match_sources',
+  {
+    id: serial('id').primaryKey(),
+    matchId: text('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    providerMatchId: text('provider_match_id').notNull(),
+    role: text('role').notNull(),
+    status: text('status').notNull().default('active'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    providerMatchUniq: uniqueIndex('match_sources_provider_match_uniq').on(
+      t.provider,
+      t.providerMatchId,
+      t.role,
+    ),
+    matchRoleUniq: uniqueIndex('match_sources_match_role_uniq').on(
+      t.matchId,
+      t.provider,
+      t.role,
+    ),
+    matchIdx: index('match_sources_match_idx').on(t.matchId),
+    roleCk: check(
+      'match_sources_role_ck',
+      sql`${t.role} IN ('score', 'timeline', 'lineup')`,
+    ),
+  }),
+);
+
+/** Provider-wide quota state. The Worker reserves a request atomically before
+ * every upstream fetch, preventing overlapping isolates from exceeding trial
+ * or per-minute limits. */
+export const providerSyncState = pgTable('provider_sync_state', {
+  provider: text('provider').primaryKey(),
+  windowStartedAt: timestamp('window_started_at', { withTimezone: true }).notNull().defaultNow(),
+  requestsInWindow: integer('requests_in_window').notNull().default(0),
+  totalRequests: integer('total_requests').notNull().default(0),
+  consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+  circuitOpenUntil: timestamp('circuit_open_until', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Current provisional timeline. Snapshot replacement is safe here because no
+ * user citation points at this row; durable citations use match_moments. */
+export const matchTimelineState = pgTable(
+  'match_timeline_state',
+  {
+    matchId: text('match_id')
+      .primaryKey()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    providerMatchId: text('provider_match_id').notNull(),
+    mode: text('mode').notNull().default('shadow'),
+    coverage: text('coverage').notNull().default('none'),
+    snapshotHash: text('snapshot_hash'),
+    snapshotVersion: integer('snapshot_version').notNull().default(0),
+    events: jsonb('events').$type<unknown[]>().notNull().default([]),
+    providerUpdatedAt: timestamp('provider_updated_at', { withTimezone: true }),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+    lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+    lastFinalCheckAt: timestamp('last_final_check_at', { withTimezone: true }),
+    consecutiveIdentical: integer('consecutive_identical').notNull().default(0),
+    lastErrorCode: text('last_error_code'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    modeCk: check(
+      'match_timeline_state_mode_ck',
+      sql`${t.mode} IN ('shadow', 'live', 'finalizing', 'finalized', 'degraded')`,
+    ),
+  }),
+);
+
+/** Changed snapshots retained for replay/idempotency evidence. Identical polls
+ * are deduplicated by hash and update only the current-state heartbeat. */
+export const matchTimelineSnapshots = pgTable(
+  'match_timeline_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    matchId: text('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    snapshotHash: text('snapshot_hash').notNull(),
+    coverage: text('coverage').notNull(),
+    eventCount: integer('event_count').notNull(),
+    events: jsonb('events').$type<unknown[]>().notNull(),
+    providerUpdatedAt: timestamp('provider_updated_at', { withTimezone: true }),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    hashUniq: uniqueIndex('match_timeline_snapshots_hash_uniq').on(
+      t.matchId,
+      t.provider,
+      t.snapshotHash,
+    ),
+    matchIdx: index('match_timeline_snapshots_match_idx').on(t.matchId, t.fetchedAt),
+  }),
+);
+
+/** Latest lineup payload and our independent quality verdict. Provider
+ * `confirmed=true` is never sufficient by itself. */
+export const matchLineups = pgTable(
+  'match_lineups',
+  {
+    matchId: text('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    providerMatchId: text('provider_match_id').notNull(),
+    status: text('status').notNull(),
+    rejectionReason: text('rejection_reason'),
+    snapshotHash: text('snapshot_hash').notNull(),
+    lineup: jsonb('lineup').$type<Record<string, unknown>>().notNull(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+    validatedAt: timestamp('validated_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.matchId, t.provider] }),
+    statusCk: check(
+      'match_lineups_status_ck',
+      sql`${t.status} IN ('rejected', 'official')`,
+    ),
+  }),
 );
 
 /**
@@ -247,6 +417,14 @@ export const matchMoments = pgTable(
   'match_moments',
   {
     id: serial('id').primaryKey(),
+    provider: text('provider'),
+    providerEventId: text('provider_event_id'),
+    providerSequence: integer('provider_sequence'),
+    period: text('period'),
+    providerTeamId: text('provider_team_id'),
+    providerPlayerId: text('provider_player_id'),
+    verificationStatus: text('verification_status').notNull().default('confirmed'),
+    snapshotHash: text('snapshot_hash'),
     matchId: text('match_id')
       .notNull()
       .references(() => matches.id, { onDelete: 'cascade' }),
@@ -258,10 +436,39 @@ export const matchMoments = pgTable(
     goatSlug: text('goat_slug').references(() => entities.id),
     detail: text('detail'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     matchIdx: index('match_moments_match_idx').on(t.matchId),
+    providerEventUniq: uniqueIndex('match_moments_provider_event_uniq').on(
+      t.provider,
+      t.providerEventId,
+    ),
+    verificationCk: check(
+      'match_moments_verification_ck',
+      sql`${t.verificationStatus} IN ('confirmed', 'retracted', 'superseded')`,
+    ),
   })
+);
+
+/** Explicit provider-player mappings. GOAT linkage never uses fuzzy names. */
+export const goatProviderPlayers = pgTable(
+  'goat_provider_players',
+  {
+    goatSlug: text('goat_slug')
+      .notNull()
+      .references(() => entities.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    providerPlayerId: text('provider_player_id').notNull(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.goatSlug, t.provider] }),
+    providerPlayerUniq: uniqueIndex('goat_provider_players_provider_player_uniq').on(
+      t.provider,
+      t.providerPlayerId,
+    ),
+  }),
 );
 
 /**
@@ -350,6 +557,40 @@ export const commentVotes = pgTable(
   })
 );
 
+/** Launch moderation queue. A partial unique index permits a new report only
+ * after the previous report by that user for that comment is no longer open. */
+export const commentReports = pgTable(
+  'comment_reports',
+  {
+    id: serial('id').primaryKey(),
+    reporterId: text('reporter_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    commentId: integer('comment_id')
+      .notNull()
+      .references(() => comments.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    details: text('details'),
+    status: text('status').notNull().default('open'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('comment_reports_status_idx').on(t.status, t.createdAt),
+    activeUniq: uniqueIndex('comment_reports_active_uniq')
+      .on(t.reporterId, t.commentId)
+      .where(sql`${t.status} = 'open'`),
+    reasonCk: check(
+      'comment_reports_reason_ck',
+      sql`${t.reason} IN ('spam', 'harassment', 'hate', 'privacy', 'misinformation', 'other')`,
+    ),
+    statusCk: check(
+      'comment_reports_status_ck',
+      sql`${t.status} IN ('open', 'reviewing', 'resolved', 'dismissed')`,
+    ),
+  }),
+);
+
 /**
  * Comment stat tags — the "settle it with a fact" mechanic. A comment can cite
  * one or more definitive goat stats (e.g. Messi · International Goals). Only the
@@ -384,7 +625,15 @@ export type UserRow = typeof user.$inferSelect;
 export type SessionRow = typeof session.$inferSelect;
 export type CommentRow = typeof comments.$inferSelect;
 export type CommentVoteRow = typeof commentVotes.$inferSelect;
+export type CommentReportRow = typeof commentReports.$inferSelect;
 export type MatchRow = typeof matches.$inferSelect;
 export type MatchMomentRow = typeof matchMoments.$inferSelect;
 export type MatchGoatRow = typeof matchGoats.$inferSelect;
+export type MatchSourceRow = typeof matchSources.$inferSelect;
+export type ProviderSyncStateRow = typeof providerSyncState.$inferSelect;
+export type MatchTimelineStateRow = typeof matchTimelineState.$inferSelect;
+export type MatchTimelineSnapshotRow = typeof matchTimelineSnapshots.$inferSelect;
+export type MatchLineupRow = typeof matchLineups.$inferSelect;
+export type GoatProviderPlayerRow = typeof goatProviderPlayers.$inferSelect;
 export type CommentStatTagRow = typeof commentStatTags.$inferSelect;
+export type DeploymentEnvironmentRow = typeof deploymentEnvironment.$inferSelect;

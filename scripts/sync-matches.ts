@@ -14,9 +14,10 @@
  * Run with:  npm run db:sync:matches
  */
 import { eq } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
 import { matches, matchMoments, matchGoats } from '../src/lib/db/schema';
 import { getFixtures, getFixtureEvents, type ApiFixture, type ApiEvent } from '../src/lib/apiFootball';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const LEAGUE = 1; // FIFA World Cup
 const SEASON = 2022; // Qatar (accessible on the free plan)
@@ -218,7 +219,7 @@ async function main() {
   console.log(`\n✓ Done. Synced ${done.length} real matches from API-Football.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({
+  operation: 'legacy API-Football demo match import',
+  allowedTargets: ['development'],
+}, main).catch(exitOnDatabaseError);

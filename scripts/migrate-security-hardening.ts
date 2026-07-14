@@ -5,7 +5,8 @@
  * Then verify the printed row counts against the database before deployment.
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const statements = [
   `CREATE TABLE IF NOT EXISTS head_vote_windows (
@@ -43,7 +44,4 @@ async function main() {
   console.log(`✓ Security schema ready: ${headCount} head-vote claims, ${rateCount} active rate counters.`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'security migration' }, main).catch(exitOnDatabaseError);

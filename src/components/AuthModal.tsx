@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { authClient } from '../lib/authClient';
-import { onOpenAuthModal, emitSessionChanged, consumePendingAuthModal } from '../lib/authModal';
+import {
+  onOpenAuthModal,
+  emitSessionChanged,
+  consumePendingAuthModal,
+  markSessionHint,
+} from '../lib/authModal';
 
 interface Props {
   /** Whether Google OAuth is configured server-side (hides the button if not). */
@@ -92,6 +97,7 @@ export default function AuthModal({ googleEnabled = false }: Props) {
           ? await authClient.signUp.email({ email, password, name })
           : await authClient.signIn.email({ email, password });
       if (res.error) throw new Error(res.error.message ?? 'Something went wrong');
+      markSessionHint();
       emitSessionChanged();
       close();
     } catch (err) {
@@ -104,6 +110,9 @@ export default function AuthModal({ googleEnabled = false }: Props) {
   async function google() {
     setError(null);
     try {
+      // The callback returns to a static page; this hint tells its account
+      // island to perform the one real session check after OAuth completes.
+      markSessionHint();
       await authClient.signIn.social({ provider: 'google', callbackURL: window.location.href });
     } catch {
       setError('Google sign-in failed');
@@ -143,81 +152,82 @@ export default function AuthModal({ googleEnabled = false }: Props) {
         </p>
 
         {googleEnabled && (
+          <button
+            onClick={google}
+            class="mt-6 w-full h-12 flex items-center justify-center gap-2.5 rounded-sm bg-ink text-canvas font-headline font-black uppercase tracking-wider text-base hover:opacity-90 transition-opacity"
+          >
+            <span class="text-lg">G</span> Continue with Google
+          </button>
+        )}
+
+        {!googleEnabled && (
           <>
-            <button
-              onClick={google}
-              class="mt-6 w-full h-12 flex items-center justify-center gap-2.5 rounded-sm bg-ink text-canvas font-headline font-black uppercase tracking-wider text-base hover:opacity-90 transition-opacity"
-            >
-              <span class="text-lg">G</span> Continue with Google
-            </button>
-            <div class="flex items-center gap-3 my-5">
-              <span class="h-px flex-1 bg-hairline"></span>
-              <span class="font-mono text-[11px] uppercase tracking-widest text-mute">or</span>
-              <span class="h-px flex-1 bg-hairline"></span>
-            </div>
+            <form onSubmit={submit} class="mt-6">
+              {isSignup && (
+                <label class="block mb-3">
+                  <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Display name</span>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onInput={(e) => setName((e.target as HTMLInputElement).value)}
+                    class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
+                  />
+                </label>
+              )}
+              <label class="block mb-3">
+                <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Email</span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+                  class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
+                />
+              </label>
+              <label class="block mb-4">
+                <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Password</span>
+                <input
+                  type="password"
+                  required
+                  minLength={isSignup ? 10 : undefined}
+                  value={password}
+                  onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+                  class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
+                />
+              </label>
+
+              {error && (
+                <p class="font-mono text-[13px] text-red mb-3">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={pending}
+                class="w-full h-12 rounded-sm bg-lime text-canvas font-headline font-black uppercase tracking-wider text-lg hover:bg-lime-dark transition-colors disabled:opacity-50"
+              >
+                {pending ? '…' : isSignup ? 'Create account' : 'Log in'}
+              </button>
+            </form>
+
+            <p class="text-center font-sans text-sm text-body mt-5">
+              {isSignup ? 'Already have an account?' : 'New to GOATSBattle?'}{' '}
+              <button
+                onClick={() => {
+                  setMode(isSignup ? 'signin' : 'signup');
+                  setError(null);
+                }}
+                class="text-lime font-semibold hover:underline"
+              >
+                {isSignup ? 'Log in' : 'Sign up'}
+              </button>
+            </p>
           </>
         )}
 
-        <form onSubmit={submit} class={googleEnabled ? '' : 'mt-6'}>
-          {isSignup && (
-            <label class="block mb-3">
-              <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Display name</span>
-              <input
-                type="text"
-                required
-                value={name}
-                onInput={(e) => setName((e.target as HTMLInputElement).value)}
-                class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
-              />
-            </label>
-          )}
-          <label class="block mb-3">
-            <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Email</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
-              class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
-            />
-          </label>
-          <label class="block mb-4">
-            <span class="font-mono text-[11px] uppercase tracking-widest text-mute">Password</span>
-            <input
-              type="password"
-              required
-              minLength={isSignup ? 10 : undefined}
-              value={password}
-              onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-              class="mt-1 w-full h-11 px-3 bg-canvas-soft-2 border border-hairline rounded-sm text-ink font-sans focus:outline-none focus:border-lime"
-            />
-          </label>
-
-          {error && (
-            <p class="font-mono text-[13px] text-red mb-3">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={pending}
-            class="w-full h-12 rounded-sm bg-lime text-canvas font-headline font-black uppercase tracking-wider text-lg hover:bg-lime-dark transition-colors disabled:opacity-50"
-          >
-            {pending ? '…' : isSignup ? 'Create account' : 'Log in'}
-          </button>
-        </form>
-
-        <p class="text-center font-sans text-sm text-body mt-5">
-          {isSignup ? 'Already have an account?' : 'New to GOATSBattle?'}{' '}
-          <button
-            onClick={() => {
-              setMode(isSignup ? 'signin' : 'signup');
-              setError(null);
-            }}
-            class="text-lime font-semibold hover:underline"
-          >
-            {isSignup ? 'Log in' : 'Sign up'}
-          </button>
-        </p>
+        {googleEnabled && error && (
+          <p class="font-mono text-[13px] text-red mt-4">{error}</p>
+        )}
       </div>
     </div>
   );

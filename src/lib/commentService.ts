@@ -12,6 +12,7 @@ export interface MomentRef {
   minute: number;
   extra: number | null;
   type: string;
+  verificationStatus: 'confirmed' | 'retracted' | 'superseded';
 }
 
 /**
@@ -78,6 +79,7 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
       momentMinute: matchMoments.minute,
       momentExtra: matchMoments.extra,
       momentType: matchMoments.type,
+      momentVerificationStatus: matchMoments.verificationStatus,
     })
     .from(comments)
     .innerJoin(user, eq(user.id, comments.userId))
@@ -101,7 +103,13 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
     fanTag: fanTags.get(r.authorId) ?? null,
     moment:
       r.momentId !== null && r.momentMinute !== null
-        ? { id: r.momentId, minute: r.momentMinute, extra: r.momentExtra, type: r.momentType! }
+        ? {
+            id: r.momentId,
+            minute: r.momentMinute,
+            extra: r.momentExtra,
+            type: r.momentType!,
+            verificationStatus: r.momentVerificationStatus as MomentRef['verificationStatus'],
+          }
         : null,
     statTags: statTagsByComment.get(r.id) ?? [],
   }));
@@ -181,12 +189,21 @@ export async function postComment(
     const [m] = await db
       .select({ id: matchMoments.id, matchId: matchMoments.matchId, minute: matchMoments.minute, extra: matchMoments.extra, type: matchMoments.type })
       .from(matchMoments)
-      .where(eq(matchMoments.id, momentId))
+      .where(and(
+        eq(matchMoments.id, momentId),
+        eq(matchMoments.verificationStatus, 'confirmed'),
+      ))
       .limit(1);
     if (!m || m.matchId !== subject.match) {
       return { status: 'invalid', error: 'Invalid moment' };
     }
-    moment = { id: m.id, minute: m.minute, extra: m.extra, type: m.type };
+    moment = {
+      id: m.id,
+      minute: m.minute,
+      extra: m.extra,
+      type: m.type,
+      verificationStatus: 'confirmed',
+    };
   }
 
   // Resolve + dedupe the cited stats, dropping unknown goat/label pairs and

@@ -491,8 +491,15 @@ export async function getMatchMoments(matchId: string): Promise<MatchMoment[]> {
       detail: matchMoments.detail,
     })
     .from(matchMoments)
-    .where(eq(matchMoments.matchId, matchId))
-    .orderBy(matchMoments.minute, matchMoments.extra);
+    .where(and(
+      eq(matchMoments.matchId, matchId),
+      eq(matchMoments.verificationStatus, 'confirmed'),
+    ))
+    .orderBy(
+      sql`${matchMoments.providerSequence} ASC NULLS LAST`,
+      matchMoments.minute,
+      matchMoments.extra,
+    );
 
   return rows.map((r) => ({
     ...r,

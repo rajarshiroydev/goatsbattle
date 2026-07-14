@@ -7,7 +7,8 @@
  * Run with:  npm run db:migrate:moment-tags
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const statements = [
   `ALTER TABLE comments ADD COLUMN IF NOT EXISTS moment_id integer
@@ -27,7 +28,4 @@ async function main() {
   console.log('\n✓ Moment-tags migration applied.');
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'moment-tags migration' }, main).catch(exitOnDatabaseError);

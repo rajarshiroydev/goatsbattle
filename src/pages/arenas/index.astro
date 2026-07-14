@@ -3,13 +3,10 @@ import Layout from '../../layouts/Layout.astro';
 import PageHero from '../../components/PageHero.astro';
 import { arenas } from '../../data/arenas';
 import { getEntitiesByArena } from '../../data';
-import { getAllBattleSummaries } from '../../lib/queries';
+import { getStaticBattleSummaries } from '../../lib/staticCatalog';
 import { compactNumber } from '../../lib/format';
 
-// Live — the inline marquee per arena reflects current tallies.
-export const prerender = false;
-
-const allSummaries = await getAllBattleSummaries();
+const allSummaries = getStaticBattleSummaries();
 
 const cards = arenas.map((c) => {
   const inArena = allSummaries.filter((b) => b.arena === c.id);
@@ -38,10 +35,8 @@ const description = 'Football, cricket, tennis, Formula 1 and more. Pick an aren
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         {cards.map((c) => (
           <a href={`/arenas/${c.id}`}
-            class="group block bg-canvas-soft border border-hairline rounded-md p-[22px] transition-colors"
-            style={`background-image: linear-gradient(140deg, ${c.accent}12, transparent 55%)`}
-            onmouseover={`this.style.borderColor='${c.accent}'`}
-            onmouseout={`this.style.borderColor=''`}>
+            class="arena-card group block bg-canvas-soft border border-hairline rounded-md p-[22px] transition-colors"
+            style={`--arena-accent:${c.accent}; background-image: linear-gradient(140deg, ${c.accent}12, transparent 55%)`}>
 
             <!-- Arena title row -->
             <div class="flex items-baseline gap-2.5">
@@ -90,5 +85,9 @@ const description = 'Football, cricket, tennis, Formula 1 and more. Pick an aren
       </div>
     </div>
   </section>
+
+  <style>
+    .arena-card:hover { border-color: var(--arena-accent); }
+  </style>
 
 </Layout>

@@ -59,7 +59,7 @@ export default function MarqueeCarousel({ battles }: Props) {
     >
       {/* Card stage — fills the column so the centre card's top sits flush
           with the hero heading on the left. */}
-      <div class="relative flex-1 min-h-[280px]" style="perspective: 1400px">
+      <div class="relative flex-1 min-h-[280px] overflow-hidden [perspective:1400px]">
         {battles.map((b, j) => {
           const off = offsetOf(j);
           const abs = Math.abs(off);

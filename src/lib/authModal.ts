@@ -12,6 +12,29 @@ export interface AuthModalDetail {
   mode?: 'signin' | 'signup';
 }
 
+const SESSION_HINT_KEY = 'gb:session-hint';
+
+/**
+ * UI-only hint used to avoid an anonymous session request on every static page.
+ * It never grants access; server endpoints still validate the HttpOnly Better
+ * Auth cookie. A stale hint can only cause one harmless session lookup.
+ */
+export function hasSessionHint(): boolean {
+  try {
+    return window.localStorage.getItem(SESSION_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markSessionHint(): void {
+  try { window.localStorage.setItem(SESSION_HINT_KEY, '1'); } catch { /* storage unavailable */ }
+}
+
+export function clearSessionHint(): void {
+  try { window.localStorage.removeItem(SESSION_HINT_KEY); } catch { /* storage unavailable */ }
+}
+
 // Stored on `window` (not a module var) so it survives across separate island
 // bundles: a page (e.g. /login) can request an open before the AuthModal island
 // has hydrated, and the island replays it on mount via consumePendingAuthModal.

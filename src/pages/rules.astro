@@ -1,0 +1,34 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Community Rules — GOATSBattle" description="The rules for constructive GOAT debates and match discussions.">
+  <section class="page-container py-12 sm:py-16">
+    <div class="max-w-3xl">
+      <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">The floor is competitive—not hostile</p>
+      <h1 class="mt-2 font-headline font-black uppercase text-4xl sm:text-5xl text-ink">Community rules</h1>
+      <p class="mt-4 font-sans text-body leading-relaxed">Argue the take. Back it with evidence. Leave the person out of it.</p>
+
+      <ol class="mt-10 space-y-5">
+        {[
+          ['Challenge ideas, not people', 'No harassment, threats, slurs, dehumanising language, or targeted abuse.'],
+          ['Keep it relevant', 'Use match threads for that match and GOAT battles for the named comparison. Repeated spam and promotion are removed.'],
+          ['Do not manipulate participation', 'No duplicate accounts, coordinated vote manipulation, automated actions, or deceptive engagement.'],
+          ['Respect privacy and safety', 'Do not publish private personal information, impersonate others, or encourage real-world harm.'],
+          ['Share only what you can', 'Do not post unlawful material or content that infringes another person’s rights.'],
+          ['Report responsibly', 'Report genuine rule violations. Do not weaponise reporting against opinions you simply disagree with.'],
+        ].map(([title, body], index) => (
+          <li class="grid grid-cols-[2.5rem_1fr] gap-3 bg-canvas-soft border border-hairline rounded-md p-4">
+            <span class="font-mono text-lime text-sm">0{index + 1}</span>
+            <div>
+              <h2 class="font-headline font-black uppercase text-xl text-ink">{title}</h2>
+              <p class="mt-1 font-sans text-sm leading-relaxed text-body">{body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <p class="mt-8 font-sans text-sm leading-relaxed text-mute">Moderation decisions may include content removal or account restrictions. Context, severity, repetition, and risk to the community all matter.</p>
+    </div>
+  </section>
+</Layout>

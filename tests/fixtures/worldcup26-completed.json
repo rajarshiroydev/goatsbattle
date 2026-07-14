@@ -1,0 +1,13 @@
+{
+  "id": "98",
+  "type": "qf",
+  "home_team_id": "29",
+  "away_team_id": "25",
+  "home_team_name_en": "Spain",
+  "away_team_name_en": "Belgium",
+  "home_score": "2",
+  "away_score": "1",
+  "finished": "TRUE",
+  "time_elapsed": "finished",
+  "local_date": "07/10/2026 12:00"
+}

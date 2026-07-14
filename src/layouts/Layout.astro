@@ -2,12 +2,12 @@
 import '../styles/global.css';
 import AccountMenu from '../components/AccountMenu';
 import AuthModal from '../components/AuthModal';
+import MobileNav from '../components/MobileNav';
 
 // Only offer the Google button when creds are configured server-side.
-const googleEnabled = !!(
-  (process.env.GOOGLE_CLIENT_ID ?? import.meta.env.GOOGLE_CLIENT_ID) &&
-  (process.env.GOOGLE_CLIENT_SECRET ?? import.meta.env.GOOGLE_CLIENT_SECRET)
-);
+const googleEnabled = import.meta.env.PUBLIC_GOOGLE_AUTH_ENABLED === 'true';
+const cloudflareAnalyticsToken = import.meta.env.PUBLIC_CLOUDFLARE_WEB_ANALYTICS_TOKEN;
+Astro.csp?.insertDirective("style-src-attr 'unsafe-inline'");
 
 interface Props {
   title?: string;
@@ -29,6 +29,7 @@ const imageURL = image ? new URL(image, Astro.site ?? Astro.url) : undefined;
 // Primary nav — `match` marks the active tab (highlighted) via path prefix.
 const pathname = Astro.url.pathname;
 const navLinks = [
+  { href: '/world-cup', label: 'World Cup', match: ['/world-cup'] },
   { href: '/floor', label: 'The Floor', match: ['/floor'] },
   { href: '/goats', label: 'Goats', match: ['/goats'] },
   { href: '/arenas', label: 'Arenas', match: ['/arenas'] },
@@ -103,6 +104,7 @@ const isActive = (m: string[]) =>
 
         <!-- CTA -->
         <div class="flex items-center gap-2.5 shrink-0">
+          <MobileNav client:load pathname={pathname} />
           <AccountMenu client:load />
         </div>
 
@@ -152,9 +154,11 @@ const isActive = (m: string[]) =>
               </ul>
             </div>
             <div>
-              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Developers</p>
+              <p class="font-mono text-[13px] uppercase tracking-widest text-mute mb-3">Community</p>
               <ul class="space-y-2.5">
-                <li><a href="/api" class="text-body hover:text-ink transition-colors">Public API</a></li>
+                <li><a href="/rules" class="text-body hover:text-ink transition-colors">Rules</a></li>
+                <li><a href="/privacy" class="text-body hover:text-ink transition-colors">Privacy</a></li>
+                <li><a href="/terms" class="text-body hover:text-ink transition-colors">Terms</a></li>
               </ul>
             </div>
           </div>
@@ -163,13 +167,22 @@ const isActive = (m: string[]) =>
         <div class="mt-10 pt-6 border-t border-hairline flex flex-col sm:flex-row justify-between gap-3">
           <p class="font-sans text-mute text-sm">© 2026 GOATSBattle. All rights reserved.</p>
           <div class="flex gap-4 font-sans text-sm text-mute">
-            <a href="#" class="hover:text-body transition-colors">Privacy</a>
-            <a href="#" class="hover:text-body transition-colors">Terms</a>
-            <a href="/api" class="hover:text-body transition-colors">API</a>
+            <a href="/privacy" class="hover:text-body transition-colors">Privacy</a>
+            <a href="/terms" class="hover:text-body transition-colors">Terms</a>
+            <a href="/rules" class="hover:text-body transition-colors">Rules</a>
           </div>
         </div>
       </div>
     </footer>
+
+    {cloudflareAnalyticsToken && (
+      <script
+        is:inline
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={JSON.stringify({ token: cloudflareAnalyticsToken })}
+      ></script>
+    )}
 
   </body>
 </html>

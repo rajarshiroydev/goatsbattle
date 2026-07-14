@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { authClient } from './authClient';
+import { clearSessionHint, hasSessionHint } from './authModal';
 
 export interface SessionUser {
   id: string;
@@ -16,6 +17,10 @@ let inflight: Promise<SessionUser | null> | null = null;
 
 function load(force = false): Promise<SessionUser | null> {
   if (!force && cachedUser !== undefined) return Promise.resolve(cachedUser);
+  if (!force && !hasSessionHint()) {
+    cachedUser = null;
+    return Promise.resolve(null);
+  }
   // On force (e.g. after a session-changed event) bypass any pending request so
   // we never resolve from a stale in-flight getSession().
   if (force || !inflight) {
@@ -23,11 +28,13 @@ function load(force = false): Promise<SessionUser | null> {
       .getSession()
       .then((res: { data?: { user?: SessionUser } | null }) => {
         cachedUser = res?.data?.user ?? null;
+        if (!cachedUser) clearSessionHint();
         inflight = null;
         return cachedUser;
       })
       .catch(() => {
         cachedUser = null;
+        clearSessionHint();
         inflight = null;
         return null;
       });
@@ -40,8 +47,16 @@ function load(force = false): Promise<SessionUser | null> {
  * a `session-changed` event fires (after login/logout). See {@link authClient}.
  */
 export function useSession(): { user: SessionUser | null; loading: boolean } {
-  const [user, setUser] = useState<SessionUser | null>(cachedUser ?? null);
-  const [loading, setLoading] = useState(cachedUser === undefined);
+  // Always start in the loading state so the FIRST client render reproduces the
+  // server's output. `load()` only runs in the effect below (never during SSR),
+  // so every island is server-rendered as `loading` regardless of cache. Reading
+  // the shared module cache here caused hydration mismatches: an island that
+  // hydrated after an earlier island's effect had synchronously set
+  // `cachedUser = null` would render the resolved (logged-out) UI while the SSR
+  // markup was still the loading placeholder. The effect resolves the real state
+  // on the next tick (immediately from cache when warm).
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
