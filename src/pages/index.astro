@@ -14,6 +14,10 @@ import { flagEmoji } from '../lib/format';
 const mostVoted = getStaticBattleSummaries('football').slice(0, 6);
 const remainingMatches = worldCup2026Fixtures.filter((fixture) => fixture.matchNumber >= 101);
 const nextMatch = remainingMatches.find((fixture) => fixture.status === 'scheduled') ?? remainingMatches[0];
+if (!nextMatch) throw new Error('No World Cup knockout fixtures are available for the homepage hero.');
+const nextMatchStage = nextMatch.stage
+  .replace(/-/g, ' ')
+  .replace(/\b\w/g, (letter) => letter.toUpperCase());
 const nextMatchKickoff = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
@@ -55,7 +59,7 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
             The world is on <span class="text-lime">the floor.</span>
           </h1>
           <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-md">
-            Follow all 104 matches, then make the case in the main match thread. The next semifinal is ready for your take.
+            Follow all 104 matches, then make the case in the main match thread. The {nextMatchStage.toLowerCase()} is ready for your take.
           </p>
           <div class="mt-6 flex flex-wrap gap-2.5">
             <a href={`/floor/${nextMatch.id}`} class="btn btn-primary text-base px-6 py-3">Join the discussion</a>
@@ -65,7 +69,7 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
 
         <a href={`/floor/${nextMatch.id}`} class="block bg-canvas-soft border border-hairline rounded-lg p-5 sm:p-6 hover:border-hairline-strong transition-colors">
           <div class="flex items-center justify-between gap-3">
-            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">Semifinal · Upcoming</span>
+            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">{nextMatchStage} · Upcoming</span>
             <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">Discuss →</span>
           </div>
           <div class="mt-7 grid grid-cols-[1fr_auto_1fr] gap-3 items-center">

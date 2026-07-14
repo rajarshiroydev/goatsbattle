@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { listComments, postComment, deleteComment, type CommentSubject } from '../../lib/commentService';
 import { rateLimit } from '../../lib/ratelimit';
+import { getClientIp, hashIp } from '../../lib/ip';
 import {
   commentBodySchema,
   deleteCommentBodySchema,
@@ -27,7 +28,7 @@ const resolveSubject = (battle: string | null, match: string | null): CommentSub
 };
 
 /** GET ?battle=slug | ?match=id → flat list of the subject's comments (public read). */
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
   const battle = url.searchParams.get('battle');
   const match = url.searchParams.get('match');
   if ((battle && !slugSchema.safeParse(battle).success) || (match && !slugSchema.safeParse(match).success)) {
@@ -35,6 +36,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
   const subject = resolveSubject(battle, match);
   if (!subject) return json({ error: 'exactly one of battle/match query param required' }, 400);
+
+  const rl = await rateLimit(`comments:read:${hashIp(getClientIp(request.headers))}`, { max: 120 });
+  if (!rl.ok) {
+    return json({ error: 'Too many requests.' }, 429, { 'Retry-After': String(rl.retryAfter) });
+  }
 
   const list = await listComments(subject, locals.user?.id ?? null);
   return json({ comments: list });

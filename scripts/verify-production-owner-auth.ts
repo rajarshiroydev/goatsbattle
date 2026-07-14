@@ -5,12 +5,15 @@ import {
   exitOnDatabaseError,
 } from './lib/database-safety';
 
-const EXPECTED_OWNER_EMAIL = 'roystark24@gmail.com';
+const EXPECTED_OWNER_EMAIL = process.env.EXPECTED_OWNER_EMAIL;
 
 async function main() {
   const target = getRequestedTarget();
   if (target !== 'production') {
     throw new Error('This verifier is restricted to the production database.');
+  }
+  if (!EXPECTED_OWNER_EMAIL) {
+    throw new Error('EXPECTED_OWNER_EMAIL is not set for the production owner verifier.');
   }
 
   await assertDatabaseTarget(target, 'verify production owner authentication');
@@ -47,7 +50,7 @@ async function main() {
   `;
 
   if (users.length !== 1 || users[0]?.email !== EXPECTED_OWNER_EMAIL) {
-    throw new Error(`Expected exactly one production owner user (${EXPECTED_OWNER_EMAIL}).`);
+    throw new Error('Expected exactly one configured production owner user.');
   }
   if (users[0].emailVerified !== true) {
     throw new Error('The production owner email is not verified.');
@@ -75,7 +78,7 @@ async function main() {
 
   console.log('Verified production owner authentication:');
   console.log(JSON.stringify({
-    email: users[0].email,
+    email: users[0].email.replace(/(^.).*(@.*$)/, '$1***$2'),
     emailVerified: users[0].emailVerified,
     linkedProvider: accounts[0].providerId,
     users: users.length,

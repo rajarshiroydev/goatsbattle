@@ -33,6 +33,7 @@ export interface StatsApiClientOptions {
 async function boundedJson(response: Response): Promise<unknown> {
   const declaredLength = Number(response.headers.get('content-length') ?? 0);
   if (declaredLength > MAX_RESPONSE_BYTES) {
+    await response.body?.cancel('declared length exceeds limit');
     throw new Error(`TheStatsAPI response exceeds ${MAX_RESPONSE_BYTES} bytes.`);
   }
   if (!response.body) throw new Error('TheStatsAPI response has no body.');

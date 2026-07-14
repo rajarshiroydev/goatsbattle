@@ -31,7 +31,7 @@ not ceremony.
 
 ### 1. Verify locally
 Prove the change works before asking Codex to spend time on it.
-- Run `npx tsc --noEmit 2>&1`. **Capture `2>&1`** — `tsc` writes diagnostics to *stdout*,
+- Run `./node_modules/.bin/tsc --noEmit 2>&1`. **Capture `2>&1`** — `tsc` writes diagnostics to *stdout*,
   not stderr, so stderr-only checks make real errors look like a clean pass.
 - If the change is observable in the browser preview, drive the affected flow (dev server
   on port 4321 via `.claude/launch.json`) and confirm it — don't ask the user to check.
@@ -52,7 +52,7 @@ for them to bring back Codex's output.
 - Default to the adversarial review (it challenges the approach/assumptions, not just
   defects), backgrounded for anything beyond ~1–2 files:
 
-  ```
+  ```text
   /codex:adversarial-review --background
   ```
 

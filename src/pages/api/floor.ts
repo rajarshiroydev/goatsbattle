@@ -11,7 +11,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
   if (filter !== 'mygoats') {
     return Response.json({ error: 'Only the mygoats filter is dynamic' }, { status: 400 });
   }
-  if (!locals.user) return Response.json({ events: [] });
+  if (!locals.user) {
+    return Response.json({ events: [] }, {
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
+  }
   const events = await getFloorEvents({ filter, userId: locals.user.id, limit: 40 });
   return Response.json({ events }, {
     headers: { 'Cache-Control': 'private, no-store' },

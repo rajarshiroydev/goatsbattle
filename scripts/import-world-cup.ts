@@ -63,18 +63,36 @@ async function main() {
       provider: sql`excluded.provider`,
       providerFixtureId: sql`excluded.provider_fixture_id`,
       tournamentStage: sql`excluded.tournament_stage`,
-      sourceStatus: sql`excluded.source_status`,
-      lastSyncedAt: sql`excluded.last_synced_at`,
+      sourceStatus: sql`CASE
+        WHEN excluded.last_synced_at IS NULL AND ${matches.lastSyncedAt} IS NOT NULL
+          THEN ${matches.sourceStatus}
+        ELSE excluded.source_status END`,
+      lastSyncedAt: sql`COALESCE(excluded.last_synced_at, ${matches.lastSyncedAt})`,
       arena: sql`excluded.arena`,
       competition: sql`excluded.competition`,
-      homeTeam: sql`excluded.home_team`,
-      awayTeam: sql`excluded.away_team`,
+      homeTeam: sql`CASE
+        WHEN excluded.last_synced_at IS NULL AND ${matches.lastSyncedAt} IS NOT NULL
+          THEN ${matches.homeTeam}
+        ELSE excluded.home_team END`,
+      awayTeam: sql`CASE
+        WHEN excluded.last_synced_at IS NULL AND ${matches.lastSyncedAt} IS NOT NULL
+          THEN ${matches.awayTeam}
+        ELSE excluded.away_team END`,
       homeCode: sql`excluded.home_code`,
       awayCode: sql`excluded.away_code`,
-      homeScore: sql`excluded.home_score`,
-      awayScore: sql`excluded.away_score`,
+      homeScore: sql`CASE
+        WHEN excluded.last_synced_at IS NULL AND ${matches.lastSyncedAt} IS NOT NULL
+          THEN ${matches.homeScore}
+        ELSE excluded.home_score END`,
+      awayScore: sql`CASE
+        WHEN excluded.last_synced_at IS NULL AND ${matches.lastSyncedAt} IS NOT NULL
+          THEN ${matches.awayScore}
+        ELSE excluded.away_score END`,
       kickoff: sql`excluded.kickoff`,
-      status: sql`excluded.status`,
+      status: sql`CASE
+        WHEN excluded.last_synced_at IS NULL AND ${matches.lastSyncedAt} IS NOT NULL
+          THEN ${matches.status}
+        ELSE excluded.status END`,
       venue: sql`excluded.venue`,
     },
   });

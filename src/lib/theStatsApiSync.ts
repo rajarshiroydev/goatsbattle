@@ -167,7 +167,7 @@ async function updateScore(
   const nextStatus = appStatus(match.status);
   assertSafeStatusTransition(source.status, nextStatus);
   const score = displayScore(match.score);
-  await query`
+  const updated = await query`
     UPDATE matches
     SET home_team = ${displayProviderTeamName(match.homeTeam.name, source.homeTeam)},
         away_team = ${displayProviderTeamName(match.awayTeam.name, source.awayTeam)},
@@ -179,7 +179,13 @@ async function updateScore(
         source_status = 'fresh',
         last_synced_at = ${now}
     WHERE id = ${source.matchId}
+      AND status = ${source.status}
+      AND (last_synced_at IS NULL OR last_synced_at <= ${now})
+    RETURNING id
   `;
+  if (updated.length === 0) {
+    throw new Error(`Concurrent score refresh superseded ${source.matchId}.`);
+  }
   await query`
     UPDATE match_sources
     SET last_attempt_at = ${now}, last_success_at = ${now}, status = 'active', updated_at = ${now}
@@ -267,15 +273,8 @@ async function persistTimelineSnapshot(
   now: Date,
 ) {
   const snapshotHash = await hashNormalizedValue(timeline.events);
-  const [previous] = await query.query(
-    `SELECT snapshot_hash AS "snapshotHash", consecutive_identical AS "consecutiveIdentical"
-     FROM match_timeline_state WHERE match_id = $1`,
-    [source.matchId],
-  ) as Array<{ snapshotHash: string | null; consecutiveIdentical: number }>;
-  const unchanged = previous?.snapshotHash === snapshotHash;
-  const consecutiveIdentical = unchanged ? Number(previous.consecutiveIdentical) + 1 : 1;
   const providerUpdatedAt = isoOrNull(timeline.lastUpdated);
-  await query.query(
+  const [state] = await query.query(
     `INSERT INTO match_timeline_snapshots (
        match_id, provider, snapshot_hash, coverage, event_count, events,
        provider_updated_at, fetched_at
@@ -289,7 +288,7 @@ async function persistTimelineSnapshot(
        match_id, provider, provider_match_id, mode, coverage, snapshot_hash,
        snapshot_version, events, provider_updated_at, fetched_at, last_success_at,
        last_final_check_at, consecutive_identical, last_error_code, updated_at
-     ) VALUES ($1, $2, $3, $4, $5, $6, 1, $7::jsonb, $8, $9, $9, $10, $11, NULL, $9)
+     ) VALUES ($1, $2, $3, $4, $5, $6, 1, $7::jsonb, $8, $9, $9, $10, 1, NULL, $9)
      ON CONFLICT (match_id) DO UPDATE SET
        provider = excluded.provider,
        provider_match_id = excluded.provider_match_id,
@@ -305,14 +304,30 @@ async function persistTimelineSnapshot(
        fetched_at = excluded.fetched_at,
        last_success_at = excluded.last_success_at,
        last_final_check_at = excluded.last_final_check_at,
-       consecutive_identical = excluded.consecutive_identical,
+       consecutive_identical = CASE
+         WHEN match_timeline_state.snapshot_hash = excluded.snapshot_hash
+           THEN match_timeline_state.consecutive_identical + 1
+         ELSE 1 END,
        last_error_code = NULL,
-       updated_at = excluded.updated_at`,
+       updated_at = excluded.updated_at
+     WHERE match_timeline_state.fetched_at IS NULL
+        OR match_timeline_state.fetched_at < excluded.fetched_at
+     RETURNING snapshot_hash AS "snapshotHash",
+               consecutive_identical AS "consecutiveIdentical"`,
     [source.matchId, THE_STATS_API_PROVIDER, source.providerMatchId, mode,
       timeline.coverage, snapshotHash, JSON.stringify(timeline.events), providerUpdatedAt,
-      now, mode === 'finalizing' ? now : null, consecutiveIdentical],
-  );
-  return { snapshotHash, unchanged, consecutiveIdentical };
+      now, mode === 'finalizing' ? now : null],
+  ) as Array<{ snapshotHash: string; consecutiveIdentical: number }>;
+  if (!state) {
+    return { accepted: false, snapshotHash, unchanged: false, consecutiveIdentical: 0 };
+  }
+  const consecutiveIdentical = Number(state.consecutiveIdentical);
+  return {
+    accepted: true,
+    snapshotHash: state.snapshotHash,
+    unchanged: consecutiveIdentical > 1,
+    consecutiveIdentical,
+  };
 }
 
 function normalizeMoment(
@@ -500,11 +515,12 @@ async function syncOneSource(
 
   if (source.status === 'live') {
     const timeline = await providerCall(query, now, () => fetchStatsApiTimeline(source.providerMatchId, true, options));
-    await persistTimelineSnapshot(query, source, timeline, 'shadow', now);
-    snapshots += 1;
+    const snapshot = await persistTimelineSnapshot(query, source, timeline, 'shadow', now);
+    if (snapshot.accepted) snapshots += 1;
   } else if (source.status === 'finished' && await shouldFetchFinalTimeline(query, source.matchId, now)) {
     const timeline = await providerCall(query, now, () => fetchStatsApiTimeline(source.providerMatchId, false, options));
     const snapshot = await persistTimelineSnapshot(query, source, timeline, 'finalizing', now);
+    if (!snapshot.accepted) return { lineupAccepted, lineupRejected, snapshots, finalized };
     snapshots += 1;
     const oldEnough = now.getTime() - source.kickoff.getTime() >= IMMEDIATE_BACKFILL_AGE_MS;
     const stable = snapshot.consecutiveIdentical >= 2

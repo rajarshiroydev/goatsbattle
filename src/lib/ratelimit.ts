@@ -17,6 +17,12 @@ export interface RateLimitOptions {
   windowSeconds?: number;
 }
 
+interface BetterAuthRateLimitValue {
+  key: string;
+  count: number;
+  lastRequest: number;
+}
+
 /**
  * Shared fixed-window limiter backed by PostgreSQL. The upsert is a single
  * atomic statement, so all serverless instances observe the same counter.
@@ -72,3 +78,46 @@ export async function rateLimit(
     retryAfter: hits <= max ? 0 : retryAfter,
   };
 }
+
+const authKey = (key: string) => `auth:${key}`;
+
+/** Better Auth adapter over the same shared atomic limiter used by app routes. */
+export const betterAuthRateLimitStorage = {
+  async get(key: string): Promise<BetterAuthRateLimitValue | null> {
+    const result = await db.execute(sql`
+      SELECT hits, window_start AS "windowStart"
+      FROM rate_limits
+      WHERE key = ${authKey(key)}
+    `);
+    const row = (result as unknown as {
+      rows: Array<{ hits: number; windowStart: Date }>;
+    }).rows[0];
+    if (!row) return null;
+    return {
+      key,
+      count: Number(row.hits),
+      lastRequest: new Date(row.windowStart).getTime(),
+    };
+  },
+
+  async set(key: string, value: BetterAuthRateLimitValue): Promise<void> {
+    await db.execute(sql`
+      INSERT INTO rate_limits (key, window_start, hits)
+      VALUES (${authKey(key)}, ${new Date(value.lastRequest)}, ${value.count})
+      ON CONFLICT (key) DO UPDATE
+      SET window_start = excluded.window_start,
+          hits = excluded.hits
+    `);
+  },
+
+  async consume(key: string, rule: { window: number; max: number }) {
+    const result = await rateLimit(authKey(key), {
+      max: rule.max,
+      windowSeconds: rule.window,
+    });
+    return {
+      allowed: result.ok,
+      retryAfter: result.ok ? null : result.retryAfter,
+    };
+  },
+};

@@ -17,9 +17,12 @@ if printf '%s' "$input" | grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*tr
   exit 0
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+if ! cd "${CLAUDE_PROJECT_DIR:-.}"; then
+  echo "Unable to enter CLAUDE_PROJECT_DIR for typechecking." >&2
+  exit 2
+fi
 
-if output=$(npx tsc --noEmit 2>&1); then
+if output=$(./node_modules/.bin/tsc --noEmit 2>&1); then
   # Clean — allow the stop with no feedback.
   exit 0
 fi

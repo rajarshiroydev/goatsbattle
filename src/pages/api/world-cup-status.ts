@@ -2,17 +2,15 @@ import type { APIRoute } from 'astro';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../lib/db';
 import { entities, matches, matchGoats } from '../../lib/db/schema';
+import { worldCup2026Fixtures } from '../../data/worldCup2026';
 
 export const prerender = false;
 
 export const GET: APIRoute = async () => {
   const now = Date.now();
-  const featuredIds = [
-    'world-cup-2026-match-101',
-    'world-cup-2026-match-102',
-    'world-cup-2026-match-103',
-    'world-cup-2026-match-104',
-  ];
+  const featuredIds = worldCup2026Fixtures
+    .filter((fixture) => fixture.matchNumber >= 101)
+    .map((fixture) => fixture.id);
   const rows = await db
     .select({
       id: matches.id,

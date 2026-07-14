@@ -4,6 +4,7 @@ import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { user, session, account, verification } from './db/schema';
+import { betterAuthRateLimitStorage } from './ratelimit';
 
 const secret = env.BETTER_AUTH_SECRET;
 const baseURL = env.BETTER_AUTH_URL;
@@ -32,7 +33,7 @@ async function generateUsername(name: string, email: string): Promise<string> {
       .slice(0, 20) || 'goat';
 
   for (let i = 0; i < 5; i++) {
-    const candidate = `${base}-${crypto.randomUUID().replaceAll('-', '').slice(0, 4)}`;
+    const candidate = `${base}-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`;
     const [taken] = await db.select({ id: user.id }).from(user).where(eq(user.username, candidate)).limit(1);
     if (!taken) return candidate;
   }
@@ -82,6 +83,7 @@ export const auth = betterAuth({
   },
   rateLimit: {
     enabled: true,
+    customStorage: betterAuthRateLimitStorage,
     window: 60,
     max: 100,
     customRules: {

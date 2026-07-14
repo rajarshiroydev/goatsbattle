@@ -35,7 +35,19 @@ async function main() {
     DELETE FROM match_timeline_snapshots
     WHERE match_id = 'world-cup-2026-match-100' AND provider = ${THE_STATS_API_PROVIDER}
   `;
-  console.log(`✓ Removed and verified ${removed.length} uncited invalid canary moments.`);
+  const [timelineState] = await query`
+    SELECT
+      (SELECT count(*)::int FROM match_timeline_state
+       WHERE match_id = 'world-cup-2026-match-100'
+         AND provider = ${THE_STATS_API_PROVIDER}) AS state,
+      (SELECT count(*)::int FROM match_timeline_snapshots
+       WHERE match_id = 'world-cup-2026-match-100'
+         AND provider = ${THE_STATS_API_PROVIDER}) AS snapshots
+  `;
+  if (Number(timelineState.state) !== 0 || Number(timelineState.snapshots) !== 0) {
+    throw new Error('Invalid TheStatsAPI canary timeline rows remain after cleanup.');
+  }
+  console.log(`✓ Removed and verified ${removed.length} uncited invalid canary moments and timeline rows.`);
 }
 
 runDatabaseOperation({

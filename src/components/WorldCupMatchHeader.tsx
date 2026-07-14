@@ -9,17 +9,25 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
+    let active = true;
     const refresh = () => fetch('/api/world-cup-status')
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data: StatusResponse) => {
+        if (!active) return;
         const update = data.matches.find((item) => item.id === initial.id);
         if (update) setMatch((current) => ({ ...current, ...update }));
       })
       .catch(() => undefined);
     refresh();
     const poll = window.setInterval(refresh, 120_000);
-    const clock = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => { window.clearInterval(poll); window.clearInterval(clock); };
+    const clock = window.setInterval(() => {
+      if (active) setNow(Date.now());
+    }, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(poll);
+      window.clearInterval(clock);
+    };
   }, [initial.id]);
 
   const hasScore = match.homeScore !== null && match.awayScore !== null;

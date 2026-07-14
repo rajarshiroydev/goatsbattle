@@ -526,7 +526,7 @@ The web product should prioritize:
 - Read access before account creation
 - Login only when a user votes, comments, follows, or personalizes
 
-Mobile apps should follow after the product proves:
+Mobile apps should follow once the product proves:
 
 - Repeat usage
 - Notification value

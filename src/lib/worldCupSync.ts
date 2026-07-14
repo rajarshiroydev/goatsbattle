@@ -85,19 +85,23 @@ export async function refreshWorldCupScores(options: {
   }
   const existingByProviderId = new Map(existingRows.map((row) => [row.providerFixtureId, row]));
 
-  const updates: Array<{ fixtureId: string; game: WorldCupCommunityMatch }> = [];
+  const updates: Array<{
+    fixtureId: string;
+    expectedStatus: WorldCupMatchStatus;
+    game: WorldCupCommunityMatch;
+  }> = [];
   for (const fixture of targetFixtures) {
     const game = providerByNumber.get(fixture.matchNumber);
     const existing = existingByProviderId.get(fixture.providerFixtureId);
     if (!game || !existing) throw new Error(`Missing validated state for match ${fixture.matchNumber}.`);
     assertSafeStatusTransition(existing.status, game.status);
-    updates.push({ fixtureId: fixture.providerFixtureId, game });
+    updates.push({ fixtureId: fixture.providerFixtureId, expectedStatus: existing.status, game });
   }
 
   // All transitions are validated before the first write. Each update preserves
   // canonical kickoff/venue and touches score/status/team identity only.
-  for (const { fixtureId, game } of updates) {
-    await query`
+  for (const { fixtureId, expectedStatus, game } of updates) {
+    const updated = await query`
       UPDATE matches
       SET home_team = COALESCE(${game.homeTeam}, home_team),
           away_team = COALESCE(${game.awayTeam}, away_team),
@@ -108,7 +112,13 @@ export async function refreshWorldCupScores(options: {
           last_synced_at = ${options.now}
       WHERE provider = 'worldcup26-community'
         AND provider_fixture_id = ${fixtureId}
+        AND status = ${expectedStatus}
+        AND (last_synced_at IS NULL OR last_synced_at <= ${options.now})
+      RETURNING id
     `;
+    if (updated.length === 0) {
+      throw new Error(`Concurrent score refresh superseded ${fixtureId}.`);
+    }
   }
 
   return { outcome: 'updated', checked: providerGames.length, updated: updates.length };
