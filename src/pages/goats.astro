@@ -4,12 +4,9 @@ import PageHero from '../components/PageHero.astro';
 import GoatGrid from '../components/GoatGrid.tsx';
 import type { GoatCardData, GridArena } from '../components/GoatGrid.tsx';
 import { arenas } from '../data/arenas';
-import { getAllGoatsRanked } from '../lib/queries';
+import { getStaticRankings } from '../lib/staticCatalog';
 
-// Live directory — ordered by ranking votes.
-export const prerender = false;
-
-const ranked = await getAllGoatsRanked();
+const ranked = getStaticRankings();
 
 const goats: GoatCardData[] = ranked.map((r) => {
   const top = r.entity.achievements[0];

@@ -1,69 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import SectionHeader from '../components/SectionHeader.astro';
-import EventRow from '../components/EventRow.astro';
-import { getFloorEvents, getLiveEventCount } from '../lib/queries';
-import { FLOOR_FILTERS, parseFloorFilter } from '../lib/floor';
+import FloorFeed from '../components/FloorFeed.tsx';
+import type { FloorFeedEvent } from '../components/FloorFeed.tsx';
+import { archiveMatches } from '../data/archiveMatches';
+import { worldCupEvents } from '../data/worldCupCatalog';
 
-// Live feed — read events on every request.
-export const prerender = false;
-
-// The Floor lists football matches a GOAT played in; each opens Reddit-style
-// into a focused debate. Filters: Top (most discussed), Recents (newest),
-// Live (in progress), My Goats (events with the goats you back).
-const filter = parseFloorFilter(Astro.url.searchParams.get('filter'));
-const EVENT_LIMIT = 40;
-const [events, liveCount] = await Promise.all([
-  getFloorEvents({ filter, userId: Astro.locals.user?.id ?? null, limit: EVENT_LIMIT }),
-  getLiveEventCount(),
-]);
-const chips = FLOOR_FILTERS.map((f) => ({
-  ...f,
-  href: `/floor?filter=${f.key}`,
-  active: f.key === filter,
+const events: FloorFeedEvent[] = [...worldCupEvents, ...archiveMatches].map((event) => ({
+  ...event,
+  kickoff: event.kickoff.toISOString(),
 }));
 
 const title = 'The Floor — Match Debates | GOATSBattle';
 const description = 'The floor is open. Every match a GOAT played in, one debate at a time — follow the moment-by-moment timeline, back your GOAT, settle the greatness argument.';
 
-// Empty-state copy depends on why the list is empty.
-const emptyMsg =
-  filter === 'mygoats' && !Astro.locals.user
-    ? { head: 'Log in to see your goats', body: 'Sign in and we’ll surface the matches your GOATs played in.', cta: 'Log in', href: '/login' }
-    : filter === 'mygoats'
-      ? { head: 'No matches yet', body: 'Back a GOAT by voting, and their matches show up here.', cta: 'Find your GOAT', href: '/goats' }
-      : filter === 'live'
-        ? { head: 'Nothing live right now', body: 'No matches are in progress. Check the top debates instead.', cta: 'Top debates', href: '/floor?filter=top' }
-        : { head: 'The floor is open', body: 'No matches on the floor yet — check back soon.', cta: 'Browse goats', href: '/goats' };
 ---
 
 <Layout title={title} description={description}>
-
-  <SectionHeader title="The Floor" live={liveCount > 0} stat={liveCount > 0 ? `${liveCount} live now` : `${events.length} matches on the floor`}>
-    <div slot="chips">
-      {chips.map((c) => (
-        <a href={c.href} class:list={['chip', c.active && 'chip-active']} title={c.hint}>{c.label}</a>
-      ))}
-    </div>
-  </SectionHeader>
-
-  <section class="pt-[18px] pb-10">
-    <div class="page-container flex flex-col gap-2.5">
-      {events.length > 0 ? (
-        <>
-          {events.map((event) => <EventRow event={event} />)}
-          <span class="self-center mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute">
-            {events.length < EVENT_LIMIT ? "That's every match so far" : `Showing ${EVENT_LIMIT} matches`}
-          </span>
-        </>
-      ) : (
-        <div class="bg-canvas-soft border border-hairline rounded-md px-6 py-12 text-center">
-          <p class="font-headline font-black uppercase text-2xl text-ink">{emptyMsg.head}</p>
-          <p class="mt-2 font-sans text-body">{emptyMsg.body}</p>
-          <a href={emptyMsg.href} class="btn btn-primary text-sm px-6 py-2.5 mt-5">{emptyMsg.cta}</a>
-        </div>
-      )}
-    </div>
-  </section>
-
+  <FloorFeed client:load events={events} />
 </Layout>

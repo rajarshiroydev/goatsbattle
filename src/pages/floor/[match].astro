@@ -1,47 +1,95 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import MatchHeader from '../../components/MatchHeader.astro';
-import MatchTimeline from '../../components/MatchTimeline.astro';
+import WorldCupMatchHeader from '../../components/WorldCupMatchHeader.tsx';
+import type { WorldCupHubMatch } from '../../components/WorldCupHub';
+import MatchTimelineLive from '../../components/MatchTimelineLive.tsx';
 import CommentThread from '../../components/CommentThread.tsx';
-import { getMatchById, getMatchMoments } from '../../lib/queries';
+import ShareButton from '../../components/ShareButton.tsx';
 import { taggableGoatsForArena } from '../../lib/statTags';
+import { archiveMatches, getArchiveMatch } from '../../data/archiveMatches';
+import { getWorldCupEvent, worldCupEvents } from '../../data/worldCupCatalog';
+import { worldCup2026Fixtures } from '../../data/worldCup2026';
 
-// Match data is dynamic (DB), so render on request.
-export const prerender = false;
+export function getStaticPaths() {
+  return [...worldCupEvents, ...archiveMatches].map((event) => ({ params: { match: event.id } }));
+}
 
 const { match } = Astro.params;
-const event = match ? await getMatchById(match) : null;
+const worldCupEvent = getWorldCupEvent(match);
+const event = worldCupEvent ?? getArchiveMatch(match);
 if (!event) return Astro.redirect('/floor');
+const worldCupFixture = worldCupEvent
+  ? worldCup2026Fixtures.find((fixture) => fixture.id === worldCupEvent.id)
+  : undefined;
+const liveHeader: WorldCupHubMatch | undefined = worldCupFixture
+  ? { ...worldCupFixture, kickoff: worldCupFixture.kickoff }
+  : undefined;
+const promptSets: Readonly<Record<number, readonly string[]>> = {
+  101: [
+    'Who reaches the final, and what is the strongest reason for your prediction?',
+    'Which France–Spain matchup will decide the semifinal?',
+    'What tactical change or controversy could become the turning point?',
+  ],
+  102: [
+    'Who reaches the final, and where does the match swing?',
+    'Which England–Argentina matchup matters most?',
+    'Name the player most likely to decide this semifinal—and explain why.',
+  ],
+  103: [
+    'Who responds better to semifinal disappointment?',
+    'Which matchup will decide the bronze medal?',
+    'Who should finish the tournament as player of this match?',
+  ],
+  104: [
+    'Who wins the World Cup, and what is your strongest reason?',
+    'Which individual matchup will define the final?',
+    'Who will be player of the match—and what must they do to earn it?',
+  ],
+};
+const prompts = worldCupFixture ? [...(promptSets[worldCupFixture.matchNumber] ?? [])] : [];
 
-const moments = await getMatchMoments(event.id);
 // Stats you can cite in the debate — every football goat, this match's first.
 const taggableGoats = taggableGoatsForArena('football', event.goats.map((g) => g.slug));
 
 const title = `${event.homeTeam} vs ${event.awayTeam} — The Floor | GOATSBattle`;
-const description = `${event.competition}. Join the debate on ${event.homeTeam} vs ${event.awayTeam} — follow the match timeline, back your GOAT, settle it on The Floor.`;
+const description = `${event.competition}. Join the debate on ${event.homeTeam} vs ${event.awayTeam}, make your case, and settle it on The Floor.`;
+const image = worldCupFixture?.matchNumber && worldCupFixture.matchNumber >= 101
+  ? `/og/match/${worldCupFixture.id}.png`
+  : undefined;
 ---
 
-<Layout title={title} description={description}>
+<Layout title={title} description={description} image={image}>
   <section class="pt-6 pb-12">
     <div class="page-container">
 
-      <a href="/floor" class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute hover:text-ink transition-colors mb-4">
-        ← The Floor
+      <a href={worldCupEvent ? '/world-cup' : '/floor'} class="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-mute hover:text-ink transition-colors mb-4">
+        ← {worldCupEvent ? 'World Cup' : 'The Floor'}
       </a>
 
-      <MatchHeader event={event} />
+      {liveHeader ? <WorldCupMatchHeader client:load initial={liveHeader} /> : <MatchHeader event={event} />}
+      <div class="mt-3 flex justify-end">
+        <ShareButton client:load title={`${event.homeTeam} vs ${event.awayTeam} — GOATSBattle`} text={`Join the ${event.homeTeam} vs ${event.awayTeam} discussion on The Floor.`} />
+      </div>
 
       <div class="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
 
         {/* Discussion (main column) */}
         <div class="order-2 lg:order-1 min-w-0">
           <h2 class="font-headline font-black uppercase text-ink text-2xl mb-3">The Debate</h2>
-          <CommentThread client:visible matchId={event.id} taggableGoats={taggableGoats} />
+          <CommentThread client:visible matchId={event.id} taggableGoats={taggableGoats} prompts={prompts} />
         </div>
 
         {/* Side panel — timeline + context (stacks above the thread on mobile) */}
         <aside class="order-1 lg:order-2 lg:sticky lg:top-[76px] flex flex-col gap-4">
-          <MatchTimeline moments={moments} homeTeam={event.homeTeam} awayTeam={event.awayTeam} />
+          {worldCupEvent && worldCupFixture?.status !== 'finished' && (
+            <div class="bg-canvas-soft border border-hairline rounded-lg p-5">
+              <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-lime">Launch coverage</p>
+              <h2 class="mt-2 font-headline font-black uppercase text-xl text-ink">Score + status</h2>
+              <p class="mt-2 font-sans text-sm leading-relaxed text-body">The main thread stays open before, during, and after kickoff. Event timelines are added only after their source passes replay and shadow rehearsals.</p>
+            </div>
+          )}
+          <MatchTimelineLive client:visible matchId={event.id} homeTeam={event.homeTeam} awayTeam={event.awayTeam} />
         </aside>
 
       </div>

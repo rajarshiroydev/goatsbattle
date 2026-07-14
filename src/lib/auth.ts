@@ -1,22 +1,19 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { user, session, account, verification } from './db/schema';
 
-// Same env pattern as db/index.ts: process.env (Vercel/tsx) first, falling back
-// to Vite's static import.meta.env replacement in the dev SSR runtime. Each key
-// is referenced literally — no dynamic bracket access or `?.`, which would
-// defeat Vite's compile-time substitution. auth.ts is server-only (middleware +
-// /api routes), so these secrets never reach the client bundle.
-const secret = process.env.BETTER_AUTH_SECRET ?? import.meta.env.BETTER_AUTH_SECRET;
-const baseURL = process.env.BETTER_AUTH_URL ?? import.meta.env.BETTER_AUTH_URL;
-const googleClientId = process.env.GOOGLE_CLIENT_ID ?? import.meta.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? import.meta.env.GOOGLE_CLIENT_SECRET;
+const secret = env.BETTER_AUTH_SECRET;
+const baseURL = env.BETTER_AUTH_URL;
+const googleClientId = env.GOOGLE_CLIENT_ID;
+const googleClientSecret = env.GOOGLE_CLIENT_SECRET;
+const googleConfigured = Boolean(googleClientId && googleClientSecret);
 
 // Only wire Google when both creds exist so local dev works without them.
 const socialProviders =
-  googleClientId && googleClientSecret
+  googleConfigured
     ? { google: { clientId: googleClientId, clientSecret: googleClientSecret } }
     : {};
 
@@ -35,12 +32,12 @@ async function generateUsername(name: string, email: string): Promise<string> {
       .slice(0, 20) || 'goat';
 
   for (let i = 0; i < 5; i++) {
-    const candidate = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+    const candidate = `${base}-${crypto.randomUUID().replaceAll('-', '').slice(0, 4)}`;
     const [taken] = await db.select({ id: user.id }).from(user).where(eq(user.username, candidate)).limit(1);
     if (!taken) return candidate;
   }
   // Extremely unlikely: fall back to a much larger suffix.
-  return `${base}-${Math.random().toString(36).slice(2, 12)}`;
+  return `${base}-${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`;
 }
 
 export const auth = betterAuth({
@@ -55,6 +52,17 @@ export const auth = betterAuth({
   // Derive from the deployment origin (baseURL) so it never diverges from env;
   // localhost is always allowed for local dev.
   trustedOrigins: Array.from(new Set([baseURL, 'http://localhost:4321'].filter(Boolean))) as string[],
+  account: {
+    // Google is the only deployed identity provider. Implicit linking is still
+    // restricted to the exact same email, and Better Auth's local-email
+    // verification gate remains enabled to prevent pre-registration takeover.
+    encryptOAuthTokens: true,
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google'],
+      allowDifferentEmails: false,
+    },
+  },
   session: {
     // Validate the session from a short-lived signed cookie instead of hitting
     // the DB on every request. The middleware runs getSession on EVERY request
@@ -64,8 +72,30 @@ export const auth = betterAuth({
     // maxAge keeps revocation reasonably fresh; logout clears the cookie locally.
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
-  emailAndPassword: {
+  advanced: {
+    ipAddress: {
+      // Cloudflare overwrites this header at the edge. Using it avoids the
+      // spoofable X-Forwarded-For fallback and gives the auth limiter the real
+      // viewer IP on Workers.
+      ipAddressHeaders: ['cf-connecting-ip'],
+    },
+  },
+  rateLimit: {
     enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      // OAuth initiation is intentionally low-frequency. Keep automated
+      // traffic from turning its crypto/state work into a Free-plan CPU risk.
+      '/sign-in/social': { window: 60, max: 10 },
+    },
+  },
+  emailAndPassword: {
+    // Password hashing measured 155–179 ms of actual Worker CPU. When Google
+    // is configured, keep the deployed auth surface OAuth-only so those public
+    // endpoints cannot be abused into repeated Free-plan CPU overruns. Local
+    // development without Google retains email/password for convenience.
+    enabled: !googleConfigured,
     minPasswordLength: 10,
     maxPasswordLength: 128,
   },

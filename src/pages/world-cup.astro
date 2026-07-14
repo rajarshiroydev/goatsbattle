@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+import WorldCupHub from '../components/WorldCupHub.tsx';
+import type { WorldCupHubMatch } from '../components/WorldCupHub';
+import { worldCup2026Fixtures } from '../data/worldCup2026';
+
+const fixtures: WorldCupHubMatch[] = worldCup2026Fixtures.map((fixture) => ({
+  ...fixture,
+  kickoff: fixture.kickoff,
+}));
+---
+
+<Layout
+  title="World Cup 2026 Match Discussions | GOATSBattle"
+  description="All 104 FIFA World Cup 2026 match discussions, live scores, results, and the four remaining match threads."
+>
+  <WorldCupHub client:load fixtures={fixtures} />
+</Layout>

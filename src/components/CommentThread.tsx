@@ -30,7 +30,13 @@ interface CommentNode {
   author: { username: string | null; name: string; image: string | null };
   viewerUpvoted: boolean;
   fanTag: FanTag | null;
-  moment: { id: number; minute: number; extra: number | null; type: string } | null;
+  moment: {
+    id: number;
+    minute: number;
+    extra: number | null;
+    type: string;
+    verificationStatus: 'confirmed' | 'retracted' | 'superseded';
+  } | null;
   statTags: StatTag[];
 }
 
@@ -44,6 +50,8 @@ type Props = SubjectProps & {
   accentB?: string;
   /** Goats whose stats can be cited in this discussion (composer stat picker). */
   taggableGoats?: TaggableGoat[];
+  /** Editorial starting points that focus the existing main composer. */
+  prompts?: string[];
 };
 
 type SortMode = 'top' | 'new';
@@ -62,7 +70,7 @@ function momentLabel(m: { minute: number; extra: number | null; type: string }):
   return `${min} ${MOMENT_TYPE_LABEL[m.type] ?? m.type.replace(/_/g, ' ')}`;
 }
 
-export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635', taggableGoats }: Props) {
+export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635', taggableGoats, prompts = [] }: Props) {
   // The subject drives the API query param and POST body (battle XOR match).
   const subjectQuery = matchId ? `match=${encodeURIComponent(matchId)}` : `battle=${encodeURIComponent(battleId!)}`;
   const subjectBody: Record<string, string> = matchId ? { matchId } : { battleId: battleId! };
@@ -71,6 +79,8 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('top');
+  const [activePrompt, setActivePrompt] = useState<string | null>(null);
+  const [composerFocusSignal, setComposerFocusSignal] = useState(0);
   // The timeline moment the composer is currently anchored to (match pages only).
   const [activeMoment, setActiveMoment] = useState<{ id: number; label: string } | null>(null);
   // Guards against overlapping vote requests on the same comment, which would
@@ -220,8 +230,46 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
 
   const count = comments.filter((c) => !c.deleted).length;
 
+  function selectPrompt(prompt: string) {
+    setActivePrompt(prompt);
+    setComposerFocusSignal((signal) => signal + 1);
+    requestAnimationFrame(() => {
+      document.getElementById('match-comment-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
   return (
     <div>
+      {prompts.length > 0 && (
+        <section class="mb-7" aria-labelledby="match-prompts-heading">
+          <div class="flex flex-col items-start sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-3 mb-3">
+            <div>
+              <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-lime">Start here</p>
+              <h2 id="match-prompts-heading" class="mt-1 font-headline font-black uppercase text-xl text-ink">Pick your angle</h2>
+            </div>
+            <span class="font-sans text-xs text-mute">Your comment stays in the main thread</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {prompts.map((prompt, index) => (
+              <button
+                type="button"
+                key={prompt}
+                onClick={() => selectPrompt(prompt)}
+                aria-pressed={activePrompt === prompt}
+                class={`text-left rounded-md border px-3.5 py-3 transition-colors ${
+                  activePrompt === prompt
+                    ? 'border-lime bg-canvas-soft-2'
+                    : 'border-hairline bg-canvas-soft hover:border-hairline-strong'
+                }`}
+              >
+                <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">Prompt {index + 1}</span>
+                <span class="block mt-1.5 font-sans text-sm leading-snug text-ink">{prompt}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Header — count title with sort toggle sitting beside it */}
       <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-6">
         <div class="flex items-center gap-3 min-w-0">
@@ -251,6 +299,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
       </div>
 
       {/* Composer */}
+      <div id="match-comment-composer">
       {sessionLoading ? (
         // Hold a neutral placeholder until the session resolves so logged-in
         // users don't flash the "Log in to join" prompt.
@@ -260,6 +309,20 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
         </div>
       ) : user ? (
         <div>
+          {activePrompt && (
+            <div class="flex items-start gap-2 mb-2 bg-canvas-soft border border-lime/60 rounded-md px-3 py-2">
+              <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-lime shrink-0 pt-0.5">Selected</span>
+              <span class="flex-1 font-sans text-[13px] leading-snug text-body">{activePrompt}</span>
+              <button
+                type="button"
+                onClick={() => setActivePrompt(null)}
+                class="font-mono text-[11px] text-mute hover:text-ink transition-colors"
+                aria-label="Clear selected prompt"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {activeMoment && (
             <div class="flex items-center gap-2 mb-2 bg-canvas-soft border border-hairline rounded-md px-3 py-2">
               <span class="team-tag" style={{ '--tag': 'var(--color-lime)', '--tag-fg': '#0d0d0f' }}>⚑ {activeMoment.label}</span>
@@ -274,9 +337,10 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
             </div>
           )}
           <Composer
-            placeholder={activeMoment ? `Weigh in on ${activeMoment.label}…` : 'Add to the debate…'}
+            placeholder={activePrompt ?? (activeMoment ? `Weigh in on ${activeMoment.label}…` : 'Add to the debate…')}
             avatar={<Avatar src={user.image ?? null} name={user.username || user.name} />}
             goats={taggableGoats}
+            focusSignal={composerFocusSignal}
             onSubmit={async (body, statTags) => {
               const ok = await post(null, body, activeMoment?.id ?? null, statTags);
               if (ok && activeMoment) clearMoment();
@@ -295,6 +359,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
           </button>
         </div>
       )}
+      </div>
 
       {error && <p class="font-mono text-[13px] text-red mt-3">{error}</p>}
 
@@ -484,7 +549,7 @@ function CommentItem({
           </div>
 
           {/* Moment tag — links the comment to a point on the match timeline */}
-          {node.moment && (
+          {node.moment && node.moment.verificationStatus === 'confirmed' && (
             <button
               type="button"
               onClick={() =>
@@ -499,6 +564,11 @@ function CommentItem({
             >
               ⚑ {momentLabel(node.moment)}
             </button>
+          )}
+          {node.moment && node.moment.verificationStatus !== 'confirmed' && (
+            <span class="inline-flex items-center gap-1 mb-1.5 font-mono text-[11px] uppercase tracking-wider text-red">
+              Source corrected · {momentLabel(node.moment)}
+            </span>
           )}
 
           {/* Stat citations — definitive goat stats backing the argument */}
@@ -554,6 +624,9 @@ function CommentItem({
               >
                 Delete
               </button>
+            )}
+            {!isAuthor && !node.deleted && (
+              <ReportControl commentId={node.id} authenticated={!!viewerId} />
             )}
             {replyCount > 0 && (
               <button
@@ -634,6 +707,98 @@ function countDescendants(node: TreeNode): number {
   return node.children.reduce((sum, c) => sum + 1 + countDescendants(c), 0);
 }
 
+type ReportReason = 'spam' | 'harassment' | 'hate' | 'privacy' | 'misinformation' | 'other';
+
+function ReportControl({ commentId, authenticated }: { commentId: number; authenticated: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<ReportReason | ''>('');
+  const [details, setDetails] = useState('');
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function begin() {
+    if (!authenticated) {
+      openAuthModal({ reason: 'Log in to report a comment' });
+      return;
+    }
+    setOpen((value) => !value);
+    setMessage(null);
+  }
+
+  async function submit() {
+    if (!reason || pending) return;
+    setPending(true);
+    setMessage(null);
+    try {
+      const response = await fetch('/api/comment-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId, reason, ...(details.trim() ? { details: details.trim() } : {}) }),
+      });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? 'Could not submit report');
+      setMessage('Report submitted for review.');
+      setReason('');
+      setDetails('');
+      setOpen(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not submit report');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div class="relative">
+      <button
+        type="button"
+        onClick={begin}
+        class="font-mono text-[13px] text-mute hover:text-red transition-colors"
+        aria-expanded={open}
+      >
+        Report
+      </button>
+      {message && !open && <span class="ml-2 font-mono text-[11px] text-mute">{message}</span>}
+      {open && (
+        <div class="absolute right-0 top-7 z-20 w-[min(20rem,calc(100vw-3rem))] rounded-md border border-hairline bg-canvas-soft p-3 shadow-2xl">
+          <p class="font-headline font-black uppercase text-lg text-ink">Report comment</p>
+          <label class="block mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-mute" for={`report-reason-${commentId}`}>Reason</label>
+          <select
+            id={`report-reason-${commentId}`}
+            value={reason}
+            onChange={(event) => setReason((event.target as HTMLSelectElement).value as ReportReason | '')}
+            class="mt-1 w-full rounded-sm border border-hairline bg-canvas px-2 py-2 font-sans text-sm text-ink"
+          >
+            <option value="">Choose a reason…</option>
+            <option value="spam">Spam or manipulation</option>
+            <option value="harassment">Harassment or threats</option>
+            <option value="hate">Hateful conduct</option>
+            <option value="privacy">Privacy or personal information</option>
+            <option value="misinformation">Dangerous misinformation</option>
+            <option value="other">Other rule violation</option>
+          </select>
+          <label class="block mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-mute" for={`report-details-${commentId}`}>Details (optional)</label>
+          <textarea
+            id={`report-details-${commentId}`}
+            value={details}
+            maxLength={1000}
+            rows={3}
+            onInput={(event) => setDetails((event.target as HTMLTextAreaElement).value)}
+            class="mt-1 w-full resize-y rounded-sm border border-hairline bg-canvas px-2 py-2 font-sans text-sm text-ink"
+          />
+          {message && <p class="mt-2 font-mono text-[11px] text-red">{message}</p>}
+          <div class="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={() => setOpen(false)} class="btn btn-secondary text-xs px-3 py-2">Cancel</button>
+            <button type="button" onClick={submit} disabled={!reason || pending} class="btn btn-primary text-xs px-3 py-2 disabled:opacity-40">
+              {pending ? 'Submitting…' : 'Submit report'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Composer ─────────────────────────────────────────────────────────────────
 
 function Composer({
@@ -644,6 +809,7 @@ function Composer({
   compact = false,
   autoFocus = false,
   goats,
+  focusSignal = 0,
 }: {
   placeholder: string;
   onSubmit: (body: string, statTags: StatTagInput[]) => Promise<boolean>;
@@ -652,6 +818,7 @@ function Composer({
   compact?: boolean;
   autoFocus?: boolean;
   goats?: TaggableGoat[];
+  focusSignal?: number;
 }) {
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
@@ -676,6 +843,12 @@ function Composer({
   useEffect(() => {
     autoGrow(textareaRef.current);
   }, [value]);
+
+  useEffect(() => {
+    if (focusSignal <= 0) return;
+    textareaRef.current?.focus();
+    textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusSignal]);
 
   function addTag() {
     if (!activeGoat || !pickStat || tags.length >= MAX_STAT_TAGS) return;

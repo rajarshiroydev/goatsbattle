@@ -33,6 +33,7 @@ const recentComments = profile
       .select({
         id: comments.id,
         battleId: comments.battleId,
+        matchId: comments.matchId,
         body: comments.body,
         upvotes: comments.upvotes,
         deleted: comments.deleted,
@@ -80,8 +81,11 @@ const joined = profile
             {recentComments.map((c) => (
               <li class="bg-canvas-soft border border-hairline rounded-md p-4">
                 <div class="flex items-center justify-between mb-1.5">
-                  <a href={`/battle/${c.battleId}`} class="font-mono text-[12px] uppercase tracking-widest text-lime hover:underline">
-                    {c.battleId}
+                  <a
+                    href={c.matchId ? `/floor/${c.matchId}` : `/battle/${c.battleId}`}
+                    class="font-mono text-[12px] uppercase tracking-widest text-lime hover:underline"
+                  >
+                    {c.matchId ?? c.battleId}
                   </a>
                   <span class="font-mono text-[12px] text-mute">
                     ▲ {c.upvotes} · {relativeTime(c.createdAt)}

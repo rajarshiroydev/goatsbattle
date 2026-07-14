@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
-import { allBattlePairs, getEntityBySlug } from '../../../data';
-import { getBattleId, parseBattleSlug } from '../../../lib/battle';
+import { getEntityBySlug } from '../../../data';
+import { SHARE_BATTLE_SLUGS } from '../../../data/shareBattles';
+import { parseBattleSlug } from '../../../lib/battle';
 import { renderBattleOg } from '../../../lib/og';
 
 // One PNG per canonical battle, generated at build time.
 export function getStaticPaths() {
-  return allBattlePairs.map(([a, b]) => ({ params: { slug: getBattleId(a, b) } }));
+  return SHARE_BATTLE_SLUGS.map((slug) => ({ params: { slug } }));
 }
 
 export const GET: APIRoute = async ({ params }) => {

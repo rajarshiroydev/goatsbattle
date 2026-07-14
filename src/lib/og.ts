@@ -86,3 +86,62 @@ export async function renderBattleOg(a: Entity, b: Entity): Promise<Buffer> {
   const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } });
   return Buffer.from(resvg.render().asPng());
 }
+
+/** Render a 1200×630 launch share image for a World Cup fixture. */
+export async function renderMatchOg(match: {
+  matchNumber: number;
+  stage: string;
+  homeTeam: string;
+  awayTeam: string;
+  venue: string;
+}): Promise<Buffer> {
+  const stage = match.stage.replace(/-/g, ' ').toUpperCase();
+  const tree = h(
+    'div',
+    {
+      style: {
+        width: '1200px',
+        height: '630px',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: COLOR.canvas,
+        padding: '64px',
+        fontFamily: 'Barlow',
+      },
+    },
+    h(
+      'div',
+      { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+      text({ fontSize: 28, fontWeight: 900, color: COLOR.ink, letterSpacing: '0.04em' }, 'GOATSBATTLE'),
+      text({ fontSize: 22, fontWeight: 600, color: COLOR.lime, letterSpacing: '0.16em' }, `WORLD CUP 2026 · MATCH ${match.matchNumber}`),
+    ),
+    col(
+      { flex: 1, alignItems: 'center', justifyContent: 'center' },
+      text({ fontSize: 26, fontWeight: 600, color: COLOR.body, letterSpacing: '0.18em' }, stage),
+      h(
+        'div',
+        { style: { display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: '34px', marginTop: '30px' } },
+        text({ flex: 1, justifyContent: 'flex-end', textAlign: 'right', fontSize: 104, fontWeight: 900, color: COLOR.ink, lineHeight: 0.95, textTransform: 'uppercase' }, match.homeTeam),
+        text({ fontSize: 94, fontWeight: 900, color: COLOR.lime, lineHeight: 1 }, 'VS'),
+        text({ flex: 1, justifyContent: 'flex-start', fontSize: 104, fontWeight: 900, color: COLOR.ink, lineHeight: 0.95, textTransform: 'uppercase' }, match.awayTeam),
+      ),
+    ),
+    h(
+      'div',
+      { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
+      h('div', { style: { display: 'flex', width: '48px', height: '8px', backgroundColor: COLOR.lime } }),
+      text({ fontSize: 26, fontWeight: 600, color: COLOR.body, letterSpacing: '0.05em' }, `${match.venue} · Join the discussion on The Floor`),
+    ),
+  );
+
+  const svg = await satori(tree as never, {
+    width: 1200,
+    height: 630,
+    fonts: [
+      { name: 'Barlow', data: fontBlack, weight: 900, style: 'normal' },
+      { name: 'Barlow', data: fontSemi, weight: 600, style: 'normal' },
+    ],
+  });
+  const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } });
+  return Buffer.from(resvg.render().asPng());
+}
