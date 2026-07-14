@@ -46,7 +46,7 @@
       },
       "vars": {
         "APP_ENV": "production",
-        "LIVE_MOMENTS_ENABLED": "false"
+        "LIVE_MOMENTS_ENABLED": "true"
       },
       "kv_namespaces": [
         { "binding": "SESSION", "id": "15a174bd4b144bf9958469bed9b8794f" }
