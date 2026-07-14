@@ -289,7 +289,7 @@ async function persistTimelineSnapshot(
 ) {
   const snapshotHash = await hashNormalizedValue(timeline.events);
   const providerUpdatedAt = isoOrNull(timeline.lastUpdated);
-  const [state] = await query.query(
+  await query.query(
     `INSERT INTO match_timeline_snapshots (
        match_id, provider, snapshot_hash, coverage, event_count, events,
        provider_updated_at, fetched_at
@@ -298,7 +298,7 @@ async function persistTimelineSnapshot(
     [source.matchId, THE_STATS_API_PROVIDER, snapshotHash, timeline.coverage,
       timeline.events.length, JSON.stringify(timeline.events), providerUpdatedAt, now],
   );
-  await query.query(
+  const [state] = await query.query(
     `INSERT INTO match_timeline_state (
        match_id, provider, provider_match_id, mode, coverage, snapshot_hash,
        snapshot_version, events, provider_updated_at, fetched_at, last_success_at,
