@@ -146,6 +146,13 @@ Keep this list current. Each entry = symptom → cause → fix.
   changed snapshots by hash, and expose only finalized `match_moments` keyed by
   `providerMatchId:period:sequence`; later removals become `retracted`, never destructive
   deletes of citation history.
+- **The timeline can lead the match score resource by minutes.** Symptom: a goal appears in
+  Match Moments while the score card remains stale even though both poll frequently → Cause:
+  TheStatsAPI updates `/live-timeline` and the match resource independently (observed skew:
+  about two minutes) → Fix: for live matches with `full` timeline coverage, the public status
+  endpoint derives the regulation score from active TheStatsAPI `goal`/`penalty` moments;
+  exclude shootouts and fall back to the match resource outside that gate. This adds no
+  provider request and lets retracted provisional goals correct the displayed score.
 - **Substitution and VAR payloads are semantically incomplete.** Symptom: a timeline claims
   a player-in/player-out pair or a VAR outcome the provider never supplied → Cause:
   TheStatsAPI substitution events currently identify only one player, and VAR events lack a
