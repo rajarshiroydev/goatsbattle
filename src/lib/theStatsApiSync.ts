@@ -458,21 +458,20 @@ export async function persistStatsApiMoments(
          AND ($6 = 'confirmed' OR existing.verification_status = 'provisional')
          AND NOT EXISTS (
            SELECT 1 FROM incoming WHERE incoming.provider_event_id = existing.provider_event_id
-         )
+       )
        RETURNING existing.provider_event_id
+     ), finalized AS (
+       UPDATE match_timeline_state
+       SET mode = 'finalized', updated_at = $5
+       WHERE match_id = $3 AND $6 = 'confirmed'
+       RETURNING match_id
      )
      SELECT
        (SELECT count(*)::int FROM upserted) AS written,
-       (SELECT count(*)::int FROM retracted) AS retracted`,
+       (SELECT count(*)::int FROM retracted) AS retracted,
+       (SELECT count(*)::int FROM finalized) AS finalized`,
     [JSON.stringify(databaseMoments), THE_STATS_API_PROVIDER, source.matchId, snapshotHash, now, verificationStatus],
   ) as Array<{ written: number; retracted: number }>;
-  if (verificationStatus === 'confirmed') {
-    await query`
-      UPDATE match_timeline_state
-      SET mode = 'finalized', updated_at = ${now}
-      WHERE match_id = ${source.matchId}
-    `;
-  }
   return { written: Number(result?.written ?? 0), retracted: Number(result?.retracted ?? 0) };
 }
 

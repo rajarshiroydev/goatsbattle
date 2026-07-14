@@ -19,6 +19,11 @@ async function main() {
   const matchId = 'world-cup-2026-match-101';
   const baseUrl = process.env.SMOKE_BASE_URL ?? 'http://localhost:4321';
   let momentId: number | null = null;
+  const [timelineStateBefore] = await query`
+    SELECT mode, updated_at AS "updatedAt"
+    FROM match_timeline_state
+    WHERE match_id = ${matchId}
+  `;
 
   const fetchFeed = async () => {
     const url = new URL('/api/match-moments', baseUrl);
@@ -105,6 +110,15 @@ async function main() {
     console.log('✓ Final snapshot promoted the same durable event to confirmed.');
   } finally {
     await query`DELETE FROM match_moments WHERE provider_event_id = ${`${providerMatchId}:first_half:1`}`;
+    if (timelineStateBefore) {
+      await query`
+        UPDATE match_timeline_state
+        SET mode = ${timelineStateBefore.mode}, updated_at = ${timelineStateBefore.updatedAt}
+        WHERE match_id = ${matchId}
+      `;
+    } else {
+      await query`DELETE FROM match_timeline_state WHERE match_id = ${matchId}`;
+    }
   }
 
   const [leftovers] = await query`
@@ -115,7 +129,20 @@ async function main() {
   if (Number(leftovers.count) !== 0) {
     throw new Error(`Live-moment smoke cleanup failed: ${JSON.stringify(leftovers)}`);
   }
+  const [timelineStateAfter] = await query`
+    SELECT mode, updated_at AS "updatedAt"
+    FROM match_timeline_state
+    WHERE match_id = ${matchId}
+  `;
+  const timelineRestored = timelineStateBefore
+    ? timelineStateAfter?.mode === timelineStateBefore.mode
+      && new Date(timelineStateAfter.updatedAt).getTime() === new Date(timelineStateBefore.updatedAt).getTime()
+    : timelineStateAfter === undefined;
+  if (!timelineRestored) {
+    throw new Error('Live-moment smoke did not restore match_timeline_state.');
+  }
   console.log('✓ Smoke event was removed; no test moment remains.');
+  console.log('✓ Timeline state was restored exactly.');
 }
 
 runDatabaseOperation({

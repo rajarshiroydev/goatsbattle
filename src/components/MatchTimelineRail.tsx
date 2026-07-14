@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import {
-  subscribeMatchMoments, anchorLabel, minuteLabel, isGoal, isCard,
+  subscribeMatchMoments, anchorLabel, cardColor, minuteLabel, isGoal, isCard,
   type Moment,
 } from '../lib/matchMoments';
 
@@ -51,8 +51,6 @@ export default function MatchTimelineRail({ matchId, homeTeam, awayTeam }: Props
 
   const goals = railMoments.filter((m) => isGoal(m.type));
   const cards = railMoments.filter((m) => isCard(m.type));
-  const cardColor = (type: string) => (type === 'red_card' ? 'var(--color-red)' : '#f5c518');
-
   function select(m: Moment) {
     setActiveId(m.id);
     window.dispatchEvent(new CustomEvent('gb:moment', { detail: { id: m.id, label: anchorLabel(m) } }));

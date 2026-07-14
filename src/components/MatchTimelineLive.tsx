@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import {
-  subscribeMatchMoments, anchorLabel, minuteLabel, momentGlyph, momentTypeLabel,
+  subscribeMatchMoments, anchorLabel, cardColor, minuteLabel, momentGlyph, momentTypeLabel,
   isGoal, isCard, type Moment,
 } from '../lib/matchMoments';
 
@@ -117,9 +117,9 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
                   <span class={`font-headline font-extrabold text-[14px] leading-none pt-0.5 ${home ? 'text-lime' : 'text-red'}`}>{minuteLabel(moment)}</span>
                   <span class="mt-0.5 flex justify-center" aria-hidden="true">
                     {goal ? (
-                      <span class="w-4 h-4 rounded-full bg-lime grid place-items-center text-[9px] leading-none">⚽</span>
+                      <span class={`w-4 h-4 rounded-full ${home ? 'bg-lime' : 'bg-red'} grid place-items-center text-[9px] leading-none`}>⚽</span>
                     ) : card ? (
-                      <span class="w-3 h-[15px] rounded-[2px]" style={`background:${moment.type === 'red_card' ? 'var(--color-red)' : '#f5c518'}`} />
+                      <span class="w-3 h-[15px] rounded-[2px]" style={`background:${cardColor(moment.type)}`} />
                     ) : (
                       <span class="text-[12px] leading-none">{momentGlyph(moment.type)}</span>
                     )}

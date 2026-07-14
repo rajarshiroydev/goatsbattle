@@ -494,6 +494,8 @@ export async function getMatchMomentFeed(
   const statuses = includeProvisional ? ['provisional', 'confirmed'] : ['confirmed'];
   const rows = await db
     .select({
+      matchStatus: matches.status,
+      fetchedAt: matchTimelineState.fetchedAt,
       id: matchMoments.id,
       minute: matchMoments.minute,
       extra: matchMoments.extra,
@@ -504,32 +506,32 @@ export async function getMatchMomentFeed(
       detail: matchMoments.detail,
       verificationStatus: matchMoments.verificationStatus,
     })
-    .from(matchMoments)
-    .where(and(
-      eq(matchMoments.matchId, matchId),
-      inArray(matchMoments.verificationStatus, statuses),
-    ))
-    .orderBy(
-      sql`${matchMoments.providerSequence} ASC NULLS LAST`,
-      matchMoments.minute,
-      matchMoments.extra,
-    );
-
-  const [state] = await db
-    .select({ status: matches.status, fetchedAt: matchTimelineState.fetchedAt })
     .from(matches)
     .leftJoin(matchTimelineState, eq(matchTimelineState.matchId, matches.id))
+    .leftJoin(matchMoments, and(
+      eq(matchMoments.matchId, matches.id),
+      inArray(matchMoments.verificationStatus, statuses),
+    ))
     .where(eq(matches.id, matchId))
-    .limit(1);
+    .orderBy(
+      sql`${matchMoments.minute} ASC NULLS LAST`,
+      sql`${matchMoments.extra} ASC NULLS FIRST`,
+      sql`${matchMoments.providerSequence} ASC NULLS LAST`,
+    );
 
-  const moments = rows.map((r) => ({
-    ...r,
-    verificationStatus: r.verificationStatus as MatchMoment['verificationStatus'],
-    goatShortName: r.goatSlug ? (getEntityBySlug(r.goatSlug)?.shortName ?? null) : null,
-  }));
+  const moments: MatchMoment[] = rows
+    .filter((row): row is typeof row & { id: number; minute: number; type: string; team: string; verificationStatus: string } =>
+      row.id !== null && row.minute !== null && row.type !== null
+      && row.team !== null && row.verificationStatus !== null)
+    .map(({ matchStatus: _matchStatus, fetchedAt: _fetchedAt, ...row }) => ({
+      ...row,
+      verificationStatus: row.verificationStatus as MatchMoment['verificationStatus'],
+      goatShortName: row.goatSlug ? (getEntityBySlug(row.goatSlug)?.shortName ?? null) : null,
+    }));
+  const state = rows[0];
   return {
     moments,
-    matchStatus: state?.status ?? null,
+    matchStatus: state?.matchStatus ?? null,
     fetchedAt: state?.fetchedAt ? new Date(state.fetchedAt).toISOString() : null,
     hasProvisional: moments.some((moment) => moment.verificationStatus === 'provisional'),
   };

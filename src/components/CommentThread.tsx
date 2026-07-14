@@ -965,7 +965,7 @@ function Composer({
           </div>
         )}
 
-        <div class={`flex justify-end items-center gap-2 mt-3 ${well ? 'border-t border-hairline pt-3' : 'mt-2'}`}>
+        <div class={`flex justify-end items-center gap-2 ${well ? 'mt-3 border-t border-hairline pt-3' : 'mt-2'}`}>
           {canTagStats && (
             <button
               onClick={() => setPickerOpen((o) => !o)}
