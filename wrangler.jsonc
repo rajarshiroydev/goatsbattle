@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "goatsbattle",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-07-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "assets": {
+    "run_worker_first": ["/api/*"]
+  },
+  "env": {
+    "preview": {
+      "name": "goatsbattle-preview",
+      "vars": {
+        "APP_ENV": "preview"
+      },
+      // Astro's Cloudflare adapter auto-injects a SESSION KV binding (better-auth
+      // itself stores sessions in Postgres, so this is effectively unused). Pin the
+      // id per-env so a fresh deploy binds it explicitly instead of relying on the
+      // "inherited" binding from a prior deployment.
+      "kv_namespaces": [
+        { "binding": "SESSION", "id": "4204057bcfd648ce9cd5db5754c6bdd3" }
+      ]
+    },
+    "production": {
+      "name": "goatsbattle",
+      "routes": [
+        {
+          "pattern": "goatsbattle.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "www.goatsbattle.com",
+          "custom_domain": true
+        }
+      ],
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "vars": {
+        "APP_ENV": "production"
+      },
+      "kv_namespaces": [
+        { "binding": "SESSION", "id": "15a174bd4b144bf9958469bed9b8794f" }
+      ]
+    }
+  }
+}

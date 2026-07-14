@@ -12,7 +12,8 @@
  * Run with:  npm run db:migrate:matches
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const statements = [
   // ─── matches (events) ───────────────────────────────────────────────────────
@@ -79,7 +80,4 @@ async function main() {
 // neon-http has no interactive transactions, so statements run one-by-one and
 // this migration is NOT atomic. Every statement is idempotent (IF [NOT] EXISTS,
 // idempotent ALTER, DROP CONSTRAINT before ADD), so recovery is to re-run it.
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'match-events migration' }, main).catch(exitOnDatabaseError);

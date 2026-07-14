@@ -1,0 +1,13 @@
+{
+  "id": "101",
+  "type": "sf",
+  "home_team_id": "33",
+  "away_team_id": "29",
+  "home_team_name_en": "France",
+  "away_team_name_en": "Spain",
+  "home_score": "0",
+  "away_score": "0",
+  "finished": "FALSE",
+  "time_elapsed": "notstarted",
+  "local_date": "07/14/2026 14:00"
+}

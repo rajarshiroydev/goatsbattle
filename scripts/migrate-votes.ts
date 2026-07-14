@@ -6,7 +6,8 @@
  * Run with:  npx tsx --env-file=.env scripts/migrate-votes.ts
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const statements = [
   // entities: ranking total replaces Elo
@@ -38,7 +39,4 @@ async function main() {
   console.log('\n✓ Migration applied.');
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'votes migration' }, main).catch(exitOnDatabaseError);

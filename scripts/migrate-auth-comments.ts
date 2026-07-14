@@ -15,7 +15,8 @@
  * Run with:  npx tsx --env-file=.env scripts/migrate-auth-comments.ts
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 const statements = [
   // ─── better-auth core tables ("user" is a reserved word → always quoted) ────
@@ -113,7 +114,4 @@ async function main() {
 // idempotent (CREATE/ADD ... IF [NOT] EXISTS, DROP CONSTRAINT IF EXISTS before
 // ADD, idempotent ALTER ... SET/DROP NOT NULL, TRUNCATE), so re-running from the
 // top safely converges to the target schema.
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'auth/comments migration' }, main).catch(exitOnDatabaseError);

@@ -6,10 +6,11 @@
  * Run with:  npm run db:seed   (loads .env via --env-file)
  */
 import { sql } from 'drizzle-orm';
-import { db } from '../src/lib/db';
+import { db } from './lib/node-db';
 import { allEntities, allBattlePairs } from '../src/data';
 import { getBattleId } from '../src/lib/battle';
 import { entities, battles } from '../src/lib/db/schema';
+import { exitOnDatabaseError, runDatabaseOperation } from './lib/database-safety';
 
 async function main() {
   console.log('→ Seeding entities…');
@@ -53,13 +54,22 @@ async function main() {
   console.log(`  ✓ ${allBattlePairs.length} battles`);
 
   const [[entityRow], [battleRow]] = await Promise.all([
-    db.select({ count: sql<number>`count(*)::int` }).from(entities),
-    db.select({ count: sql<number>`count(*)::int` }).from(battles),
+    db.select({
+      count: sql<number>`count(*)::int`,
+      fabricatedTallies: sql<number>`coalesce(sum(${entities.votes} + ${entities.votesFor} + ${entities.votesAgainst}), 0)::int`,
+    }).from(entities),
+    db.select({
+      count: sql<number>`count(*)::int`,
+      fabricatedTallies: sql<number>`coalesce(sum(${battles.votesA} + ${battles.votesB}), 0)::int`,
+    }).from(battles),
   ]);
+  if (entityRow.fabricatedTallies !== 0 || battleRow.fabricatedTallies !== 0) {
+    throw new Error(
+      `Refusing seeded state with non-zero aggregates: entities=${entityRow.fabricatedTallies}, battles=${battleRow.fabricatedTallies}.`,
+    );
+  }
   console.log(`\n✓ Done. ${entityRow.count} entities, ${battleRow.count} battles in DB.`);
+  console.log('✓ All entity and battle vote aggregates are zero.');
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runDatabaseOperation({ operation: 'curated goat/battle seed' }, main).catch(exitOnDatabaseError);
