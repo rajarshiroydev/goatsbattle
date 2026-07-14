@@ -11,6 +11,7 @@ import {
   validateStatsApiTimeline,
   type StatsApiMatch,
 } from '../src/lib/theStatsApi';
+import { normalizeStatsApiSourceRow } from '../src/lib/theStatsApiSync';
 
 const rawMatch = (index: number) => {
   const fixture = worldCup2026Fixtures[index];
@@ -155,4 +156,22 @@ test('keeps readable canonical placeholders until a real team is known', () => {
   assert.equal(displayProviderTeamName('W101', 'Winner Match 101'), 'Winner Match 101');
   assert.equal(displayProviderTeamName('L102', 'Loser Match 102'), 'Loser Match 102');
   assert.equal(displayProviderTeamName('Argentina', 'Winner Match 102'), 'Argentina');
+});
+
+test('normalizes Neon timestamp strings before live sync date arithmetic', () => {
+  const source = normalizeStatsApiSourceRow({
+    matchId: 'world-cup-2026-match-101',
+    providerMatchId: 'mt_836288430',
+    kickoff: '2026-07-14T19:00:00.000Z',
+    status: 'scheduled',
+    homeTeam: 'France',
+    awayTeam: 'Spain',
+    metadata: {},
+  });
+  assert.ok(source.kickoff instanceof Date);
+  assert.equal(source.kickoff.toISOString(), '2026-07-14T19:00:00.000Z');
+  assert.throws(
+    () => normalizeStatsApiSourceRow({ ...source, kickoff: 'not-a-date' }),
+    /Invalid kickoff timestamp/,
+  );
 });

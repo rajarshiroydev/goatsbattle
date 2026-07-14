@@ -39,6 +39,20 @@ interface SourceRow {
   metadata: Record<string, unknown>;
 }
 
+type DatabaseSourceRow = Omit<SourceRow, 'kickoff'> & {
+  kickoff: Date | string;
+};
+
+export function normalizeStatsApiSourceRow(source: DatabaseSourceRow): SourceRow {
+  const kickoff = source.kickoff instanceof Date
+    ? source.kickoff
+    : new Date(source.kickoff);
+  if (Number.isNaN(kickoff.getTime())) {
+    throw new Error(`Invalid kickoff timestamp for ${source.matchId}.`);
+  }
+  return { ...source, kickoff };
+}
+
 interface NormalizedMoment {
   providerEventId: string;
   providerSequence: number;
@@ -567,7 +581,7 @@ export async function refreshTheStatsApiWorldCup(options: {
   now: Date;
 }): Promise<StatsApiSyncResult> {
   const query = neon(options.databaseUrl);
-  const rows = await query.query(
+  const databaseRows = await query.query(
     `SELECT source.match_id AS "matchId", source.provider_match_id AS "providerMatchId",
             match.kickoff, match.status, match.home_team AS "homeTeam",
             match.away_team AS "awayTeam", source.metadata
@@ -579,7 +593,8 @@ export async function refreshTheStatsApiWorldCup(options: {
                              AND $2::timestamptz + interval '2 hours'
      ORDER BY match.kickoff`,
     [THE_STATS_API_PROVIDER, options.now],
-  ) as SourceRow[];
+  ) as DatabaseSourceRow[];
+  const rows = databaseRows.map(normalizeStatsApiSourceRow);
   if (rows.length === 0) {
     return {
       outcome: 'skipped', matches: 0, scores: 0, lineupsAccepted: 0,
@@ -632,7 +647,7 @@ export async function backfillStatsApiTimeline(options: {
   now: Date;
 }) {
   const query = neon(options.databaseUrl);
-  const [source] = await query.query(
+  const [databaseSource] = await query.query(
     `SELECT source.match_id AS "matchId", source.provider_match_id AS "providerMatchId",
             match.kickoff, match.status, match.home_team AS "homeTeam",
             match.away_team AS "awayTeam", source.metadata
@@ -641,8 +656,9 @@ export async function backfillStatsApiTimeline(options: {
      WHERE source.match_id = $1 AND source.provider_match_id = $2
        AND source.provider = $3 AND source.role = 'timeline'`,
     [options.matchId, options.providerMatchId, THE_STATS_API_PROVIDER],
-  ) as SourceRow[];
-  if (!source) throw new Error(`No TheStatsAPI timeline source for ${options.matchId}.`);
+  ) as DatabaseSourceRow[];
+  if (!databaseSource) throw new Error(`No TheStatsAPI timeline source for ${options.matchId}.`);
+  const source = normalizeStatsApiSourceRow(databaseSource);
   if (source.status !== 'finished') throw new Error(`Refusing to backfill unfinished match ${options.matchId}.`);
   const client = clientOptions(query, options.apiKey, options.now);
   const timeline = await providerCall(query, options.now, () =>
