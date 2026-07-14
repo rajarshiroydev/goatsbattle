@@ -14,16 +14,12 @@ async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL is not set.');
   const query = neon(connectionString);
-  const providerEventId = `gbt19-smoke:${randomUUID()}`;
-  const providerMatchId = providerEventId;
-  const matchId = 'world-cup-2026-match-101';
+  const smokeId = randomUUID();
+  const providerMatchId = `gbt19-smoke:${smokeId}`;
+  const matchId = `gbt19-smoke-${smokeId}`;
   const baseUrl = process.env.SMOKE_BASE_URL ?? 'http://localhost:4321';
   let momentId: number | null = null;
-  const [timelineStateBefore] = await query`
-    SELECT mode, updated_at AS "updatedAt"
-    FROM match_timeline_state
-    WHERE match_id = ${matchId}
-  `;
+  let matchCreated = false;
 
   const fetchFeed = async () => {
     const url = new URL('/api/match-moments', baseUrl);
@@ -35,6 +31,11 @@ async function main() {
   };
 
   try {
+    await query`
+      INSERT INTO matches (id, competition, home_team, away_team, kickoff, status)
+      VALUES (${matchId}, 'GBT-19 Smoke', 'Smoke Home', 'Smoke Away', now(), 'live')
+    `;
+    matchCreated = true;
     const source = {
       matchId,
       providerMatchId,
@@ -109,40 +110,22 @@ async function main() {
     }
     console.log('✓ Final snapshot promoted the same durable event to confirmed.');
   } finally {
-    await query`DELETE FROM match_moments WHERE provider_event_id = ${`${providerMatchId}:first_half:1`}`;
-    if (timelineStateBefore) {
-      await query`
-        UPDATE match_timeline_state
-        SET mode = ${timelineStateBefore.mode}, updated_at = ${timelineStateBefore.updatedAt}
-        WHERE match_id = ${matchId}
-      `;
-    } else {
-      await query`DELETE FROM match_timeline_state WHERE match_id = ${matchId}`;
-    }
+    if (matchCreated) await query`DELETE FROM matches WHERE id = ${matchId}`;
   }
 
   const [leftovers] = await query`
-    SELECT count(*)::int AS count
-    FROM match_moments
-    WHERE provider_event_id = ${`${providerMatchId}:first_half:1`}
+    SELECT
+      (SELECT count(*)::int FROM matches WHERE id = ${matchId}) AS matches,
+      (SELECT count(*)::int FROM match_moments
+        WHERE provider_event_id = ${`${providerMatchId}:first_half:1`}) AS moments,
+      (SELECT count(*)::int FROM match_timeline_state WHERE match_id = ${matchId}) AS timeline_state
   `;
-  if (Number(leftovers.count) !== 0) {
+  if (Number(leftovers.matches) !== 0
+    || Number(leftovers.moments) !== 0
+    || Number(leftovers.timeline_state) !== 0) {
     throw new Error(`Live-moment smoke cleanup failed: ${JSON.stringify(leftovers)}`);
   }
-  const [timelineStateAfter] = await query`
-    SELECT mode, updated_at AS "updatedAt"
-    FROM match_timeline_state
-    WHERE match_id = ${matchId}
-  `;
-  const timelineRestored = timelineStateBefore
-    ? timelineStateAfter?.mode === timelineStateBefore.mode
-      && new Date(timelineStateAfter.updatedAt).getTime() === new Date(timelineStateBefore.updatedAt).getTime()
-    : timelineStateAfter === undefined;
-  if (!timelineRestored) {
-    throw new Error('Live-moment smoke did not restore match_timeline_state.');
-  }
-  console.log('✓ Smoke event was removed; no test moment remains.');
-  console.log('✓ Timeline state was restored exactly.');
+  console.log('✓ Dedicated smoke match and all dependent state were removed.');
 }
 
 runDatabaseOperation({
