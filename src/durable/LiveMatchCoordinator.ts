@@ -76,8 +76,10 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
     });
   }
 
-  async start(config: StatsApiCoordinatorMatch): Promise<{ active: boolean; healthy: boolean }> {
-    const now = Date.now();
+  async start(
+    config: StatsApiCoordinatorMatch,
+    now = Date.now(),
+  ): Promise<{ active: boolean; healthy: boolean }> {
     this.ctx.storage.sql.exec(
       `INSERT INTO coordinator_config
         (id, match_id, provider, provider_match_id, kickoff, featured)

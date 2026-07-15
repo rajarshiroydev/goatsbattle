@@ -72,22 +72,23 @@ describe('LiveMatchCoordinator runtime', () => {
 
   it('keeps a coordinator healthy through the status cadence grace window', async () => {
     const coordinator = env.LIVE_MATCH_COORDINATOR.getByName('health-grace-match');
+    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
     const config = {
       matchId: 'health-grace-match',
       provider: 'thestatsapi' as const,
       providerMatchId: 'provider-health',
-      kickoff: new Date(Date.now() + 60 * 60_000).toISOString(),
+      kickoff: new Date(now + 60 * 60_000).toISOString(),
       status: 'scheduled' as const,
       featured: true,
     };
-    await coordinator.start(config);
+    await coordinator.start(config, now);
     await runInDurableObject(coordinator, async (_instance, state) => {
       state.storage.sql.exec(
         'UPDATE coordinator_state SET last_success_at = ?, failure_count = 0 WHERE id = 1',
-        Date.now() - COORDINATOR_HEALTHY_GRACE_MS + 5_000,
+        now - COORDINATOR_HEALTHY_GRACE_MS + 5_000,
       );
     });
-    expect((await coordinator.start(config)).healthy).toBe(true);
+    expect((await coordinator.start(config, now)).healthy).toBe(true);
   });
 
   it('keeps finished coordinators active until every correction slot is consumed', async () => {
