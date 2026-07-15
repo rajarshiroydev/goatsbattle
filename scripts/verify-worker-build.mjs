@@ -32,11 +32,17 @@ assert(config.vars?.LIVE_MOMENTS_ENABLED === 'true', 'LIVE_MOMENTS_ENABLED must 
 const session = config.kv_namespaces?.find((binding) => binding.binding === 'SESSION');
 assert(session?.id === expected.sessionId, 'SESSION must use the environment-specific KV namespace');
 
-const durableBindings = new Set(
-  (config.durable_objects?.bindings ?? []).map((binding) => binding.name),
+const durableBindings = new Map(
+  (config.durable_objects?.bindings ?? []).map((binding) => [binding.name, binding.class_name]),
 );
-assert(durableBindings.has('LIVE_MATCH_COORDINATOR'), 'LIVE_MATCH_COORDINATOR binding is missing');
-assert(durableBindings.has('STATS_API_REQUEST_BROKER'), 'STATS_API_REQUEST_BROKER binding is missing');
+assert(
+  durableBindings.get('LIVE_MATCH_COORDINATOR') === 'LiveMatchCoordinator',
+  'LIVE_MATCH_COORDINATOR must bind to LiveMatchCoordinator',
+);
+assert(
+  durableBindings.get('STATS_API_REQUEST_BROKER') === 'StatsApiRequestBroker',
+  'STATS_API_REQUEST_BROKER must bind to StatsApiRequestBroker',
+);
 
 const migration = config.migrations?.find((item) => item.tag === 'v1-live-match-coordination');
 const sqliteClasses = new Set(migration?.new_sqlite_classes ?? []);

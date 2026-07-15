@@ -108,6 +108,20 @@ test('recalibration moves forward but never jumps backward in one period', () =>
   })?.elapsedSeconds, 60 * 60);
 });
 
+test('accepts a newer real phase and rejects a stale real phase transition', () => {
+  const firstHalf: LiveClockState = {
+    phase: 'first_half', elapsedSeconds: 44 * 60, observedAt: at.toISOString(),
+    running: true, approximate: false,
+  };
+  const halfTime: LiveClockState = {
+    phase: 'half_time', elapsedSeconds: 45 * 60,
+    observedAt: new Date(at.getTime() + 60_000).toISOString(),
+    running: false, approximate: false,
+  };
+  assert.deepEqual(recalibrateLiveMatchClock(firstHalf, halfTime), halfTime);
+  assert.deepEqual(recalibrateLiveMatchClock(halfTime, firstHalf), halfTime);
+});
+
 test('accepts a backwards correction when a real timeline replaces the provisional clock', () => {
   const provisional = deriveLiveMatchClock({ status: 'live', latestEvent: null, observedAt: at });
   const realObservedAt = new Date(at.getTime() + 3 * 60_000);
@@ -157,4 +171,9 @@ test('does not create a provisional clock unless the match is live', () => {
   assert.equal(deriveLiveMatchClock({ status: 'scheduled', latestEvent: null, observedAt: at }), null);
   assert.equal(deriveLiveMatchClock({ status: 'finished', latestEvent: null, observedAt: at }), null);
   assert.equal(deriveLiveMatchClock({ status: 'live', latestEvent: null, observedAt: null }), null);
+});
+
+test('does not treat a malformed latest event as an empty timeline', () => {
+  assert.equal(deriveLiveMatchClock({ status: 'live', latestEvent: {}, observedAt: at }), null);
+  assert.equal(deriveLiveMatchClock({ status: 'live', latestEvent: undefined, observedAt: at }), null);
 });

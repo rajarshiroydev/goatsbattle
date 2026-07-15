@@ -71,7 +71,7 @@ export function deriveLiveMatchClock(options: {
 }): LiveClockState | null {
   const event = clockEvent(options.latestEvent);
   if (!event) {
-    if (options.status !== 'live' || !options.observedAt) return null;
+    if (options.status !== 'live' || options.latestEvent !== null || !options.observedAt) return null;
     return {
       phase: 'first_half',
       elapsedSeconds: 0,
@@ -146,7 +146,17 @@ export function recalibrateLiveMatchClock(
   const previousApproximate = previous.approximate === true;
   const nextApproximate = next.approximate === true;
   if (previousApproximate !== nextApproximate) return previousApproximate ? next : previous;
-  if (previous.phase !== next.phase) return next;
+  if (previous.phase !== next.phase) {
+    // `revision` exists only on WebSocket snapshots, while REST updates carry
+    // this persisted observation time too. Reject an older phase transition in
+    // either transport, but allow a genuinely newer phase to take precedence.
+    const previousObservedAt = Date.parse(previous.observedAt);
+    const nextObservedAt = Date.parse(next.observedAt);
+    if (Number.isFinite(previousObservedAt)
+      && Number.isFinite(nextObservedAt)
+      && nextObservedAt < previousObservedAt) return previous;
+    return next;
+  }
   const nextObservedAt = Date.parse(next.observedAt);
   const previousAtObservation = projectedSeconds(previous, nextObservedAt);
   if (next.elapsedSeconds >= previousAtObservation) return next;
