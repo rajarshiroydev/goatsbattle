@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
-import { formatLiveMatchClock, type LiveClockState } from '../lib/liveMatchClock';
+import { formatLiveMatchClock, recalibrateLiveMatchClock, type LiveClockState } from '../lib/liveMatchClock';
 
 type HubFilter = 'upcoming' | 'live' | 'results';
 
@@ -99,7 +99,17 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
       .then((data: StatusResponse) => {
         if (!active) return;
         const updates = new Map(data.matches.map((match) => [match.id, match]));
-        setMatches((current) => current.map((match) => ({ ...match, ...updates.get(match.id) })));
+        setMatches((current) => current.map((match) => {
+          const update = updates.get(match.id);
+          if (!update) return match;
+          return {
+            ...match,
+            ...update,
+            matchClock: 'matchClock' in update
+              ? recalibrateLiveMatchClock(match.matchClock ?? null, update.matchClock ?? null)
+              : match.matchClock,
+          };
+        }));
       })
       .catch(() => undefined);
     refresh();

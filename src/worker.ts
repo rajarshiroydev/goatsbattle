@@ -26,7 +26,9 @@ export default {
           try {
             const coordinator = env.LIVE_MATCH_COORDINATOR.getByName(candidate.matchId);
             const status = await coordinator.start(candidate);
-            if (status.active && status.healthy) coordinatedMatchIds.push(candidate.matchId);
+            if (status.active && (status.healthy || candidate.status === 'finished')) {
+              coordinatedMatchIds.push(candidate.matchId);
+            }
           } catch (error) {
             console.error(JSON.stringify({
               event: 'live_match_coordinator_start_failed',

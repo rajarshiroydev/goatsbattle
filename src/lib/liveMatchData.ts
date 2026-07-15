@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { deriveLiveMatchClock } from './liveMatchClock';
+import { deriveLiveScore } from './liveScore';
 import type { LiveMatchSnapshot } from './liveMatchProtocol';
 import type { Moment } from './matchMoments';
 
@@ -18,6 +19,7 @@ export async function readLiveMatchSnapshot(options: {
             state.events -> -1 AS "latestEvent",
             state.fetched_at AS "fetchedAt",
             state.last_success_at AS "lastSuccessAt",
+            state.coverage AS "timelineCoverage",
             (
               SELECT snapshot.fetched_at
               FROM match_timeline_snapshots snapshot
@@ -40,12 +42,13 @@ export async function readLiveMatchSnapshot(options: {
     latestEvent: unknown;
     fetchedAt: Date | string | null;
     lastSuccessAt: Date | string | null;
+    timelineCoverage: string | null;
     observedAt: Date | string | null;
   }>;
   if (!match) throw new Error(`Match ${options.matchId} was not found.`);
 
   const rows = await query.query(
-    `SELECT moment.id, moment.minute, moment.extra, moment.type, moment.team,
+    `SELECT moment.id, moment.minute, moment.extra, moment.type, moment.team, moment.period,
             moment.player_name AS "playerName", moment.goat_slug AS "goatSlug",
             entity.short_name AS "goatShortName", moment.detail,
             moment.verification_status AS "verificationStatus"
@@ -55,8 +58,8 @@ export async function readLiveMatchSnapshot(options: {
        AND moment.verification_status IN ('provisional', 'confirmed', 'retracted', 'superseded')
      ORDER BY moment.minute, moment.extra NULLS FIRST, moment.provider_sequence NULLS LAST`,
     [options.matchId],
-  ) as Array<Omit<Moment, 'verificationStatus'> & { verificationStatus: string }>;
-  const moments: Moment[] = rows.map((moment) => ({
+  ) as Array<Omit<Moment, 'verificationStatus'> & { verificationStatus: string; period: string | null }>;
+  const moments: Moment[] = rows.map(({ period: _period, ...moment }) => ({
     ...moment,
     verificationStatus: moment.verificationStatus === 'retracted' || moment.verificationStatus === 'superseded'
       ? 'corrected'
@@ -67,11 +70,11 @@ export async function readLiveMatchSnapshot(options: {
   const lastSuccessAt = match.lastSuccessAt ? new Date(match.lastSuccessAt) : null;
   let timelineHomeScore = 0;
   let timelineAwayScore = 0;
-  let hasGoalHistory = false;
-  for (const moment of moments) {
-    if (!['goal', 'penalty', 'own_goal'].includes(moment.type)) continue;
-    hasGoalHistory = true;
-    if (moment.verificationStatus !== 'active') continue;
+  for (const moment of rows) {
+    if (!['goal', 'penalty', 'own_goal'].includes(moment.type)
+      || moment.period === 'penalties'
+      || moment.verificationStatus === 'retracted'
+      || moment.verificationStatus === 'superseded') continue;
     if (moment.type === 'own_goal') {
       if (moment.team === 'home') timelineAwayScore += 1;
       else timelineHomeScore += 1;
@@ -82,12 +85,19 @@ export async function readLiveMatchSnapshot(options: {
   // score from the same persisted moments keeps goals and score in one revision;
   // the approximately-minute match-resource poll remains authoritative and
   // recalibrates any provider correction that cannot be inferred here.
-  const useTimelineScore = match.status === 'live' && hasGoalHistory;
+  const liveScore = deriveLiveScore({
+    status: match.status,
+    timelineCoverage: match.timelineCoverage,
+    providerHomeScore: match.homeScore,
+    providerAwayScore: match.awayScore,
+    timelineHomeGoals: timelineHomeScore,
+    timelineAwayGoals: timelineAwayScore,
+  });
   return {
     matchId: match.id,
     status: match.status,
-    homeScore: useTimelineScore ? timelineHomeScore : match.homeScore,
-    awayScore: useTimelineScore ? timelineAwayScore : match.awayScore,
+    homeScore: liveScore.homeScore,
+    awayScore: liveScore.awayScore,
     homePenaltyScore: match.homePenaltyScore,
     awayPenaltyScore: match.awayPenaltyScore,
     clock: deriveLiveMatchClock({

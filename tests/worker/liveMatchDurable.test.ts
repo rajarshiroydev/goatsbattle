@@ -1,7 +1,11 @@
 import { env } from 'cloudflare:workers';
 import { runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { correctionDueAt, coordinatorRetryDelay } from '../../src/durable/LiveMatchCoordinator';
+import {
+  COORDINATOR_HEALTHY_GRACE_MS,
+  correctionDueAt,
+  coordinatorRetryDelay,
+} from '../../src/durable/LiveMatchCoordinator';
 import { LIVE_MATCH_PROTOCOL_VERSION } from '../../src/lib/liveMatchProtocol';
 
 describe('StatsApiRequestBroker', () => {
@@ -49,7 +53,7 @@ describe('LiveMatchCoordinator runtime', () => {
     expect(socket).not.toBeNull();
     socket!.accept();
     const received = new Promise<string>((resolve) => {
-      socket!.addEventListener('message', (event) => resolve(String(event.data)), { once: true });
+      socket!.addEventListener('message', (event: MessageEvent) => resolve(String(event.data)), { once: true });
     });
     await coordinator.publish({
       version: LIVE_MATCH_PROTOCOL_VERSION,
@@ -64,6 +68,45 @@ describe('LiveMatchCoordinator runtime', () => {
       matchId: 'discussion-match',
     });
     socket!.close(1000, 'done');
+  });
+
+  it('keeps a coordinator healthy through the status cadence grace window', async () => {
+    const coordinator = env.LIVE_MATCH_COORDINATOR.getByName('health-grace-match');
+    const config = {
+      matchId: 'health-grace-match',
+      provider: 'thestatsapi' as const,
+      providerMatchId: 'provider-health',
+      kickoff: new Date(Date.now() + 60 * 60_000).toISOString(),
+      status: 'scheduled' as const,
+      featured: true,
+    };
+    await coordinator.start(config);
+    await runInDurableObject(coordinator, async (_instance, state) => {
+      state.storage.sql.exec(
+        'UPDATE coordinator_state SET last_success_at = ?, failure_count = 0 WHERE id = 1',
+        Date.now() - COORDINATOR_HEALTHY_GRACE_MS + 5_000,
+      );
+    });
+    expect((await coordinator.start(config)).healthy).toBe(true);
+  });
+
+  it('keeps finished coordinators active until every correction slot is consumed', async () => {
+    const coordinator = env.LIVE_MATCH_COORDINATOR.getByName('correction-lifecycle-match');
+    const config = {
+      matchId: 'correction-lifecycle-match',
+      provider: 'thestatsapi' as const,
+      providerMatchId: 'provider-corrections',
+      kickoff: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+      status: 'finished' as const,
+      featured: true,
+    };
+    expect(await coordinator.start(config)).toEqual({ active: true, healthy: true });
+    await runInDurableObject(coordinator, async (_instance, state) => {
+      state.storage.sql.exec(
+        'UPDATE coordinator_state SET correction_index = 6, failure_count = 0 WHERE id = 1',
+      );
+    });
+    expect(await coordinator.start(config)).toEqual({ active: false, healthy: true });
   });
 });
 

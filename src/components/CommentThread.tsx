@@ -6,6 +6,7 @@ import { relativeTime } from '../lib/format';
 import { MAX_STAT_TAGS } from '../lib/statTags';
 import type { TaggableGoat, StatTag, StatTagInput } from '../lib/statTags';
 import { subscribeLiveMatch } from '../lib/liveMatchSocket';
+import type { LiveMatchEvent } from '../lib/liveMatchProtocol';
 
 /** "Int'l Goals 106" — compact stat display used on chips and picker options. */
 function statText(s: { statLabel: string; value: string | number; unit?: string } | { label: string; value: string | number; unit?: string }): string {
@@ -39,6 +40,29 @@ interface CommentNode {
     verificationStatus: 'active' | 'corrected';
   } | null;
   statTags: StatTag[];
+}
+
+type CommentSocketEvent = Extract<LiveMatchEvent, {
+  type: 'comment.created' | 'comment.deleted' | 'comment.vote';
+}>;
+
+function isCommentSocketEvent(event: LiveMatchEvent): event is CommentSocketEvent {
+  return event.type === 'comment.created' || event.type === 'comment.deleted' || event.type === 'comment.vote';
+}
+
+function applyCommentSocketEvent(current: CommentNode[], event: CommentSocketEvent): CommentNode[] {
+  if (event.type === 'comment.created') {
+    const incoming = event.payload.comment as CommentNode;
+    return current.some((comment) => comment.id === incoming.id) ? current : [...current, incoming];
+  }
+  if (event.type === 'comment.deleted') {
+    return current.map((comment) => comment.id === event.payload.commentId
+      ? { ...comment, deleted: true, body: '[deleted]' }
+      : comment);
+  }
+  return current.map((comment) => comment.id === event.payload.commentId
+    ? { ...comment, upvotes: event.payload.upvotes }
+    : comment);
 }
 
 /** Exactly one of battleId / matchId — the discussion subject. */
@@ -96,30 +120,44 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
 
   useEffect(() => {
     let active = true;
-    const refresh = () => fetch(`/api/comments?${subjectQuery}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data: { comments: CommentNode[] }) => active && setComments(data.comments))
-      .catch(() => active && setError('Could not load comments'))
-      .finally(() => active && setLoading(false));
+    let refreshPromise: Promise<void> | null = null;
+    let bufferedEvents: CommentSocketEvent[] = [];
+    const refresh = () => {
+      if (refreshPromise) return refreshPromise;
+      bufferedEvents = [];
+      refreshPromise = (async () => {
+        try {
+          const response = await fetch(`/api/comments?${subjectQuery}`);
+          if (!response.ok) throw new Error('Could not load comments');
+          const data = await response.json() as { comments: CommentNode[] };
+          if (!active) return;
+          const events = bufferedEvents;
+          bufferedEvents = [];
+          setComments(events.reduce(applyCommentSocketEvent, data.comments));
+          setError(null);
+        } catch {
+          if (!active) return;
+          const events = bufferedEvents;
+          bufferedEvents = [];
+          if (events.length > 0) {
+            setComments((current) => events.reduce(applyCommentSocketEvent, current));
+          }
+          setError('Could not load comments');
+        } finally {
+          if (active) setLoading(false);
+        }
+      })().finally(() => { refreshPromise = null; });
+      return refreshPromise;
+    };
     void refresh();
     const unsubscribeSocket = matchId ? subscribeLiveMatch(matchId, (event) => {
-      if (event.type === 'comment.created') {
-        const incoming = event.payload.comment as CommentNode;
-        setComments((current) => current.some((comment) => comment.id === incoming.id)
-          ? current
-          : [...current, incoming]);
-      } else if (event.type === 'comment.deleted') {
-        setComments((current) => current.map((comment) => comment.id === event.payload.commentId
-          ? { ...comment, deleted: true, body: '[deleted]' }
-          : comment));
-      } else if (event.type === 'comment.vote') {
-        setComments((current) => current.map((comment) => comment.id === event.payload.commentId
-          ? { ...comment, upvotes: event.payload.upvotes }
-          : comment));
-      }
+      if (!isCommentSocketEvent(event)) return;
+      if (refreshPromise) bufferedEvents.push(event);
+      else setComments((current) => applyCommentSocketEvent(current, event));
     }, () => { void refresh(); }) : () => undefined;
     return () => {
       active = false;
+      bufferedEvents = [];
       unsubscribeSocket();
     };
   }, [subjectQuery, matchId]);

@@ -13,6 +13,7 @@ import {
 
 const POLL_MS = 10_000;
 const STATUS_MS = 60_000;
+export const COORDINATOR_HEALTHY_GRACE_MS = STATUS_MS + 2 * POLL_MS;
 const CORRECTION_OFFSETS = [0, 5 * 60_000, 15 * 60_000, 60 * 60_000, 6 * 60 * 60_000, 24 * 60 * 60_000];
 const FAILURE_BACKOFF = [10_000, 20_000, 40_000, 60_000];
 
@@ -76,6 +77,7 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
   }
 
   async start(config: StatsApiCoordinatorMatch): Promise<{ active: boolean; healthy: boolean }> {
+    const now = Date.now();
     this.ctx.storage.sql.exec(
       `INSERT INTO coordinator_config
         (id, match_id, provider, provider_match_id, kickoff, featured)
@@ -87,16 +89,25 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
       config.matchId, config.provider, config.providerMatchId, config.kickoff, config.featured ? 1 : 0,
     );
     this.ctx.storage.sql.exec(
-      `INSERT OR IGNORE INTO coordinator_state (id, last_status) VALUES (1, ?)`,
-      config.status,
+      `INSERT OR IGNORE INTO coordinator_state (id, last_status, finished_at) VALUES (1, ?, ?)`,
+      config.status, config.status === 'finished' ? now : 0,
     );
-    const alarm = await this.ctx.storage.getAlarm();
-    if (alarm === null || alarm > Date.now() + POLL_MS) {
-      await this.ctx.storage.setAlarm(Date.now() + 100);
-    }
     const state = this.state();
-    const recentlyHealthy = state.last_success_at === 0 || Date.now() - state.last_success_at < 30_000;
-    return { active: true, healthy: state.failure_count === 0 && recentlyHealthy };
+    const correctionActive = state.last_status === 'finished'
+      && correctionDueAt(state.finished_at, state.correction_index) !== null;
+    const active = state.last_status !== 'finished' || correctionActive;
+    const alarm = await this.ctx.storage.getAlarm();
+    if (!active && alarm !== null) {
+      await this.ctx.storage.deleteAlarm();
+    } else if (active && (alarm === null || alarm > now + POLL_MS)) {
+      await this.ctx.storage.setAlarm(now + 100);
+    }
+    const recentlyHealthy = state.last_success_at === 0
+      || now - state.last_success_at < COORDINATOR_HEALTHY_GRACE_MS;
+    return {
+      active,
+      healthy: state.failure_count === 0 && (correctionActive || recentlyHealthy),
+    };
   }
 
   async publish(event: PublishableLiveMatchEvent): Promise<void> {
@@ -209,12 +220,14 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
         if (now >= dueAt) {
           const final = await this.runWork(config, 'final', now);
           if (final) {
+            if (!final.finalized) throw new Error(`Final timeline is incomplete for ${config.match_id}.`);
             this.ctx.storage.sql.exec(
               `UPDATE coordinator_state
-               SET correction_index = correction_index + 1, pending_broadcast = 1,
+               SET correction_index = correction_index + 1,
+                   pending_broadcast = CASE WHEN ? THEN 1 ELSE pending_broadcast END,
                    last_success_at = ?, failure_count = 0
                WHERE id = 1`,
-              now,
+              final.changed ? 1 : 0, now,
             );
           }
         }
@@ -310,7 +323,7 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
     const config = this.config();
     if (!config) return;
     this.ctx.storage.sql.exec(
-      'UPDATE coordinator_state SET revision = revision + 1, pending_broadcast = 0 WHERE id = 1',
+      'UPDATE coordinator_state SET revision = revision + 1 WHERE id = 1',
     );
     const state = this.state();
     const payload = await readLiveMatchSnapshot({
@@ -325,6 +338,9 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
       sentAt: new Date().toISOString(),
       payload,
     });
+    this.ctx.storage.sql.exec(
+      'UPDATE coordinator_state SET pending_broadcast = 0 WHERE id = 1',
+    );
   }
 
   private async broadcastHealth(

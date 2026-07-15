@@ -99,9 +99,14 @@ export async function listStatsApiCoordinatorMatches(options: {
      JOIN matches match ON match.id = source.match_id
      WHERE source.provider = $1 AND source.role = 'score'
        AND source.status IN ('active', 'degraded')
-       AND match.status IN ('scheduled', 'live')
-       AND match.kickoff BETWEEN $2::timestamptz - interval '5 hours'
-                             AND $2::timestamptz + interval '2 hours'
+       AND (
+         (match.status IN ('scheduled', 'live')
+           AND match.kickoff BETWEEN $2::timestamptz - interval '5 hours'
+                                 AND $2::timestamptz + interval '2 hours')
+         OR (match.status = 'finished'
+           AND match.kickoff BETWEEN $2::timestamptz - interval '30 hours'
+                                 AND $2::timestamptz)
+       )
      ORDER BY CASE WHEN match.status = 'live' THEN 0 ELSE 1 END, match.kickoff`,
     [THE_STATS_API_PROVIDER, options.now],
   ) as Array<{ matchId: string; providerMatchId: string; kickoff: Date | string; status: AppStatus }>;
@@ -616,6 +621,7 @@ export interface CoordinatedStatsApiResult {
   changed: boolean;
   officialLineup?: boolean;
   snapshotHash?: string;
+  finalized?: boolean;
 }
 
 async function loadCoordinatedSource(query: Query, matchId: string): Promise<SourceRow> {
@@ -713,6 +719,7 @@ export async function syncCoordinatedStatsApiMatch(options: {
     matchStatus: source.status,
     changed: snapshot.accepted && !snapshot.unchanged,
     snapshotHash: snapshot.snapshotHash,
+    finalized: snapshot.accepted && timeline.coverage === 'full',
   };
 }
 

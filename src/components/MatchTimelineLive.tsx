@@ -61,7 +61,7 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
     let home = 0;
     let away = 0;
     for (const m of moments) {
-      if (!isGoal(m.type)) continue;
+      if (!isGoal(m.type) || m.verificationStatus !== 'active') continue;
       // Own goals credit the opposing side.
       if (m.type === 'own_goal') { m.team === 'home' ? (away += 1) : (home += 1); }
       else { m.team === 'home' ? (home += 1) : (away += 1); }
