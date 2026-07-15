@@ -24,7 +24,6 @@ const TRIAL_REQUEST_RESERVE = 9_500;
 const ACTIVE_BEFORE_MS = 2 * 60 * 60 * 1_000;
 const ACTIVE_AFTER_MS = 5 * 60 * 60 * 1_000;
 const FINAL_RECHECK_MS = 15 * 60 * 1_000;
-const IMMEDIATE_BACKFILL_AGE_MS = 6 * 60 * 60 * 1_000;
 
 type Query = NeonQueryFunction<false, false>;
 type AppStatus = 'scheduled' | 'live' | 'finished';
@@ -77,6 +76,43 @@ export interface StatsApiSyncResult {
   provisional: number;
   finalized: number;
   failures: number;
+}
+
+export interface StatsApiCoordinatorMatch {
+  matchId: string;
+  provider: typeof THE_STATS_API_PROVIDER;
+  providerMatchId: string;
+  kickoff: string;
+  status: AppStatus;
+  featured: boolean;
+}
+
+export async function listStatsApiCoordinatorMatches(options: {
+  databaseUrl: string;
+  now: Date;
+}): Promise<StatsApiCoordinatorMatch[]> {
+  const query = neon(options.databaseUrl);
+  const rows = await query.query(
+    `SELECT source.match_id AS "matchId", source.provider_match_id AS "providerMatchId",
+            match.kickoff, match.status
+     FROM match_sources source
+     JOIN matches match ON match.id = source.match_id
+     WHERE source.provider = $1 AND source.role = 'score'
+       AND source.status IN ('active', 'degraded')
+       AND match.status IN ('scheduled', 'live')
+       AND match.kickoff BETWEEN $2::timestamptz - interval '5 hours'
+                             AND $2::timestamptz + interval '2 hours'
+     ORDER BY CASE WHEN match.status = 'live' THEN 0 ELSE 1 END, match.kickoff`,
+    [THE_STATS_API_PROVIDER, options.now],
+  ) as Array<{ matchId: string; providerMatchId: string; kickoff: Date | string; status: AppStatus }>;
+  return rows.map((row, index) => ({
+    matchId: row.matchId,
+    provider: THE_STATS_API_PROVIDER,
+    providerMatchId: row.providerMatchId,
+    kickoff: new Date(row.kickoff).toISOString(),
+    status: row.status,
+    featured: index === 0,
+  }));
 }
 
 export async function reserveStatsApiRequest(query: Query, now: Date, path: string) {
@@ -564,10 +600,7 @@ async function syncOneSource(
     const snapshot = await persistTimelineSnapshot(query, source, timeline, 'finalizing', now);
     if (!snapshot.accepted) return { lineupAccepted, lineupRejected, snapshots, provisional, finalized };
     snapshots += 1;
-    const oldEnough = now.getTime() - source.kickoff.getTime() >= IMMEDIATE_BACKFILL_AGE_MS;
-    const stable = snapshot.consecutiveIdentical >= 2
-      && now.getTime() - source.kickoff.getTime() >= 4 * 60 * 60 * 1_000;
-    if (timeline.coverage === 'full' && (oldEnough || stable)) {
+    if (timeline.coverage === 'full') {
       await finalizeDurableMoments(query, source, timeline, snapshot.snapshotHash, now);
       finalized += 1;
     }
@@ -575,10 +608,119 @@ async function syncOneSource(
   return { lineupAccepted, lineupRejected, snapshots, provisional, finalized };
 }
 
+export type CoordinatedStatsApiWork = 'status' | 'lineup' | 'timeline' | 'final';
+
+export interface CoordinatedStatsApiResult {
+  work: CoordinatedStatsApiWork;
+  matchStatus: AppStatus;
+  changed: boolean;
+  officialLineup?: boolean;
+  snapshotHash?: string;
+}
+
+async function loadCoordinatedSource(query: Query, matchId: string): Promise<SourceRow> {
+  const [databaseSource] = await query.query(
+    `SELECT source.match_id AS "matchId", source.provider_match_id AS "providerMatchId",
+            match.kickoff, match.status, match.home_team AS "homeTeam",
+            match.away_team AS "awayTeam", source.metadata
+     FROM match_sources source
+     JOIN matches match ON match.id = source.match_id
+     WHERE source.match_id = $1 AND source.provider = $2 AND source.role = 'score'
+       AND source.status IN ('active', 'degraded')
+     LIMIT 1`,
+    [matchId, THE_STATS_API_PROVIDER],
+  ) as DatabaseSourceRow[];
+  if (!databaseSource) throw new Error(`No active TheStatsAPI source for ${matchId}.`);
+  return normalizeStatsApiSourceRow(databaseSource);
+}
+
+/** One quota-accounted provider operation for the Durable Object coordinator.
+ * The broker allocates a slot before this is called; reserveStatsApiRequest is
+ * still invoked by the client as the cross-isolate final authority. */
+export async function syncCoordinatedStatsApiMatch(options: {
+  databaseUrl: string;
+  apiKey: string;
+  matchId: string;
+  work: CoordinatedStatsApiWork;
+  now: Date;
+}): Promise<CoordinatedStatsApiResult> {
+  const query = neon(options.databaseUrl);
+  const source = await loadCoordinatedSource(query, options.matchId);
+  const client = clientOptions(query, options.apiKey, options.now);
+
+  if (options.work === 'status') {
+    const before = source.status;
+    const match = await providerCall(query, options.now, () =>
+      fetchStatsApiMatch(source.providerMatchId, client));
+    await updateScore(query, source, match, options.now);
+    return { work: options.work, matchStatus: source.status, changed: before !== source.status };
+  }
+
+  if (options.work === 'lineup') {
+    const [existing] = await query.query(
+      `SELECT status FROM match_lineups WHERE match_id = $1 AND provider = $2`,
+      [source.matchId, THE_STATS_API_PROVIDER],
+    ) as Array<{ status: string }>;
+    if (existing?.status === 'official') {
+      return { work: options.work, matchStatus: source.status, changed: false, officialLineup: true };
+    }
+    try {
+      const lineup = await providerCall(query, options.now, () =>
+        fetchStatsApiLineup(source.providerMatchId, client), [404]);
+      const quality = await persistLineup(query, source, lineup, source.status, options.now);
+      return {
+        work: options.work,
+        matchStatus: source.status,
+        changed: quality.accepted,
+        officialLineup: quality.accepted,
+      };
+    } catch (error) {
+      if (error instanceof StatsApiHttpError && error.status === 404) {
+        return { work: options.work, matchStatus: source.status, changed: false, officialLineup: false };
+      }
+      throw error;
+    }
+  }
+
+  if (options.work === 'timeline') {
+    if (source.status !== 'live') {
+      return { work: options.work, matchStatus: source.status, changed: false };
+    }
+    const timeline = await providerCall(query, options.now, () =>
+      fetchStatsApiTimeline(source.providerMatchId, true, client));
+    const snapshot = await persistTimelineSnapshot(query, source, timeline, 'shadow', options.now);
+    if (snapshot.accepted) {
+      await persistStatsApiMoments(
+        query, source, timeline, snapshot.snapshotHash, options.now, 'provisional',
+      );
+    }
+    return {
+      work: options.work,
+      matchStatus: source.status,
+      changed: snapshot.accepted && !snapshot.unchanged,
+      snapshotHash: snapshot.snapshotHash,
+    };
+  }
+
+  const timeline = await providerCall(query, options.now, () =>
+    fetchStatsApiTimeline(source.providerMatchId, false, client));
+  const snapshot = await persistTimelineSnapshot(query, source, timeline, 'finalizing', options.now);
+  if (snapshot.accepted && timeline.coverage === 'full') {
+    await finalizeDurableMoments(query, source, timeline, snapshot.snapshotHash, options.now);
+  }
+  return {
+    work: options.work,
+    matchStatus: source.status,
+    changed: snapshot.accepted && !snapshot.unchanged,
+    snapshotHash: snapshot.snapshotHash,
+  };
+}
+
 export async function refreshTheStatsApiWorldCup(options: {
   databaseUrl: string;
   apiKey: string;
   now: Date;
+  excludeMatchIds?: readonly string[];
 }): Promise<StatsApiSyncResult> {
   const query = neon(options.databaseUrl);
   const databaseRows = await query.query(
@@ -594,7 +736,9 @@ export async function refreshTheStatsApiWorldCup(options: {
      ORDER BY match.kickoff`,
     [THE_STATS_API_PROVIDER, options.now],
   ) as DatabaseSourceRow[];
-  const rows = databaseRows.map(normalizeStatsApiSourceRow);
+  const excluded = new Set(options.excludeMatchIds ?? []);
+  const rows = databaseRows.map(normalizeStatsApiSourceRow)
+    .filter((source) => !excluded.has(source.matchId));
   if (rows.length === 0) {
     return {
       outcome: 'skipped', matches: 0, scores: 0, lineupsAccepted: 0,

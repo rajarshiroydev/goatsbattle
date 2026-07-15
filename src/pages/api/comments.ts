@@ -8,6 +8,7 @@ import {
   parseJsonBody,
   slugSchema,
 } from '../../lib/apiValidation';
+import { publishCommentCreated, publishCommentDeleted } from '../../lib/liveMatchPublish';
 
 export const prerender = false;
 
@@ -80,6 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
   if (result.status === 'invalid') return json({ error: result.error }, 400);
   if (result.status === 'not_found') return json({ error: 'Subject not found' }, 404);
+  if ('match' in subject) await publishCommentCreated(subject.match, result.comment);
   return json({ comment: result.comment });
 };
 
@@ -100,5 +102,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const result = await deleteComment(commentId, locals.user.id);
   if (result.status === 'not_found') return json({ error: 'Comment not found' }, 404);
   if (result.status === 'forbidden') return json({ error: 'Not your comment' }, 403);
+  if (result.matchId) await publishCommentDeleted(result.matchId, commentId);
   return json({ ok: true });
 };

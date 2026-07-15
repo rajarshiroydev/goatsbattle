@@ -1,5 +1,6 @@
 // Shared live feed for the two timeline islands on a match page. A module-level
 // store gives both islands one request and one polling timer per match.
+import { subscribeLiveMatch } from './liveMatchSocket';
 
 export interface Moment {
   id: number;
@@ -11,14 +12,14 @@ export interface Moment {
   goatSlug: string | null;
   goatShortName: string | null;
   detail: string | null;
-  verificationStatus: 'provisional' | 'confirmed';
+  verificationStatus: 'active' | 'corrected';
 }
 
 export interface MomentFeed {
   moments: Moment[];
   matchStatus: string | null;
   fetchedAt: string | null;
-  hasProvisional: boolean;
+  hasCorrections: boolean;
   liveEnabled: boolean;
 }
 
@@ -34,6 +35,7 @@ interface FeedStore {
 
 const stores = new Map<string, FeedStore>();
 const POLL_MS = 10_000;
+const FALLBACK_POLL_MS = 60_000;
 
 function storeFor(matchId: string): FeedStore {
   let store = stores.get(matchId);
@@ -78,7 +80,7 @@ export function fetchMatchMoments(matchId: string): Promise<Moment[]> {
 function shouldPoll(feed: MomentFeed | null): boolean {
   if (!feed) return true;
   if (!feed.liveEnabled) return false;
-  return feed.matchStatus !== 'finished' || feed.hasProvisional;
+  return feed.matchStatus !== 'finished';
 }
 
 /** Subscribe to the shared live feed. The first subscriber starts polling and
@@ -93,18 +95,35 @@ export function subscribeMatchMoments(
   store.errorListeners.add(onError);
   if (store.feed) onFeed(store.feed);
   void fetchMatchMomentFeed(matchId).catch(() => undefined);
+  const unsubscribeSocket = subscribeLiveMatch(
+    matchId,
+    (event) => {
+      if (event.type !== 'match.snapshot') return;
+      const next: MomentFeed = {
+        moments: event.payload.moments,
+        matchStatus: event.payload.status,
+        fetchedAt: event.payload.freshness.fetchedAt,
+        hasCorrections: event.payload.moments.some((moment) => moment.verificationStatus === 'corrected'),
+        liveEnabled: true,
+      };
+      store.feed = next;
+      for (const listener of store.listeners) listener(next);
+    },
+    () => { void fetchMatchMomentFeed(matchId).catch(() => undefined); },
+  );
 
   if (store.timer === null) {
     store.timer = window.setInterval(() => {
       if (document.visibilityState === 'visible' && shouldPoll(store.feed)) {
         void fetchMatchMomentFeed(matchId).catch(() => undefined);
       }
-    }, POLL_MS);
+    }, FALLBACK_POLL_MS);
   }
 
   return () => {
     store.listeners.delete(onFeed);
     store.errorListeners.delete(onError);
+    unsubscribeSocket();
     if (store.listeners.size === 0 && store.timer !== null) {
       window.clearInterval(store.timer);
       store.timer = null;

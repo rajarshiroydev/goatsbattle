@@ -94,6 +94,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   flattened config has no `env.*`). Footgun: the top-level `wrangler.jsonc` `name` is
   `goatsbattle` (= prod), so a bare `astro build` (no `CLOUDFLARE_ENV`) + `wrangler deploy`
   targets PRODUCTION. Always build via the `worker:build:preview`/`:production` scripts.
+- **Durable Object bindings are not inherited by Wrangler environments.** Symptom: the
+  top-level `durable_objects` config looks correct, but `wrangler types --env preview` warns
+  and the generated `Env` omits the namespace → Cause: bindings must be repeated inside each
+  `env.*` block → Fix: keep the coordinator/broker bindings at top level and in preview/prod,
+  regenerate `worker-configuration.d.ts`, then inspect `dist/server/wrangler.json` after the
+  environment-specific Astro build to verify both bindings and the SQLite class migration.
 - **Wall-clock benchmarks can falsely fail the Workers Free CPU gate.** Symptom: a
   Neon-backed route takes more than 10 ms by `Date.now()`/client timing and appears to
   require Workers Paid → Cause: wall time includes the Neon network wait, while Cloudflare

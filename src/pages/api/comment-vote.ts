@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { toggleCommentUpvote } from '../../lib/commentService';
 import { rateLimit } from '../../lib/ratelimit';
 import { commentVoteBodySchema, parseJsonBody } from '../../lib/apiValidation';
+import { publishCommentVote } from '../../lib/liveMatchPublish';
 
 export const prerender = false;
 
@@ -27,5 +28,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const result = await toggleCommentUpvote(commentId, locals.user.id, remove);
   if (result.status === 'not_found') return json({ error: 'Comment not found' }, 404);
+  if (result.matchId) await publishCommentVote(result.matchId, commentId, result.upvotes);
   return json({ upvotes: result.upvotes, viewerUpvoted: result.viewerUpvoted });
 };

@@ -1,6 +1,9 @@
 import { handle } from '@astrojs/cloudflare/handler';
-import { refreshTheStatsApiWorldCup } from './lib/theStatsApiSync';
+import { listStatsApiCoordinatorMatches, refreshTheStatsApiWorldCup } from './lib/theStatsApiSync';
 import { refreshWorldCupScores } from './lib/worldCupSync';
+
+export { LiveMatchCoordinator } from './durable/LiveMatchCoordinator';
+export { StatsApiRequestBroker } from './durable/StatsApiRequestBroker';
 
 type AstroHandleArgs = Parameters<typeof handle>;
 
@@ -14,15 +17,35 @@ export default {
     let shouldUseFallback = !env.THESTATSAPI_API_KEY;
     try {
       if (env.THESTATSAPI_API_KEY) {
+        const coordinatedMatchIds: string[] = [];
+        const candidates = await listStatsApiCoordinatorMatches({
+          databaseUrl: env.DATABASE_URL,
+          now,
+        });
+        for (const candidate of candidates) {
+          try {
+            const coordinator = env.LIVE_MATCH_COORDINATOR.getByName(candidate.matchId);
+            const status = await coordinator.start(candidate);
+            if (status.active && status.healthy) coordinatedMatchIds.push(candidate.matchId);
+          } catch (error) {
+            console.error(JSON.stringify({
+              event: 'live_match_coordinator_start_failed',
+              matchId: candidate.matchId,
+              error: error instanceof Error ? error.message : String(error),
+            }));
+          }
+        }
         const result = await refreshTheStatsApiWorldCup({
           databaseUrl: env.DATABASE_URL,
           apiKey: env.THESTATSAPI_API_KEY,
           now,
+          excludeMatchIds: coordinatedMatchIds,
         });
         shouldUseFallback = result.failures > 0;
         console.log(JSON.stringify({
           event: 'thestatsapi_world_cup_refresh',
           ...result,
+          coordinatedMatches: coordinatedMatchIds.length,
           at: now.toISOString(),
         }));
       }

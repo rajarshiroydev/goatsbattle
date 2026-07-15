@@ -42,6 +42,30 @@ export function resolveStat(goatSlug: string, statLabel: string): StatTag | null
   return null;
 }
 
+export type ResolveStatTagInputsResult =
+  | { ok: true; tags: StatTag[]; requested: number }
+  | { ok: false; error: string };
+
+/** Validate and deduplicate the complete submitted set. Unknown references are
+ * never dropped: the caller must reject the comment so its citations remain
+ * exactly what the author selected. */
+export function resolveStatTagInputs(inputs: readonly StatTagInput[]): ResolveStatTagInputsResult {
+  if (inputs.length > MAX_STAT_TAGS) {
+    return { ok: false, error: `Too many stat tags (max ${MAX_STAT_TAGS})` };
+  }
+  const seen = new Set<string>();
+  const tags: StatTag[] = [];
+  for (const input of inputs) {
+    const key = `${input.goatSlug}|${input.statLabel}`;
+    if (seen.has(key)) continue;
+    const tag = resolveStat(input.goatSlug, input.statLabel);
+    if (!tag) return { ok: false, error: `Unknown stat tag: ${input.goatSlug} · ${input.statLabel}` };
+    seen.add(key);
+    tags.push(tag);
+  }
+  return { ok: true, tags, requested: inputs.length };
+}
+
 /** A goat whose stats can be tagged, flattened for the composer picker. */
 export interface TaggableGoat {
   slug: string;

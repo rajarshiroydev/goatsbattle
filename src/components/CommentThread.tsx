@@ -5,6 +5,7 @@ import { openAuthModal } from '../lib/authModal';
 import { relativeTime } from '../lib/format';
 import { MAX_STAT_TAGS } from '../lib/statTags';
 import type { TaggableGoat, StatTag, StatTagInput } from '../lib/statTags';
+import { subscribeLiveMatch } from '../lib/liveMatchSocket';
 
 /** "Int'l Goals 106" — compact stat display used on chips and picker options. */
 function statText(s: { statLabel: string; value: string | number; unit?: string } | { label: string; value: string | number; unit?: string }): string {
@@ -35,7 +36,7 @@ interface CommentNode {
     minute: number;
     extra: number | null;
     type: string;
-    verificationStatus: 'provisional' | 'confirmed' | 'retracted' | 'superseded';
+    verificationStatus: 'active' | 'corrected';
   } | null;
   statTags: StatTag[];
 }
@@ -95,15 +96,33 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/comments?${subjectQuery}`)
+    const refresh = () => fetch(`/api/comments?${subjectQuery}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: { comments: CommentNode[] }) => active && setComments(data.comments))
       .catch(() => active && setError('Could not load comments'))
       .finally(() => active && setLoading(false));
+    void refresh();
+    const unsubscribeSocket = matchId ? subscribeLiveMatch(matchId, (event) => {
+      if (event.type === 'comment.created') {
+        const incoming = event.payload.comment as CommentNode;
+        setComments((current) => current.some((comment) => comment.id === incoming.id)
+          ? current
+          : [...current, incoming]);
+      } else if (event.type === 'comment.deleted') {
+        setComments((current) => current.map((comment) => comment.id === event.payload.commentId
+          ? { ...comment, deleted: true, body: '[deleted]' }
+          : comment));
+      } else if (event.type === 'comment.vote') {
+        setComments((current) => current.map((comment) => comment.id === event.payload.commentId
+          ? { ...comment, upvotes: event.payload.upvotes }
+          : comment));
+      }
+    }, () => { void refresh(); }) : () => undefined;
     return () => {
       active = false;
+      unsubscribeSocket();
     };
-  }, [subjectQuery]);
+  }, [subjectQuery, matchId]);
 
   // Timeline → composer bridge: the MatchTimeline dispatches `gb:moment` when a
   // moment is clicked; anchor the composer to it (match pages only).
@@ -136,7 +155,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
   const tree = useMemo(() => buildTree(comments, sort, orderRef), [comments, sort]);
 
   function addComment(node: CommentNode) {
-    setComments((prev) => [...prev, node]);
+    setComments((prev) => prev.some((comment) => comment.id === node.id) ? prev : [...prev, node]);
   }
 
   function updateComment(id: number, patch: Partial<CommentNode>) {
@@ -557,7 +576,7 @@ function CommentItem({
           </div>
 
           {/* Moment tag — a citation chip linking the comment to a timeline point */}
-          {node.moment && (node.moment.verificationStatus === 'confirmed' || node.moment.verificationStatus === 'provisional') && (
+          {node.moment && node.moment.verificationStatus === 'active' && (
             <button
               type="button"
               onClick={() =>
@@ -572,10 +591,9 @@ function CommentItem({
             >
               <span class="text-[11px] leading-none">🚩</span>
               <span class="font-headline font-extrabold uppercase tracking-wide text-[12px] text-lime leading-none">{momentLabel(node.moment)}</span>
-              {node.moment.verificationStatus === 'provisional' && <span class="font-mono text-[9px] uppercase tracking-wider text-mute">· Live</span>}
             </button>
           )}
-          {node.moment && (node.moment.verificationStatus === 'retracted' || node.moment.verificationStatus === 'superseded') && (
+          {node.moment && node.moment.verificationStatus === 'corrected' && (
             <span class="inline-flex items-center gap-1.5 mb-2 rounded-md border border-red/40 bg-red/[0.07] px-2.5 py-1 font-headline font-extrabold uppercase tracking-wide text-[12px] text-red leading-none">
               Source corrected · {momentLabel(node.moment)}
             </span>

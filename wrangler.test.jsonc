@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "goatsbattle-worker-tests",
+  "main": "./tests/worker/entry.ts",
+  "compatibility_date": "2026-07-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "DATABASE_URL": "postgresql://unused.invalid/test",
+    "THESTATSAPI_API_KEY": "test-key"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "LIVE_MATCH_COORDINATOR", "class_name": "LiveMatchCoordinator" },
+      { "name": "STATS_API_REQUEST_BROKER", "class_name": "StatsApiRequestBroker" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LiveMatchCoordinator", "StatsApiRequestBroker"]
+    }
+  ]
+}

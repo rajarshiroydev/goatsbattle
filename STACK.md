@@ -26,16 +26,22 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
 ## Hosting, build & deploy
 - **Cloudflare Workers** via `@astrojs/cloudflare` ^14 + **wrangler** ^4.110. Config in
   `wrangler.jsonc` (env-flattened redirected config at build via `CLOUDFLARE_ENV`).
+- **Cloudflare Durable Objects** — per-match live ingestion/WebSocket coordination plus a
+  per-provider request broker; SQLite-backed alarms and hibernating WebSockets are tested in
+  workerd via `npm run test:worker`.
 - Deploy is manual/approval-gated: `worker:deploy:preview` (Worker `goatsbattle-preview`) and
   `worker:deploy:production` (Worker `goatsbattle`, custom domain + cron). See `AGENTS.md`.
 - **OG images**: `satori` ^0.26 + `@resvg/resvg-js` ^2.6, prerendered in Node
   (`prerenderEnvironment: 'node'`) since resvg is a native binary that won't run in workerd.
 - **tsx** ^4 — runs the `scripts/*.ts` tooling (DB migrations, imports, verification).
 - **Playwright** ^1.61 — UI screenshots (`npm run shot -- <route>`).
+- **Vitest** ^4.1 + `@cloudflare/vitest-pool-workers` ^0.18 — Worker-runtime tests for
+  Durable Object storage, alarms, WebSockets, and provider quota coordination.
 
 ## External services / providers
 - **Neon** — database (prod + dev projects).
-- **Cloudflare** — Workers hosting, DNS/custom domain, Web Analytics, KV (SESSION binding).
+- **Cloudflare** — Workers hosting, Durable Objects, DNS/custom domain, Web Analytics, KV
+  (SESSION binding).
 - **Google OAuth** — the only deployed identity provider.
 - **TheStatsAPI** (`comp_6107`) — World Cup scores/status/timelines/lineups provider
   (`src/lib/theStatsApi*.ts`); community World Cup API is a score/status fallback only.

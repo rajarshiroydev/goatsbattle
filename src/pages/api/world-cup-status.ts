@@ -42,10 +42,17 @@ export const GET: APIRoute = async () => {
       status: matches.status,
       lastSyncedAt: matches.lastSyncedAt,
       timelineLatestEvent: sql<unknown>`${matchTimelineState.events} -> -1`,
-      timelineProviderUpdatedAt: matchTimelineState.providerUpdatedAt,
       timelineCoverage: matchTimelineState.coverage,
       timelineHomeGoals: timelineGoals.homeGoals,
       timelineAwayGoals: timelineGoals.awayGoals,
+      timelineObservedAt: sql<Date | null>`(
+        SELECT snapshot.fetched_at
+        FROM match_timeline_snapshots snapshot
+        WHERE snapshot.match_id = ${matches.id}
+          AND snapshot.snapshot_hash = ${matchTimelineState.snapshotHash}
+        ORDER BY snapshot.fetched_at ASC
+        LIMIT 1
+      )`,
     })
     .from(matches)
     .leftJoin(matchTimelineState, eq(matchTimelineState.matchId, matches.id))
@@ -74,7 +81,7 @@ export const GET: APIRoute = async () => {
       const inPollingWindow = now >= kickoff - 60 * 60 * 1_000 && now <= kickoff + 4 * 60 * 60 * 1_000;
       const {
         timelineLatestEvent,
-        timelineProviderUpdatedAt,
+        timelineObservedAt,
         timelineCoverage,
         timelineHomeGoals,
         timelineAwayGoals,
@@ -99,8 +106,7 @@ export const GET: APIRoute = async () => {
         matchClock: deriveLiveMatchClock({
           status: row.status,
           latestEvent: timelineLatestEvent,
-          providerUpdatedAt: timelineProviderUpdatedAt,
-          now,
+          observedAt: timelineObservedAt,
         }),
         goats: (goatsByMatch.get(row.id) ?? []).map(({ slug, shortName, team }) => ({ slug, shortName, team })),
       };

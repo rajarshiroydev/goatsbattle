@@ -20,11 +20,11 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
   }
   // Local development has no APP_ENV binding; deployed environments must opt in
-  // explicitly so provisional events can be rehearsed on preview before prod.
+  // explicitly so live events can be rehearsed on preview before prod.
   const liveEnabled = env.LIVE_MOMENTS_ENABLED === 'true' || env.APP_ENV === undefined;
   const feed = await getMatchMomentFeed(parsed.data, liveEnabled);
   const isChanging = liveEnabled
-    && (feed.matchStatus === 'live' || feed.matchStatus === 'scheduled' || feed.hasProvisional);
+    && (feed.matchStatus === 'live' || feed.matchStatus === 'scheduled');
   return Response.json({ ...feed, liveEnabled }, {
     headers: {
       'Cache-Control': isChanging

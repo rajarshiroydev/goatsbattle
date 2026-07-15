@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
+import { formatLiveMatchClock, type LiveClockState } from '../lib/liveMatchClock';
 
 type HubFilter = 'upcoming' | 'live' | 'results';
 
@@ -19,7 +20,7 @@ export interface WorldCupHubMatch {
   kickoff: string;
   venue: string;
   delayed?: boolean;
-  matchClock?: string | null;
+  matchClock?: LiveClockState | null;
   goats?: Array<{ slug: string; shortName: string; team: string | null }>;
 }
 
@@ -52,6 +53,7 @@ function MatchRow({ match, now, featured = false }: { match: WorldCupHubMatch; n
     weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
   const remaining = countdown(match.kickoff, now);
+  const clock = formatLiveMatchClock(match.matchClock ?? null, now);
   return (
     <a
       href={`/floor/${match.id}`}
@@ -60,7 +62,7 @@ function MatchRow({ match, now, featured = false }: { match: WorldCupHubMatch; n
       <div class="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
         <span>Match {match.matchNumber} · {STAGE_LABEL[match.stage] ?? match.stage}</span>
         {match.status === 'live' ? (
-          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live{match.matchClock ? ` · ${match.matchClock}` : ''}</span>
+          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live{clock ? ` · ${clock}` : ''}</span>
         ) : match.delayed ? <span class="text-red">Updates delayed</span> : <span>{remaining ?? (match.status === 'finished' ? 'Full time' : time)}</span>}
       </div>
       <div class={`mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 ${featured ? 'text-2xl' : 'text-lg'}`}>
@@ -86,7 +88,7 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const clock = window.setInterval(() => setNow(Date.now()), 60_000);
+    const clock = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(clock);
   }, []);
 

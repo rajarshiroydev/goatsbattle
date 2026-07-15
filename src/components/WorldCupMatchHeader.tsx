@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
 import type { WorldCupHubMatch } from './WorldCupHub';
+import { formatLiveMatchClock, recalibrateLiveMatchClock } from '../lib/liveMatchClock';
+import { subscribeLiveMatch } from '../lib/liveMatchSocket';
 
 type StatusResponse = { matches: Array<Partial<WorldCupHubMatch> & { id: string }> };
 
@@ -17,19 +19,40 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
       .then((data: StatusResponse) => {
         if (!active) return;
         const update = data.matches.find((item) => item.id === initial.id);
-        if (update) setMatch((current) => ({ ...current, ...update }));
+        if (update) setMatch((current) => ({
+          ...current,
+          ...update,
+          matchClock: recalibrateLiveMatchClock(current.matchClock ?? null, update.matchClock ?? null),
+        }));
       })
       .catch(() => undefined);
     };
     refresh();
-    const poll = window.setInterval(refresh, 10_000);
+    const unsubscribeSocket = subscribeLiveMatch(initial.id, (event) => {
+      if (event.type === 'match.snapshot') {
+        setMatch((current) => ({
+          ...current,
+          status: event.payload.status,
+          homeScore: event.payload.homeScore,
+          awayScore: event.payload.awayScore,
+          homePenaltyScore: event.payload.homePenaltyScore,
+          awayPenaltyScore: event.payload.awayPenaltyScore,
+          delayed: event.payload.freshness.delayed,
+          matchClock: recalibrateLiveMatchClock(current.matchClock ?? null, event.payload.clock),
+        }));
+      } else if (event.type === 'provider.health') {
+        setMatch((current) => ({ ...current, delayed: event.payload.status === 'delayed' }));
+      }
+    }, () => { void refresh(); });
+    const poll = window.setInterval(refresh, 60_000);
     const clock = window.setInterval(() => {
       if (active) setNow(Date.now());
-    }, 60_000);
+    }, 1_000);
     return () => {
       active = false;
       window.clearInterval(poll);
       window.clearInterval(clock);
+      unsubscribeSocket();
     };
   }, [initial.id]);
 
@@ -39,6 +62,7 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
   const countdown = minutes >= 1_440
     ? `${Math.floor(minutes / 1_440)}d ${Math.floor((minutes % 1_440) / 60)}h`
     : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  const clockLabel = formatLiveMatchClock(match.matchClock ?? null, now);
 
   return (
     <div class="bg-canvas-soft border border-hairline rounded-lg overflow-hidden">
@@ -66,9 +90,9 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
               </>
             ) : <span class="font-headline font-black italic text-mute text-xl sm:text-3xl leading-none">VS</span>}
           </div>
-          {match.status === 'live' && match.matchClock && (
+          {match.status === 'live' && clockLabel && (
             <span class="font-mono text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-lime" title="Approximate live minute from TheStatsAPI timeline">
-              {match.matchClock}
+              {clockLabel}
             </span>
           )}
           {match.homePenaltyScore !== null && match.homePenaltyScore !== undefined
