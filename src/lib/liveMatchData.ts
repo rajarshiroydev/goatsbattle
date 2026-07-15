@@ -24,6 +24,7 @@ export async function readLiveMatchSnapshot(options: {
               SELECT snapshot.fetched_at
               FROM match_timeline_snapshots snapshot
               WHERE snapshot.match_id = match.id
+                AND snapshot.provider = state.provider
                 AND snapshot.snapshot_hash = state.snapshot_hash
               ORDER BY snapshot.fetched_at ASC
               LIMIT 1

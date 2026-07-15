@@ -72,7 +72,9 @@ describe('LiveMatchCoordinator runtime', () => {
 
   it('keeps a coordinator healthy through the status cadence grace window', async () => {
     const coordinator = env.LIVE_MATCH_COORDINATOR.getByName('health-grace-match');
-    const now = Date.UTC(2026, 6, 15, 12, 0, 0);
+    // Keep the alarm scheduled beyond the test run. A fixed historical time
+    // makes Miniflare immediately fire the overdue alarm and mutate this state.
+    const now = Date.now() + 60 * 60_000;
     const config = {
       matchId: 'health-grace-match',
       provider: 'thestatsapi' as const,

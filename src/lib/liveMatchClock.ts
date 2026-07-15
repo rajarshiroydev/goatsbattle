@@ -15,6 +15,8 @@ export interface LiveClockState {
   /** When this anchor was first observed by our ingestion, not provider time. */
   observedAt: string;
   running: boolean;
+  /** True until a real timeline event provides the clock anchor. */
+  approximate: boolean;
 }
 
 interface TimelineClockEvent {
@@ -68,7 +70,16 @@ export function deriveLiveMatchClock(options: {
   observedAt: Date | null;
 }): LiveClockState | null {
   const event = clockEvent(options.latestEvent);
-  if (!event) return null;
+  if (!event) {
+    if (options.status !== 'live' || !options.observedAt) return null;
+    return {
+      phase: 'first_half',
+      elapsedSeconds: 0,
+      observedAt: options.observedAt.toISOString(),
+      running: true,
+      approximate: true,
+    };
+  }
   const observedAt = observedIso(options.observedAt);
 
   if (options.status === 'finished') {
@@ -78,17 +89,26 @@ export function deriveLiveMatchClock(options: {
       elapsedSeconds: (extraTime ? 120 : 90) * 60,
       observedAt,
       running: false,
+      approximate: false,
     };
   }
   if (options.status !== 'live') return null;
   if (event.period === 'penalties') {
-    return { phase: 'penalties', elapsedSeconds: 120 * 60, observedAt, running: false };
+    return {
+      phase: 'penalties', elapsedSeconds: 120 * 60, observedAt, running: false, approximate: false,
+    };
   }
   if (event.type === 'period_end' && event.period === 'first_half') {
-    return { phase: 'half_time', elapsedSeconds: (45 + event.extraTime) * 60, observedAt, running: false };
+    return {
+      phase: 'half_time', elapsedSeconds: (45 + event.extraTime) * 60,
+      observedAt, running: false, approximate: false,
+    };
   }
   if (event.type === 'period_end' && event.period === 'extra_time_first_half') {
-    return { phase: 'extra_time_half_time', elapsedSeconds: (105 + event.extraTime) * 60, observedAt, running: false };
+    return {
+      phase: 'extra_time_half_time', elapsedSeconds: (105 + event.extraTime) * 60,
+      observedAt, running: false, approximate: false,
+    };
   }
 
   const phase = playPhase(event.period);
@@ -97,7 +117,13 @@ export function deriveLiveMatchClock(options: {
   const elapsedMinutes = boundary !== null && event.minute >= boundary
     ? boundary + event.extraTime
     : event.minute;
-  return { phase, elapsedSeconds: elapsedMinutes * 60, observedAt, running: event.type !== 'period_end' };
+  return {
+    phase,
+    elapsedSeconds: elapsedMinutes * 60,
+    observedAt,
+    running: event.type !== 'period_end',
+    approximate: false,
+  };
 }
 
 function projectedSeconds(clock: LiveClockState, now: number): number {
@@ -112,7 +138,15 @@ export function recalibrateLiveMatchClock(
   previous: LiveClockState | null,
   next: LiveClockState | null,
 ): LiveClockState | null {
-  if (!previous || !next || previous.phase !== next.phase) return next;
+  if (!previous || !next) return next;
+  // A real timeline anchor always wins, including a backwards correction from
+  // the lower-trust provisional clock. A later provisional response can never
+  // displace a real anchor already held by the client. Treat a missing field
+  // from an older protocol payload as real for rolling-deployment safety.
+  const previousApproximate = previous.approximate === true;
+  const nextApproximate = next.approximate === true;
+  if (previousApproximate !== nextApproximate) return previousApproximate ? next : previous;
+  if (previous.phase !== next.phase) return next;
   const nextObservedAt = Date.parse(next.observedAt);
   const previousAtObservation = projectedSeconds(previous, nextObservedAt);
   if (next.elapsedSeconds >= previousAtObservation) return next;
@@ -120,6 +154,7 @@ export function recalibrateLiveMatchClock(
 }
 
 const two = (value: number) => String(value).padStart(2, '0');
+const PROVISIONAL_CLOCK_MAX_SECONDS = 10 * 60;
 
 /** Format from wall time on every render. Background tabs therefore recover on
  * their next render instead of replaying missed interval ticks. */
@@ -131,10 +166,22 @@ export function formatLiveMatchClock(clock: LiveClockState | null, now = Date.no
   if (clock.phase === 'full_time') return clock.elapsedSeconds >= 120 * 60 ? '120 minutes' : '90 minutes';
 
   const seconds = projectedSeconds(clock, now);
+  // Empty timeline hashes can recur later in a match. Never let their original
+  // first-seen timestamp turn an estimated startup clock into bogus stoppage time.
+  if (clock.approximate === true && seconds > PROVISIONAL_CLOCK_MAX_SECONDS) return null;
   const boundary = periodBoundary(clock.phase);
   if (boundary !== null && seconds >= boundary * 60) {
     const extraSeconds = seconds - boundary * 60;
     return `${boundary}+${two(Math.floor(extraSeconds / 60))}:${two(extraSeconds % 60)}`;
   }
   return `${Math.floor(seconds / 60)}:${two(seconds % 60)}`;
+}
+
+export function formatLiveMatchClockLabel(
+  clock: LiveClockState | null,
+  now = Date.now(),
+): string | null {
+  const clockText = formatLiveMatchClock(clock, now);
+  if (!clockText) return null;
+  return clock?.approximate === true ? `Est. ${clockText}` : clockText;
 }
