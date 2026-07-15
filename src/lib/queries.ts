@@ -476,14 +476,14 @@ export interface MatchMoment {
   goatSlug: string | null;
   goatShortName: string | null;
   detail: string | null;
-  verificationStatus: 'provisional' | 'confirmed';
+  verificationStatus: 'active' | 'corrected';
 }
 
 export interface MatchMomentFeed {
   moments: MatchMoment[];
   matchStatus: string | null;
   fetchedAt: string | null;
-  hasProvisional: boolean;
+  hasCorrections: boolean;
 }
 
 /** A match's moments, ordered along the timeline with live-feed freshness. */
@@ -491,7 +491,9 @@ export async function getMatchMomentFeed(
   matchId: string,
   includeProvisional = false,
 ): Promise<MatchMomentFeed> {
-  const statuses = includeProvisional ? ['provisional', 'confirmed'] : ['confirmed'];
+  const statuses = includeProvisional
+    ? ['provisional', 'confirmed', 'retracted', 'superseded']
+    : ['confirmed'];
   const rows = await db
     .select({
       matchStatus: matches.status,
@@ -525,7 +527,9 @@ export async function getMatchMomentFeed(
       && row.team !== null && row.verificationStatus !== null)
     .map(({ matchStatus: _matchStatus, fetchedAt: _fetchedAt, ...row }) => ({
       ...row,
-      verificationStatus: row.verificationStatus as MatchMoment['verificationStatus'],
+      verificationStatus: row.verificationStatus === 'retracted' || row.verificationStatus === 'superseded'
+        ? 'corrected'
+        : 'active',
       goatShortName: row.goatSlug ? (getEntityBySlug(row.goatSlug)?.shortName ?? null) : null,
     }));
   const state = rows[0];
@@ -533,7 +537,7 @@ export async function getMatchMomentFeed(
     moments,
     matchStatus: state?.matchStatus ?? null,
     fetchedAt: state?.fetchedAt ? new Date(state.fetchedAt).toISOString() : null,
-    hasProvisional: moments.some((moment) => moment.verificationStatus === 'provisional'),
+    hasCorrections: moments.some((moment) => moment.verificationStatus === 'corrected'),
   };
 }
 

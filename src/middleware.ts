@@ -19,14 +19,24 @@ const SESSION_FREE_GET_PATHS = new Set([
 ]);
 
 const secured = (response: Response) => {
+  // A Worker WebSocket upgrade carries a non-standard `webSocket` attachment.
+  // Reconstructing the response would detach it, and security headers are not
+  // useful after the HTTP connection has upgraded.
+  if (response.status === 101) return response;
+
+  // Responses returned through the Cloudflare dev runner can have immutable
+  // header guards. Reconstructing the response preserves its status, body,
+  // cookies, and existing headers while giving middleware a mutable copy.
+  const mutableResponse = new Response(response.body, response);
+
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     // Astro's CSP integration generates route-specific hashes/nonces. Preserve
     // that complete policy when present; this fallback covers responses that do
     // not pass through Astro's CSP renderer (for example, early API responses).
-    if (name === 'Content-Security-Policy' && response.headers.has(name)) continue;
-    response.headers.set(name, value);
+    if (name === 'Content-Security-Policy' && mutableResponse.headers.has(name)) continue;
+    mutableResponse.headers.set(name, value);
   }
-  return response;
+  return mutableResponse;
 };
 
 /**

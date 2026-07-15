@@ -29,7 +29,7 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [hasProvisional, setHasProvisional] = useState(false);
+  const [hasCorrections, setHasCorrections] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
       matchId,
       (feed) => {
         setMoments(feed.moments);
-        setHasProvisional(feed.hasProvisional);
+        setHasCorrections(feed.hasCorrections);
         setFetchedAt(feed.fetchedAt);
         setError(false);
         setLoading(false);
@@ -61,7 +61,7 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
     let home = 0;
     let away = 0;
     for (const m of moments) {
-      if (!isGoal(m.type)) continue;
+      if (!isGoal(m.type) || m.verificationStatus !== 'active') continue;
       // Own goals credit the opposing side.
       if (m.type === 'own_goal') { m.team === 'home' ? (away += 1) : (home += 1); }
       else { m.team === 'home' ? (home += 1) : (away += 1); }
@@ -80,8 +80,8 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
       <div class="flex items-baseline justify-between mb-1">
         <span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink">Match Moments</span>
         {!loading && moments.length > 0 && (
-          <span class={`font-mono text-[10px] ${hasProvisional ? 'text-red' : 'text-mute'}`}>
-            {hasProvisional ? 'Live · provisional' : `${moments.length} ${moments.length === 1 ? 'event' : 'events'}`}
+          <span class={`font-mono text-[10px] ${hasCorrections ? 'text-red' : 'text-mute'}`}>
+            {hasCorrections ? 'Source corrected' : `${moments.length} ${moments.length === 1 ? 'event' : 'events'}`}
           </span>
         )}
       </div>
@@ -131,7 +131,7 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
                     </span>
                     <span class={`block mt-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${goal ? 'text-lime' : 'text-mute'}`}>
                       {detailLine(moment, goal ? scoreByMoment.get(moment.id) ?? null : null)}
-                      {moment.verificationStatus === 'provisional' ? ' · provisional' : ''}
+                      {moment.verificationStatus === 'corrected' ? ' · Source corrected' : ''}
                     </span>
                   </span>
                   <span class="self-center font-mono text-[9px] uppercase tracking-wider text-lime opacity-0 group-hover:opacity-100 transition-opacity">Tag ⚑</span>
@@ -141,9 +141,9 @@ export default function MatchTimelineLive({ matchId, homeTeam, awayTeam }: Props
           })}
         </ul>
       )}
-      {hasProvisional && fetchedAt && (
+      {fetchedAt && (
         <p class="mt-3 font-mono text-[9px] uppercase tracking-[0.1em] text-mute">
-          Live events may be corrected · feed updated {new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          Feed updated {new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </p>
       )}
     </div>

@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
 import { comments, commentVotes, commentStatTags, user, battles, matches, matchMoments } from './db/schema';
 import { getFanTags, type FanTag } from './floor';
-import { resolveStat, MAX_STAT_TAGS, type StatTag, type StatTagInput } from './statTags';
+import { resolveStat, resolveStatTagInputs, MAX_STAT_TAGS, type StatTag, type StatTagInput } from './statTags';
 
 export { MAX_STAT_TAGS, type StatTagInput };
 
@@ -12,8 +12,11 @@ export interface MomentRef {
   minute: number;
   extra: number | null;
   type: string;
-  verificationStatus: 'provisional' | 'confirmed' | 'retracted' | 'superseded';
+  verificationStatus: 'active' | 'corrected';
 }
+
+const publicMomentStatus = (status: string): MomentRef['verificationStatus'] =>
+  status === 'retracted' || status === 'superseded' ? 'corrected' : 'active';
 
 /**
  * What a comment is attached to — a 1v1 battle or a match (event). Exactly one
@@ -108,7 +111,7 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
             minute: r.momentMinute,
             extra: r.momentExtra,
             type: r.momentType!,
-            verificationStatus: r.momentVerificationStatus as MomentRef['verificationStatus'],
+            verificationStatus: publicMomentStatus(r.momentVerificationStatus ?? 'confirmed'),
           }
         : null,
     statTags: statTagsByComment.get(r.id) ?? [],
@@ -209,41 +212,76 @@ export async function postComment(
       minute: m.minute,
       extra: m.extra,
       type: m.type,
-      verificationStatus: m.verificationStatus as MomentRef['verificationStatus'],
+      verificationStatus: publicMomentStatus(m.verificationStatus),
     };
   }
 
-  // Resolve + dedupe the cited stats, dropping unknown goat/label pairs and
-  // capping the count. Values come from code so they can't be spoofed.
-  const seen = new Set<string>();
-  const statTags: StatTag[] = [];
-  for (const t of statTagInputs.slice(0, MAX_STAT_TAGS)) {
-    const key = `${t.goatSlug}|${t.statLabel}`;
-    if (seen.has(key)) continue;
-    const resolved = resolveStat(t.goatSlug, t.statLabel);
-    if (!resolved) continue;
-    seen.add(key);
-    statTags.push(resolved);
-  }
+  // Resolve + dedupe every cited stat before writing. Unknown pairs are a
+  // client error: silently dropping them would persist a different comment
+  // from the one the author reviewed in the composer.
+  const resolvedInputs = resolveStatTagInputs(statTagInputs);
+  if (!resolvedInputs.ok) return { status: 'invalid', error: resolvedInputs.error };
+  const statTags = resolvedInputs.tags;
 
-  const [inserted] = await db
-    .insert(comments)
-    .values({
-      battleId: isMatch(subject) ? null : subject.battle,
-      matchId: isMatch(subject) ? subject.match : null,
-      momentId,
-      userId,
-      parentId,
-      body,
-    })
-    .returning({ id: comments.id, createdAt: comments.createdAt });
-
-  if (statTags.length > 0) {
-    await db
-      .insert(commentStatTags)
-      .values(statTags.map((s) => ({ commentId: inserted.id, goatSlug: s.goatSlug, statLabel: s.statLabel })))
-      .onConflictDoNothing();
+  const tagPayload = statTags.map((tag) => ({
+    goat_slug: tag.goatSlug,
+    stat_label: tag.statLabel,
+  }));
+  const insertedResult = await db.execute(sql`
+    WITH requested_tags AS (
+      SELECT *
+      FROM jsonb_to_recordset(${JSON.stringify(tagPayload)}::jsonb)
+        AS tag(goat_slug text, stat_label text)
+    ), inserted_comment AS (
+      INSERT INTO comments (
+        battle_id, match_id, moment_id, user_id, parent_id, body
+      ) VALUES (
+        ${isMatch(subject) ? null : subject.battle},
+        ${isMatch(subject) ? subject.match : null},
+        ${momentId}, ${userId}, ${parentId}, ${body}
+      )
+      RETURNING id, created_at
+    ), inserted_tags AS (
+      INSERT INTO comment_stat_tags (comment_id, goat_slug, stat_label)
+      SELECT inserted_comment.id, requested_tags.goat_slug, requested_tags.stat_label
+      FROM inserted_comment
+      CROSS JOIN requested_tags
+      RETURNING goat_slug, stat_label
+    )
+    SELECT
+      inserted_comment.id,
+      inserted_comment.created_at AS "createdAt",
+      COALESCE(
+        jsonb_agg(jsonb_build_object(
+          'goatSlug', inserted_tags.goat_slug,
+          'statLabel', inserted_tags.stat_label
+        )) FILTER (WHERE inserted_tags.goat_slug IS NOT NULL),
+        '[]'::jsonb
+      ) AS tags
+    FROM inserted_comment
+    LEFT JOIN inserted_tags ON true
+    GROUP BY inserted_comment.id, inserted_comment.created_at
+  `);
+  const inserted = insertedResult.rows[0] as {
+    id: number;
+    createdAt: Date | string;
+    tags: Array<{ goatSlug: string; statLabel: string }> | string;
+  } | undefined;
+  if (!inserted) throw new Error('Comment insert returned no row.');
+  const persistedTagRefs = (typeof inserted.tags === 'string'
+    ? JSON.parse(inserted.tags)
+    : inserted.tags) as Array<{ goatSlug: string; statLabel: string }>;
+  const persistedTags = persistedTagRefs.map((tag) => resolveStat(tag.goatSlug, tag.statLabel));
+  if (persistedTags.some((tag) => !tag) || persistedTags.length !== statTags.length) {
+    throw new Error('Persisted comment stat tags did not match the validated request.');
   }
+  const writtenStatTags = persistedTags.filter((tag): tag is StatTag => tag !== null);
+  console.info(JSON.stringify({
+    event: 'comment_stat_tags_written',
+    requested: resolvedInputs.requested,
+    resolved: statTags.length,
+    written: writtenStatTags.length,
+  }));
 
   const [author] = await db
     .select({ name: user.name, username: user.username, image: user.image })
@@ -267,17 +305,17 @@ export async function postComment(
       viewerUpvoted: false,
       fanTag: fanTags.get(userId) ?? null,
       moment,
-      statTags,
+      statTags: writtenStatTags,
     },
   };
 }
 
-export type DeleteResult = { status: 'ok' } | { status: 'not_found' } | { status: 'forbidden' };
+export type DeleteResult = { status: 'ok'; matchId: string | null } | { status: 'not_found' } | { status: 'forbidden' };
 
 /** Soft-delete a comment (author only). Keeps the row so replies stay threaded. */
 export async function deleteComment(commentId: number, userId: string): Promise<DeleteResult> {
   const [row] = await db
-    .select({ userId: comments.userId })
+    .select({ userId: comments.userId, matchId: comments.matchId })
     .from(comments)
     .where(eq(comments.id, commentId))
     .limit(1);
@@ -288,13 +326,14 @@ export async function deleteComment(commentId: number, userId: string): Promise<
     .update(comments)
     .set({ deleted: true, body: '', updatedAt: new Date() })
     .where(eq(comments.id, commentId));
-  return { status: 'ok' };
+  return { status: 'ok', matchId: row.matchId };
 }
 
 export interface UpvoteResult {
   status: 'ok' | 'not_found';
   upvotes: number;
   viewerUpvoted: boolean;
+  matchId: string | null;
 }
 
 /**
@@ -309,11 +348,11 @@ export async function toggleCommentUpvote(
 ): Promise<UpvoteResult> {
   // A soft-deleted comment is treated as gone — no vote mutations allowed.
   const [exists] = await db
-    .select({ id: comments.id })
+    .select({ id: comments.id, matchId: comments.matchId })
     .from(comments)
     .where(and(eq(comments.id, commentId), eq(comments.deleted, false)))
     .limit(1);
-  if (!exists) return { status: 'not_found', upvotes: 0, viewerUpvoted: false };
+  if (!exists) return { status: 'not_found', upvotes: 0, viewerUpvoted: false, matchId: null };
 
   if (remove) {
     const deleted = await db
@@ -346,5 +385,5 @@ export async function toggleCommentUpvote(
     .where(eq(comments.id, commentId))
     .limit(1);
 
-  return { status: 'ok', upvotes: fresh?.upvotes ?? 0, viewerUpvoted: !remove };
+  return { status: 'ok', upvotes: fresh?.upvotes ?? 0, viewerUpvoted: !remove, matchId: exists.matchId };
 }
