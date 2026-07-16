@@ -87,7 +87,10 @@ Keep this list current. Each entry = symptom → cause → fix.
   are separate manual `wrangler deploy` snapshots — nothing auto-deploys from git. A
   client-side fix (e.g. the `useSession` hydration fix) only reaches preview/prod after a
   redeploy. Preview vs prod differ by `CLOUDFLARE_ENV` at build time (name, routes, cron,
-  KV, secrets); only prod has the every-minute cron and the `goatsbattle.com` routes.
+  KV, secrets); only prod has the every-minute cron and the `goatsbattle.com` routes. Follow
+  `docs/RELEASES.md`: deploy only clean commits, test the candidate on preview, and promote
+  only a `main` tree that matches the active tested preview version. Never deploy arbitrary
+  uncommitted work directly to production.
 - **The Astro Cloudflare adapter emits an env-FLATTENED redirected config** at
   `dist/server/wrangler.json` selected by `CLOUDFLARE_ENV` at BUILD time. So the deploy
   scripts run a bare `wrangler deploy` with **no `--env` flag** — adding one breaks (the
@@ -132,6 +135,21 @@ Keep this list current. Each entry = symptom → cause → fix.
   `static.cloudflareinsights.com` and `cloudflareinsights.com`.
 
 ### TheStatsAPI / match data
+- **A live match can have no timeline clock for several minutes.** Symptom: the scorecard says
+  LIVE but shows no clock after kickoff → Cause: the provider match resource can flip to
+  `live` about two minutes after the real whistle, then `/live-timeline` can remain empty for
+  roughly two more minutes, including about 60 seconds of provider response caching (observed:
+  live at 19:03:12; events stamped 19:04:00.654 were not served until 19:05:12) → Fix: while
+  status is `live` and the timeline is empty, show a clearly approximate clock anchored to our
+  first live empty-snapshot observation, but stop rendering it after ten minutes so a recurring
+  empty hash cannot create bogus first-half stoppage time; never gate the "match started" UX
+  solely on timeline events.
+- **A timeline clock must not use the heartbeat timestamp.** Symptom: the live clock freezes at
+  the last event minute and falls minutes behind real time → Cause: an identical-snapshot
+  heartbeat re-stamps `provider_updated_at` on every poll, so `event minute + (now -
+  provider_updated_at)` never advances between events → Fix: anchor to the first-seen
+  `fetched_at` for the current snapshot hash, as `liveMatchClock.ts` does; never anchor a clock
+  to `provider_updated_at`.
 - **Provider fixtures are identities/enrichment, not the canonical schedule.** Symptom:
   semifinal kickoff times drift or unresolved `W101`/`L101` labels leak into public pages →
   Cause: the provider schedule can disagree with FIFA and uses terse placeholder teams →

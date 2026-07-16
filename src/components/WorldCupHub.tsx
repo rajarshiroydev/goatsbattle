@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
-import { formatLiveMatchClock, recalibrateLiveMatchClock, type LiveClockState } from '../lib/liveMatchClock';
+import { formatLiveMatchClockLabel, recalibrateLiveMatchClock, type LiveClockState } from '../lib/liveMatchClock';
 
 type HubFilter = 'upcoming' | 'live' | 'results';
 
@@ -53,7 +53,7 @@ function MatchRow({ match, now, featured = false }: { match: WorldCupHubMatch; n
     weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
   });
   const remaining = countdown(match.kickoff, now);
-  const clock = formatLiveMatchClock(match.matchClock ?? null, now);
+  const clockLabel = formatLiveMatchClockLabel(match.matchClock ?? null, now);
   return (
     <a
       href={`/floor/${match.id}`}
@@ -62,7 +62,7 @@ function MatchRow({ match, now, featured = false }: { match: WorldCupHubMatch; n
       <div class="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.12em] text-mute">
         <span>Match {match.matchNumber} · {STAGE_LABEL[match.stage] ?? match.stage}</span>
         {match.status === 'live' ? (
-          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live{clock ? ` · ${clock}` : ''}</span>
+          <span class="text-red flex items-center gap-1.5"><span class="live-dot gb-pulse-fast" style="--dot:var(--color-red)" />Live{clockLabel ? ` · ${clockLabel}` : ''}</span>
         ) : match.delayed ? <span class="text-red">Updates delayed</span> : <span>{remaining ?? (match.status === 'finished' ? 'Full time' : time)}</span>}
       </div>
       <div class={`mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3 ${featured ? 'text-2xl' : 'text-lg'}`}>

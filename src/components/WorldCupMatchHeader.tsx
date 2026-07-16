@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
 import type { WorldCupHubMatch } from './WorldCupHub';
-import { formatLiveMatchClock, recalibrateLiveMatchClock } from '../lib/liveMatchClock';
+import { formatLiveMatchClockLabel, recalibrateLiveMatchClock } from '../lib/liveMatchClock';
 import { subscribeLiveMatch } from '../lib/liveMatchSocket';
 
 type StatusResponse = { matches: Array<Partial<WorldCupHubMatch> & { id: string }> };
@@ -62,7 +62,7 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
   const countdown = minutes >= 1_440
     ? `${Math.floor(minutes / 1_440)}d ${Math.floor((minutes % 1_440) / 60)}h`
     : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-  const clockLabel = formatLiveMatchClock(match.matchClock ?? null, now);
+  const clockLabel = formatLiveMatchClockLabel(match.matchClock ?? null, now);
 
   return (
     <div class="bg-canvas-soft border border-hairline rounded-lg overflow-hidden">
@@ -91,7 +91,12 @@ export default function WorldCupMatchHeader({ initial }: { initial: WorldCupHubM
             ) : <span class="font-headline font-black italic text-mute text-xl sm:text-3xl leading-none">VS</span>}
           </div>
           {match.status === 'live' && clockLabel && (
-            <span class="font-mono text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] text-lime" title="Approximate live minute from TheStatsAPI timeline">
+            <span
+              class={`font-mono text-[11px] sm:text-xs font-semibold uppercase tracking-[0.12em] ${match.matchClock?.approximate ? 'text-mute' : 'text-lime'}`}
+              title={match.matchClock?.approximate
+                ? 'Estimated from our first live observation; awaiting timeline events'
+                : 'Live match clock from TheStatsAPI timeline'}
+            >
               {clockLabel}
             </span>
           )}

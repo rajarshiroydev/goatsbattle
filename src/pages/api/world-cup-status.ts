@@ -1,7 +1,14 @@
 import type { APIRoute } from 'astro';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../lib/db';
-import { entities, matches, matchGoats, matchMoments, matchTimelineState } from '../../lib/db/schema';
+import {
+  entities,
+  matches,
+  matchGoats,
+  matchMoments,
+  matchTimelineSnapshots,
+  matchTimelineState,
+} from '../../lib/db/schema';
 import { deriveLiveMatchClock } from '../../lib/liveMatchClock';
 import { deriveLiveScore } from '../../lib/liveScore';
 import { THE_STATS_API_PROVIDER } from '../../lib/theStatsApi';
@@ -14,6 +21,16 @@ export const GET: APIRoute = async () => {
   const featuredIds = worldCup2026Fixtures
     .filter((fixture) => fixture.matchNumber >= 101)
     .map((fixture) => fixture.id);
+  const timelineSnapshots = db
+    .select({
+      matchId: matchTimelineSnapshots.matchId,
+      provider: matchTimelineSnapshots.provider,
+      snapshotHash: matchTimelineSnapshots.snapshotHash,
+      observedAt: matchTimelineSnapshots.fetchedAt,
+    })
+    .from(matchTimelineSnapshots)
+    .where(inArray(matchTimelineSnapshots.matchId, featuredIds))
+    .as('timeline_snapshots');
   const timelineGoals = db
     .select({
       matchId: matchMoments.matchId,
@@ -45,17 +62,15 @@ export const GET: APIRoute = async () => {
       timelineCoverage: matchTimelineState.coverage,
       timelineHomeGoals: timelineGoals.homeGoals,
       timelineAwayGoals: timelineGoals.awayGoals,
-      timelineObservedAt: sql<Date | null>`(
-        SELECT snapshot.fetched_at
-        FROM match_timeline_snapshots snapshot
-        WHERE snapshot.match_id = ${matches.id}
-          AND snapshot.snapshot_hash = ${matchTimelineState.snapshotHash}
-        ORDER BY snapshot.fetched_at ASC
-        LIMIT 1
-      )`,
+      timelineObservedAt: timelineSnapshots.observedAt,
     })
     .from(matches)
     .leftJoin(matchTimelineState, eq(matchTimelineState.matchId, matches.id))
+    .leftJoin(timelineSnapshots, and(
+      eq(timelineSnapshots.matchId, matches.id),
+      eq(timelineSnapshots.provider, matchTimelineState.provider),
+      eq(timelineSnapshots.snapshotHash, matchTimelineState.snapshotHash),
+    ))
     .leftJoin(timelineGoals, eq(timelineGoals.matchId, matches.id))
     .where(inArray(matches.id, featuredIds))
     .orderBy(asc(matches.kickoff));

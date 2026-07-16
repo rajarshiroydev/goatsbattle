@@ -30,7 +30,9 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
   per-provider request broker; SQLite-backed alarms and hibernating WebSockets are tested in
   workerd via `npm run test:worker`.
 - Deploy is manual/approval-gated: `worker:deploy:preview` (Worker `goatsbattle-preview`) and
-  `worker:deploy:production` (Worker `goatsbattle`, custom domain + cron). See `AGENTS.md`.
+  `worker:deploy:production` (Worker `goatsbattle`, custom domain + cron). Release commands
+  require a clean commit, stamp Git metadata, and enforce tested-preview tree parity before
+  production. See `docs/RELEASES.md`.
 - **OG images**: `satori` ^0.26 + `@resvg/resvg-js` ^2.6, prerendered in Node
   (`prerenderEnvironment: 'node'`) since resvg is a native binary that won't run in workerd.
 - **tsx** ^4 — runs the `scripts/*.ts` tooling (DB migrations, imports, verification).
