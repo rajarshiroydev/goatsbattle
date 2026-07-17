@@ -58,6 +58,28 @@ Pushing that commit and opening a pull request are procedural release policy enf
 not checks performed by the preview deployment script. Production promotion adds stricter branch,
 remote, and tested-preview checks.
 
+## Repository and production protections
+
+The active GitHub `Protect Main` ruleset targets the default branch and has no bypass actors. It
+blocks deletion and force-pushes, requires a pull request with resolved review threads, and requires
+the strict `validate` status check before merge. Branch protection controls what enters `main`; it
+does not authorize or technically prevent a Cloudflare deployment made with separate Cloudflare
+credentials.
+
+Production credentials remain restricted to the trusted manual release path. Agents must receive
+explicit user approval for each production deployment, must use the guarded production command
+above, and must never substitute raw Wrangler or dashboard deployment commands. A failed release
+guard is a stop condition, not permission to work around it. Production secrets, Wrangler auth, and
+Cloudflare API tokens must never be printed, committed, shared, or granted to another collaborator
+or automation as part of ordinary work.
+
+Move production deployment to a protected GitHub Actions `production` environment when another
+actor or automation needs deploy access, deployments become frequent enough to make the manual
+boundary fragile, approval/audit separation is required, or an accidental/raw production deploy
+occurs. At that point, restrict the environment to protected `main`, store a least-privilege
+Cloudflare token only in that environment, require explicit approval (with self-approval disabled
+once a second trusted reviewer exists), and retire ordinary local production-deploy credentials.
+
 ## Version inspection and rollback
 
 Inspect active deployments and their Git metadata:
@@ -83,11 +105,13 @@ Worker remains compatible; handle any database repair as a separate, explicitly 
 
 ### Durable Object migration exception
 
-The current realtime branch introduces `v1-live-match-coordination`, the first SQLite Durable
-Object migration. The active preview and production versions inspected before this workflow was
-added did not yet have those Durable Object bindings. Cloudflare can refuse rollback to a version
-on the other side of a Durable Object migration. Treat the first production rollout as a
-forward-fix release: validate the migration on preview, keep the old application code compatible
-with the additive Postgres schema, and do not promise that the pre-migration Worker version can be
-restored. After the migration exists in successive production versions, normal Worker-version
-rollback applies within that migration state.
+`v1-live-match-coordination`, the first SQLite Durable Object migration, was applied to preview and
+production on 2026-07-17. The first production version on that migration state is
+`800c38f2-78ad-4d83-a938-7301ec4cd920`; the recorded pre-migration production version is
+`331a1378-b2bd-4f9e-ae51-800e2be432c0`.
+
+Cloudflare can refuse rollback across this boundary, so do not promise that the pre-migration
+version can be restored. Use a forward fix for any issue that would require crossing back before
+`v1-live-match-coordination`. Normal Worker-version rollback applies between successive production
+versions that already share this migration state. Postgres, KV, and Durable Object data still need
+separate recovery decisions.
