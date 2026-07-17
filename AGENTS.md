@@ -39,6 +39,45 @@ astro dev --background
 
 Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
+## Deployment authority (mandatory)
+
+- The GitHub `Protect Main` ruleset is active for the default branch with no bypass actors. It
+  blocks branch deletion and force-pushes, requires changes to enter through a pull request with
+  resolved review threads, and requires the strict `validate` status check. Never weaken, bypass,
+  or disable it as part of an ordinary release.
+- Production deployment always requires the user's explicit approval for that specific deployment
+  in the current conversation. A request to commit, push, open/merge a PR, or deploy preview is not
+  production approval.
+- Deploy preview and production only through `npm run worker:deploy:preview` and the guarded
+  `npm run worker:deploy:production -- --preview-version=<id> --confirm-production` flow documented
+  in `docs/RELEASES.md`. Never use a raw `wrangler deploy`, an unverified dashboard upload, or an
+  arbitrary working-tree build to reach production.
+- If any release guard fails (dirty tree, wrong branch, stale `origin/main`, inactive preview
+  version, tree mismatch, failed CI/build/test/migration check), stop and report it. Do not bypass
+  the guard to finish the deployment.
+- Never expose, print, commit, or share `.env.production`, Wrangler credentials, or Cloudflare API
+  tokens. Do not grant another collaborator or automation production deploy access during ordinary
+  feature work. Cloudflare access is a separate production boundary from GitHub branch protection.
+- Before every production deployment, record the active production version for rollback, confirm
+  the tested preview tree matches production `main`, and after deployment verify `/api/version`,
+  public health, bindings/triggers, and production logs. A Worker rollback never authorizes or
+  performs a database rollback.
+
+### When to recommend stronger deployment isolation
+
+The current small-team workflow intentionally keeps production deployment manual. Proactively
+recommend moving production deployment into a protected GitHub Actions `production` environment
+when any of these becomes true: another person or automation needs Cloudflare deploy access;
+production deployments become frequent enough that the manual credential/process boundary is
+error-prone; an audit trail or approval separation is required; or any raw/bypassed/accidental
+production deployment occurs.
+
+That upgrade should restrict deployments to protected `main`, keep a least-privilege Cloudflare
+token only in the GitHub `production` environment, require an explicit environment approval (and
+prevent self-approval once a second trusted reviewer exists), deploy the already-tested commit/tree,
+and remove ordinary local production-deploy credentials. Do not introduce this infrastructure
+preemptively; surface the recommendation to the user when a trigger occurs.
+
 ## Engineering gotchas / hard-won learnings
 Keep this list current. Each entry = symptom → cause → fix.
 
@@ -79,6 +118,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   server), so any island whose first client render reads a warm cache diverges from SSR and
   throws a hydration mismatch (e.g. CommentThread `button` vs `div`). Always start
   `user=null, loading=true` and resolve in the effect.
+- **A REST fallback can overwrite newer WebSocket state.** Symptom: a newly created/deleted/voted
+  comment briefly appears and then reverts, or a live clock jumps backward after reconnect → Cause:
+  an in-flight fallback response can resolve after socket events or local wall-time projection →
+  Fix: buffer comment socket events while the refresh is pending and replay them in order onto the
+  fetched snapshot; merge clock responses through `recalibrateLiveMatchClock` rather than replacing
+  the current anchor directly.
 - **`tsc` writes diagnostics to STDOUT, not stderr.** When wiring typecheck into any
   hook/CI, capture `2>&1` — checking only stderr makes real type errors look like "no
   output" (this silently broke a Stop hook that appeared to pass but was failing).
@@ -91,6 +136,19 @@ Keep this list current. Each entry = symptom → cause → fix.
   `docs/RELEASES.md`: deploy only clean commits, test the candidate on preview, and promote
   only a `main` tree that matches the active tested preview version. Never deploy arbitrary
   uncommitted work directly to production.
+- **Dirty feature work is not a reason to bypass the release clean-tree guard.** Symptom: a
+  reviewed `main` tree is ready to promote but the shared working directory contains unrelated
+  uncommitted work → Cause: `release-worker.mjs` intentionally refuses every dirty tree, even when
+  the dirty files are not part of the build → Fix: preserve the user's files and deploy from a
+  separate clean temporary worktree checked out on fetched `main`; install from the lockfile, link
+  only the ignored environment secrets file, verify its SHA/tree, and remove the temporary worktree
+  afterward. Never stash, reset, discard, or bypass the guard merely to release.
+- **`/api/version` can briefly serve the pre-route cached 404 after its first deployment.** Symptom:
+  Cloudflare reports the new Worker active, but the first plain version request returns the old
+  static 404 with `cf-cache-status: HIT` → Cause: the edge retained the response created before the
+  dynamic route existed → Fix: revalidate with `Cache-Control: no-cache` or a unique query string,
+  then confirm the endpoint returns the expected SHA/tree and `Cache-Control: no-store`; do not
+  mistake that one stale response for a failed Worker deployment.
 - **The Astro Cloudflare adapter emits an env-FLATTENED redirected config** at
   `dist/server/wrangler.json` selected by `CLOUDFLARE_ENV` at BUILD time. So the deploy
   scripts run a bare `wrangler deploy` with **no `--env` flag** — adding one breaks (the
@@ -103,6 +161,25 @@ Keep this list current. Each entry = symptom → cause → fix.
   `env.*` block → Fix: keep the coordinator/broker bindings at top level and in preview/prod,
   regenerate `worker-configuration.d.ts`, then inspect `dist/server/wrangler.json` after the
   environment-specific Astro build to verify both bindings and the SQLite class migration.
+- **The first Durable Object migration is now a permanent rollback boundary.** Symptom: an attempt
+  to restore a production Worker from before realtime coordination may be rejected even though the
+  old version still appears in version history → Cause: `v1-live-match-coordination` introduced the
+  first SQLite Durable Object classes and was applied to preview and production on 2026-07-17 →
+  Fix: use a forward fix for problems that would require crossing back before that migration;
+  ordinary rollback is valid only among versions that already contain the same migration state.
+- **The live-match coordinator owns a match through its full correction lifecycle.** Symptom: the
+  minute cron and a Durable Object both sync a finished match, consuming quota and racing state →
+  Cause: finished matches can drop out of the coordinator candidate set or appear unhealthy between
+  widely spaced correction alarms → Fix: keep finished matches routed to their coordinator until
+  every correction slot is consumed, treat scheduled correction intervals as healthy ownership,
+  and exclude active coordinator IDs from the watchdog refresh even while a finalization retry is
+  backing off.
+- **Durable Object progress flags must advance after the durable effect succeeds.** Symptom: an
+  incomplete final timeline permanently consumes a correction slot, or a failed snapshot read loses
+  its pending broadcast → Cause: `correction_index`/`pending_broadcast` were updated before complete
+  coverage and payload assembly were proven → Fix: advance a correction only after an accepted
+  full-coverage finalization, and clear `pending_broadcast` only after the persisted snapshot has
+  been read and broadcast; rejected/incomplete work stays retryable with backoff.
 - **Wall-clock benchmarks can falsely fail the Workers Free CPU gate.** Symptom: a
   Neon-backed route takes more than 10 ms by `Date.now()`/client timing and appears to
   require Workers Paid → Cause: wall time includes the Neon network wait, while Cloudflare
@@ -224,6 +301,11 @@ Keep this list current. Each entry = symptom → cause → fix.
   also run sequentially and can be left partly applied on failure; keep every DDL step
   idempotent and rerun from the top to converge (see `scripts/migrate-matches.ts` and
   `scripts/migrate-auth-comments.ts`).
+- **Comment stat tags are all-or-nothing with their comment.** Symptom: a comment posts but its
+  requested stat chips disappear after reload → Cause: resolving or inserting tags separately can
+  silently discard unknown pairs or leave the comment committed after a tag failure → Fix: reject
+  every unresolved GOAT/stat pair with `400`, deduplicate validated inputs, insert the comment and
+  tags in one data-modifying CTE, and return the tags read back from the database.
 - **Drizzle correlated-subquery trap:** a `sql` correlated subquery in the SELECT list
   renders `${matches.id}` **unqualified** as `"id"`, which shadows to `comments.id` inside
   the subquery → `operator does not exist: text = integer`. Use a `LEFT JOIN` + `GROUP BY`
@@ -255,6 +337,12 @@ Keep this list current. Each entry = symptom → cause → fix.
 - **`astro build` does NOT typecheck** — Vite only bundles, so type errors slip through. Run
   `npx tsc --noEmit` (NOT `astro check`, which needs a TTY) before shipping. `tsc` writes
   diagnostics to **stdout**, not stderr (see the gotcha above).
+- **The Worker test tsconfig must override the root exclusion.** Symptom: the dedicated Worker
+  `tsc -p tests/worker/tsconfig.json` exits successfully while checking none of the test files →
+  Cause: the nested config inherits the root `tests/worker` exclusion even when it declares its own
+  include list → Fix: override `exclude` in the nested config, confirm the files with `--listFiles`,
+  and keep `cloudflare:test`'s `ProvidedEnv` narrowed to bindings actually supplied by
+  `wrangler.test.jsonc`.
 - **Tailwind v4:** custom colours via `@theme` in `src/styles/global.css`; `bg-lime/5` and
   arbitrary `text-[11px]` work, but **`h-13` does NOT exist** (standard scale only). Player
   accent colours must be vivid / mid-luminance so they read as both fills and on-dark text.
