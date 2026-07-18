@@ -22,7 +22,6 @@ import { assertSafeStatusTransition } from './worldCupSync';
 const INTERNAL_RPM_LIMIT = 10;
 const TRIAL_REQUEST_RESERVE = 9_500;
 const ACTIVE_BEFORE_MS = 2 * 60 * 60 * 1_000;
-const ACTIVE_AFTER_MS = 5 * 60 * 60 * 1_000;
 const FINAL_RECHECK_MS = 15 * 60 * 1_000;
 
 type Query = NeonQueryFunction<false, false>;

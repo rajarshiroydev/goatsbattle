@@ -615,25 +615,3 @@ export const commentStatTags = pgTable(
     uniq: uniqueIndex('comment_stat_tags_uniq').on(t.commentId, t.goatSlug, t.statLabel),
   })
 );
-
-export type EntityRow = typeof entities.$inferSelect;
-export type BattleRow = typeof battles.$inferSelect;
-export type VoteRow = typeof votes.$inferSelect;
-export type HeadVoteWindowRow = typeof headVoteWindows.$inferSelect;
-export type VoteWindowRow = typeof voteWindows.$inferSelect;
-export type UserRow = typeof user.$inferSelect;
-export type SessionRow = typeof session.$inferSelect;
-export type CommentRow = typeof comments.$inferSelect;
-export type CommentVoteRow = typeof commentVotes.$inferSelect;
-export type CommentReportRow = typeof commentReports.$inferSelect;
-export type MatchRow = typeof matches.$inferSelect;
-export type MatchMomentRow = typeof matchMoments.$inferSelect;
-export type MatchGoatRow = typeof matchGoats.$inferSelect;
-export type MatchSourceRow = typeof matchSources.$inferSelect;
-export type ProviderSyncStateRow = typeof providerSyncState.$inferSelect;
-export type MatchTimelineStateRow = typeof matchTimelineState.$inferSelect;
-export type MatchTimelineSnapshotRow = typeof matchTimelineSnapshots.$inferSelect;
-export type MatchLineupRow = typeof matchLineups.$inferSelect;
-export type GoatProviderPlayerRow = typeof goatProviderPlayers.$inferSelect;
-export type CommentStatTagRow = typeof commentStatTags.$inferSelect;
-export type DeploymentEnvironmentRow = typeof deploymentEnvironment.$inferSelect;

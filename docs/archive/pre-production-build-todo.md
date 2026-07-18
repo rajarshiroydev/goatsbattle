@@ -1,5 +1,10 @@
 # GOATSBattle — Build TODO
 
+> **Historical snapshot — archived 2026-07-18.** This pre-production checklist preserves
+> launch-era plans and status; it does not describe the current application or operating process.
+> Consult [AGENTS.md](../../AGENTS.md), [STACK.md](../../STACK.md), and
+> [docs/RELEASES.md](../RELEASES.md) for current guidance.
+
 Tracking the build of GOATSBattle (goatsbattle.com): a global GOAT-debate platform
 with stat-rich entity profiles, dynamic 1v1 battles, community voting, live Elo
 rankings, and a paid data API.

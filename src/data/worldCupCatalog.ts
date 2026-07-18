@@ -22,9 +22,3 @@ export const worldCupEvents: FloorEvent[] = worldCup2026Fixtures.map((fixture) =
 export function getWorldCupEvent(id: string | undefined) {
   return worldCupEvents.find((event) => event.id === id);
 }
-
-export function getWorldCupMatchNumber(id: string | undefined) {
-  const match = id?.match(/^world-cup-2026-match-(\d{1,3})$/);
-  const number = match ? Number(match[1]) : NaN;
-  return Number.isInteger(number) && number >= 1 && number <= 104 ? number : null;
-}

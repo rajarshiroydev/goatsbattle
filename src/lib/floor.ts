@@ -2,14 +2,7 @@ import { inArray, sql } from 'drizzle-orm';
 import { db } from './db';
 import { votes } from './db/schema';
 import { getEntityBySlug } from '../data';
-export { FLOOR_FILTERS, parseFloorFilter } from './floorFilters';
-export type { FloorFilter } from './floorFilters';
 
-/**
- * The Floor's shared filter definitions — the single source used by both the
- * landing preview and the dedicated /floor page (they previously duplicated the
- * chip arrays inline). Per GBT-7 the filters are Top / Recents / Live / My Goats.
- */
 /**
  * A user's "fan tag" — the goat they back most, shown before their username in
  * discussions (design-guide §"Team tag"). Derived from their voting history; a

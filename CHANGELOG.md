@@ -1,4 +1,4 @@
-The preview deployment contains these main features:
+GOATSBattle release history:
 
 ## 2026-07-17 — Realtime live-match release
 

@@ -11,7 +11,7 @@
  * check in the plan). Swap SEASON/LEAGUE + FIXTURE_IDS here to target other
  * accessible data. Tracked in DEMO_DATA.md.
  *
- * Run with:  npm run db:sync:matches
+ * Run with:  npm run db:sync:matches:dev
  */
 import { eq } from 'drizzle-orm';
 import { db } from './lib/node-db';

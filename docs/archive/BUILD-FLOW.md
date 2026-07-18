@@ -1,8 +1,13 @@
 # GOATSBattle — Build Flow & Feature Map
 
+> **Historical snapshot — archived 2026-07-18.** This launch-branch plan preserves the state and
+> assumptions recorded before production; it is not a current build, release, or operations guide.
+> Consult [AGENTS.md](../../AGENTS.md), [STACK.md](../../STACK.md), and
+> [docs/RELEASES.md](../RELEASES.md) for current guidance.
+>
 > Purpose: a single, uniform view of how the product got here and what's still uncommitted, so the
 > World Cup launch branch can be sliced into sensible commits/PRs. Every step below uses the same
-> shape — **Direction** (why, tied to [product direction](GOATSBattle_Product_Direction.md)),
+> shape — **Direction** (why, tied to [product direction](../../GOATSBattle_Product_Direction.md)),
 > **Changes** (what), **Surfaces** (key files/routes). PRs on `main` were uneven (some huge, some
 > one-liners); here they're normalized to one coherent deliverable per step.
 
