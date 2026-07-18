@@ -1,6 +1,6 @@
 import type { LiveClockState } from './liveMatchClock';
 import type { Moment } from './matchMoments';
-import type { CommentNode } from './commentService';
+import type { CommentNode } from './commentWire';
 
 export const LIVE_MATCH_PROTOCOL_VERSION = 1 as const;
 

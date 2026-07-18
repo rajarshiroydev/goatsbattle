@@ -15,6 +15,8 @@ export interface Moment {
   verificationStatus: 'active' | 'corrected';
 }
 
+type MomentLabelInput = Pick<Moment, 'minute' | 'extra' | 'type'>;
+
 export interface MomentFeed {
   moments: Moment[];
   matchStatus: string | null;
@@ -146,5 +148,5 @@ export const isCard = (type: string) => type === 'yellow_card' || type === 'red_
 export const momentGlyph = (type: string) => MOMENT_GLYPH[type] ?? '•';
 export const cardColor = (type: string) => type === 'red_card' ? 'var(--color-red)' : '#f5c518';
 export const momentTypeLabel = (type: string) => MOMENT_TYPE_LABEL[type] ?? type.replace(/_/g, ' ');
-export const minuteLabel = (moment: Moment) => `${moment.minute}${moment.extra ? `+${moment.extra}` : ''}'`;
-export const anchorLabel = (moment: Moment) => `${minuteLabel(moment)} ${momentTypeLabel(moment.type)}`;
+export const minuteLabel = (moment: MomentLabelInput) => `${moment.minute}${moment.extra ? `+${moment.extra}` : ''}'`;
+export const anchorLabel = (moment: MomentLabelInput) => `${minuteLabel(moment)} ${momentTypeLabel(moment.type)}`;

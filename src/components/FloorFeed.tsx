@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
+import { textOn } from '../lib/colorContrast';
 import { FLOOR_FILTERS, type FloorFilter } from '../lib/floorFilters';
 import { compactNumber, flagEmoji, relativeTime } from '../lib/format';
 import { useSession } from '../lib/useSession';
@@ -21,15 +22,6 @@ export interface FloorFeedEvent {
 
 interface Props {
   events: FloorFeedEvent[];
-}
-
-function textOn(hex: string): string {
-  const h = hex.replace('#', '');
-  if (h.length < 6) return '#0d0d0f';
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0d0d0f' : '#f0f0f2';
 }
 
 function EventRow({ event }: { event: FloorFeedEvent }) {

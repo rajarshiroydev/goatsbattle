@@ -1,33 +1,11 @@
 import { inArray, sql } from 'drizzle-orm';
 import { db } from './db';
 import { votes } from './db/schema';
+import { textOn } from './colorContrast';
+import type { FanTag } from './commentWire';
 import { getEntityBySlug } from '../data';
 
-/**
- * A user's "fan tag" — the goat they back most, shown before their username in
- * discussions (design-guide §"Team tag"). Derived from their voting history; a
- * dedicated allegiance picker is a future enhancement.
- */
-export interface FanTag {
-  /** Goat slug, e.g. "messi". */
-  slug: string;
-  /** Uppercase short name for the tag, e.g. "MESSI". */
-  label: string;
-  /** Background accent (the goat's colour). */
-  bg: string;
-  /** Readable foreground for that background. */
-  fg: string;
-}
-
-/** Dark or light text for a solid tag background (mirrors TakeRow's textOn). */
-function textOn(hex: string): string {
-  const h = hex.replace('#', '');
-  if (h.length < 6) return '#0d0d0f';
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0d0d0f' : '#f0f0f2';
-}
+export type { FanTag } from './commentWire';
 
 /**
  * Batch-resolve fan tags for a set of users. For each user we take the goat they
