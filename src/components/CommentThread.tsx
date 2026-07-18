@@ -7,6 +7,7 @@ import { MAX_STAT_TAGS } from '../lib/statTags';
 import type { TaggableGoat, StatTag, StatTagInput } from '../lib/statTags';
 import { subscribeLiveMatch } from '../lib/liveMatchSocket';
 import type { LiveMatchEvent } from '../lib/liveMatchProtocol';
+import { anchorLabel as momentLabel } from '../lib/matchMoments';
 
 /** "Int'l Goals 106" — compact stat display used on chips and picker options. */
 function statText(s: { statLabel: string; value: string | number; unit?: string } | { label: string; value: string | number; unit?: string }): string {
@@ -84,18 +85,6 @@ type Props = SubjectProps & {
 type SortMode = 'top' | 'new';
 
 const MAX_DEPTH = 6;
-
-const MOMENT_TYPE_LABEL: Record<string, string> = {
-  goal: 'Goal', penalty: 'Penalty', own_goal: 'Own goal', penalty_missed: 'Missed pen',
-  yellow_card: 'Yellow card', red_card: 'Red card', foul: 'Foul', handball: 'Handball',
-  sub: 'Sub', var: 'VAR', shootout: 'Shootout',
-};
-
-/** "23' Penalty" — the human label for a moment anchor. */
-function momentLabel(m: { minute: number; extra: number | null; type: string }): string {
-  const min = `${m.minute}${m.extra ? `+${m.extra}` : ''}'`;
-  return `${min} ${MOMENT_TYPE_LABEL[m.type] ?? m.type.replace(/_/g, ' ')}`;
-}
 
 export default function CommentThread({ battleId, matchId, accentA = '#a3e635', accentB = '#a3e635', taggableGoats, prompts = [], title }: Props) {
   // The subject drives the API query param and POST body (battle XOR match).
