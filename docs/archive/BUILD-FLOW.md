@@ -4,7 +4,7 @@
 > assumptions recorded before production; it is not a current build, release, or operations guide.
 > Consult [AGENTS.md](../../AGENTS.md), [STACK.md](../../STACK.md), and
 > [docs/RELEASES.md](../RELEASES.md) for current guidance.
-
+>
 > Purpose: a single, uniform view of how the product got here and what's still uncommitted, so the
 > World Cup launch branch can be sliced into sensible commits/PRs. Every step below uses the same
 > shape — **Direction** (why, tied to [product direction](../../GOATSBattle_Product_Direction.md)),
