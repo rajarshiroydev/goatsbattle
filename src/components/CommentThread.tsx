@@ -162,8 +162,8 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
     };
   }, [subjectQuery, matchId]);
 
-  // Timeline → composer bridge: the MatchTimeline dispatches `gb:moment` when a
-  // moment is clicked; anchor the composer to it (match pages only).
+  // Timeline → composer bridge: the live timeline islands dispatch `gb:moment`
+  // when a moment is clicked; anchor the composer to it (match pages only).
   useEffect(() => {
     if (!matchId) return;
     const onSelect = (e: Event) => {

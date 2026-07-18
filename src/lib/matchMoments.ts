@@ -34,7 +34,6 @@ interface FeedStore {
 }
 
 const stores = new Map<string, FeedStore>();
-const POLL_MS = 10_000;
 const FALLBACK_POLL_MS = 60_000;
 
 function storeFor(matchId: string): FeedStore {
@@ -71,10 +70,6 @@ export function fetchMatchMomentFeed(matchId: string): Promise<MomentFeed> {
       });
   }
   return store.request;
-}
-
-export function fetchMatchMoments(matchId: string): Promise<Moment[]> {
-  return fetchMatchMomentFeed(matchId).then((feed) => feed.moments);
 }
 
 function shouldPoll(feed: MomentFeed | null): boolean {
