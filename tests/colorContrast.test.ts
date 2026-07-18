@@ -11,5 +11,6 @@ test('selects readable text for representative vivid accents', () => {
 test('uses the established dark fallback for unsupported accent values', () => {
   assert.equal(textOn('#fff'), '#0d0d0f');
   assert.equal(textOn('not-a-color'), '#0d0d0f');
+  assert.equal(textOn('000#000'), '#0d0d0f');
   assert.equal(textOn(undefined), '#0d0d0f');
 });

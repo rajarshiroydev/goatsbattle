@@ -3,7 +3,7 @@ const LIGHT_TEXT = '#f0f0f2';
 
 /** Pick readable dark or light text for a solid six-digit hex accent. */
 export function textOn(hex: string | null | undefined): string {
-  const value = hex?.replace('#', '') ?? '';
+  const value = hex?.replace(/^#/, '') ?? '';
   if (!/^[0-9a-f]{6}$/i.test(value)) return DARK_TEXT;
 
   const red = parseInt(value.slice(0, 2), 16);
