@@ -1,21 +1,14 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from './db';
 import { comments, commentVotes, commentStatTags, user, battles, matches, matchMoments } from './db/schema';
-import { getFanTags, type FanTag } from './floor';
-import { resolveStat, resolveStatTagInputs, MAX_STAT_TAGS, type StatTag, type StatTagInput } from './statTags';
+import { getFanTags } from './floor';
+import { resolveStat, resolveStatTagInputs, MAX_STAT_TAGS, type StatTagInput } from './statTags';
+import type { CommentMomentRef, CommentNode, CommentStatTag } from './commentWire';
 
 export { MAX_STAT_TAGS, type StatTagInput };
+export type { CommentNode } from './commentWire';
 
-/** The timeline moment a comment is anchored to (null for un-anchored comments). */
-export interface MomentRef {
-  id: number;
-  minute: number;
-  extra: number | null;
-  type: string;
-  verificationStatus: 'active' | 'corrected';
-}
-
-const publicMomentStatus = (status: string): MomentRef['verificationStatus'] =>
+const publicMomentStatus = (status: string): CommentMomentRef['verificationStatus'] =>
   status === 'retracted' || status === 'superseded' ? 'corrected' : 'active';
 
 /**
@@ -30,27 +23,6 @@ const isMatch = (s: CommentSubject): s is { match: string } => 'match' in s;
 /** WHERE clause selecting a subject's comments. */
 const subjectWhere = (s: CommentSubject) =>
   isMatch(s) ? eq(comments.matchId, s.match) : eq(comments.battleId, s.battle);
-
-/** One comment as sent to the client. The island builds the tree from parentId. */
-export interface CommentNode {
-  id: number;
-  parentId: number | null;
-  body: string; // "[deleted]" when the comment is soft-deleted
-  upvotes: number;
-  deleted: boolean;
-  createdAt: string; // ISO
-  /** Stable author id — the reliable owner check (usernames can be null/renamed). */
-  authorId: string;
-  author: { username: string | null; name: string; image: string | null };
-  /** Whether the requesting viewer has upvoted this comment. */
-  viewerUpvoted: boolean;
-  /** The author's fan tag (goat they back), or null if they've cast no votes. */
-  fanTag: FanTag | null;
-  /** The match-timeline moment this comment is anchored to, if any. */
-  moment: MomentRef | null;
-  /** Definitive goat stats cited by this comment (value resolved from code). */
-  statTags: StatTag[];
-}
 
 export const MAX_COMMENT_LENGTH = 4000;
 
@@ -123,8 +95,8 @@ export async function listComments(subject: CommentSubject, viewerId: string | n
  * from code (dropping any whose goat/stat no longer exists). One query for the
  * whole page, grouped by comment id.
  */
-async function getStatTags(commentIds: number[]): Promise<Map<number, StatTag[]>> {
-  const out = new Map<number, StatTag[]>();
+async function getStatTags(commentIds: number[]): Promise<Map<number, CommentStatTag[]>> {
+  const out = new Map<number, CommentStatTag[]>();
   if (commentIds.length === 0) return out;
   const rows = await db
     .select({ commentId: commentStatTags.commentId, goatSlug: commentStatTags.goatSlug, statLabel: commentStatTags.statLabel })
@@ -184,7 +156,7 @@ export async function postComment(
   }
 
   // A moment anchor is only valid on a match comment, and must belong to it.
-  let moment: MomentRef | null = null;
+  let moment: CommentMomentRef | null = null;
   if (momentId !== null) {
     if (!isMatch(subject)) {
       return { status: 'invalid', error: 'Only match comments can tag a moment' };
@@ -275,7 +247,7 @@ export async function postComment(
   if (persistedTags.some((tag) => !tag) || persistedTags.length !== statTags.length) {
     throw new Error('Persisted comment stat tags did not match the validated request.');
   }
-  const writtenStatTags = persistedTags.filter((tag): tag is StatTag => tag !== null);
+  const writtenStatTags = persistedTags.filter((tag): tag is CommentStatTag => tag !== null);
   console.info(JSON.stringify({
     event: 'comment_stat_tags_written',
     requested: resolvedInputs.requested,

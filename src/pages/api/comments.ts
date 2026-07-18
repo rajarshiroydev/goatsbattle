@@ -9,6 +9,7 @@ import {
   slugSchema,
 } from '../../lib/apiValidation';
 import { publishCommentCreated, publishCommentDeleted } from '../../lib/liveMatchPublish';
+import type { CommentCreateResponse, CommentListResponse } from '../../lib/commentWire';
 
 export const prerender = false;
 
@@ -47,7 +48,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   }
 
   const list = await listComments(subject, locals.user?.id ?? null);
-  return json({ comments: list });
+  return json({ comments: list } satisfies CommentListResponse);
 };
 
 /** POST { battleId|matchId, parentId?, body } → create a comment/reply (auth required). */
@@ -82,7 +83,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (result.status === 'invalid') return json({ error: result.error }, 400);
   if (result.status === 'not_found') return json({ error: 'Subject not found' }, 404);
   if ('match' in subject) await publishCommentCreated(subject.match, result.comment);
-  return json({ comment: result.comment });
+  return json({ comment: result.comment } satisfies CommentCreateResponse);
 };
 
 /** DELETE { commentId } → soft-delete your own comment (auth required). */

@@ -1,10 +1,11 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { CommentCreateResponse, CommentListResponse, CommentNode, CommentStatTag } from '../lib/commentWire';
 import { useSession } from '../lib/useSession';
 import { openAuthModal } from '../lib/authModal';
 import { relativeTime } from '../lib/format';
 import { MAX_STAT_TAGS } from '../lib/statTags';
-import type { TaggableGoat, StatTag, StatTagInput } from '../lib/statTags';
+import type { TaggableGoat, StatTagInput } from '../lib/statTags';
 import { subscribeLiveMatch } from '../lib/liveMatchSocket';
 import type { LiveMatchEvent } from '../lib/liveMatchProtocol';
 import { anchorLabel as momentLabel } from '../lib/matchMoments';
@@ -13,34 +14,6 @@ import { anchorLabel as momentLabel } from '../lib/matchMoments';
 function statText(s: { statLabel: string; value: string | number; unit?: string } | { label: string; value: string | number; unit?: string }): string {
   const label = 'statLabel' in s ? s.statLabel : s.label;
   return `${label} ${s.value}${s.unit ? ` ${s.unit}` : ''}`;
-}
-
-interface FanTag {
-  slug: string;
-  label: string;
-  bg: string;
-  fg: string;
-}
-
-interface CommentNode {
-  id: number;
-  parentId: number | null;
-  body: string;
-  upvotes: number;
-  deleted: boolean;
-  createdAt: string;
-  authorId: string;
-  author: { username: string | null; name: string; image: string | null };
-  viewerUpvoted: boolean;
-  fanTag: FanTag | null;
-  moment: {
-    id: number;
-    minute: number;
-    extra: number | null;
-    type: string;
-    verificationStatus: 'active' | 'corrected';
-  } | null;
-  statTags: StatTag[];
 }
 
 type CommentSocketEvent = Extract<LiveMatchEvent, {
@@ -53,7 +26,7 @@ function isCommentSocketEvent(event: LiveMatchEvent): event is CommentSocketEven
 
 function applyCommentSocketEvent(current: CommentNode[], event: CommentSocketEvent): CommentNode[] {
   if (event.type === 'comment.created') {
-    const incoming = event.payload.comment as CommentNode;
+    const incoming = event.payload.comment;
     return current.some((comment) => comment.id === incoming.id) ? current : [...current, incoming];
   }
   if (event.type === 'comment.deleted') {
@@ -118,7 +91,7 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
         try {
           const response = await fetch(`/api/comments?${subjectQuery}`);
           if (!response.ok) throw new Error('Could not load comments');
-          const data = await response.json() as { comments: CommentNode[] };
+          const data = await response.json() as CommentListResponse;
           if (!active) return;
           const events = bufferedEvents;
           bufferedEvents = [];
@@ -211,9 +184,9 @@ export default function CommentThread({ battleId, matchId, accentA = '#a3e635', 
           ...(statTags.length ? { statTags } : {}),
         }),
       });
-      const data = await res.json();
+      const data = await res.json() as CommentCreateResponse & { error?: string };
       if (!res.ok) throw new Error(data?.error ?? 'Failed to post');
-      addComment(data.comment as CommentNode);
+      addComment(data.comment);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to post');
@@ -880,7 +853,7 @@ function Composer({
 }) {
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
-  const [tags, setTags] = useState<StatTag[]>([]);
+  const [tags, setTags] = useState<CommentStatTag[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickGoat, setPickGoat] = useState('');
   const [pickStat, setPickStat] = useState('');

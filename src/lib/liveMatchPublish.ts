@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { LIVE_MATCH_PROTOCOL_VERSION, type LiveMatchEvent } from './liveMatchProtocol';
-import type { CommentNode } from './commentService';
+import type { CommentNode } from './commentWire';
 
 async function publish(event: Exclude<LiveMatchEvent, { type: 'match.snapshot' }>): Promise<void> {
   if (!env.LIVE_MATCH_COORDINATOR) return;

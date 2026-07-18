@@ -1,17 +1,12 @@
 import { getEntityBySlug, getEntitiesByArena } from '../data';
+import type { CommentStatTag } from './commentWire';
 
 /**
  * Stat tagging — the "settle it with a fact" mechanic. A comment references a
  * goat stat by (slug, label); the value is resolved live from the canonical
  * stat data in code so tags never drift from the source of truth.
  */
-export interface StatTag {
-  goatSlug: string;
-  goatShortName: string;
-  statLabel: string;
-  value: string | number;
-  unit?: string;
-}
+export type StatTag = CommentStatTag;
 
 /** A (goat, stat) reference a comment cites, before value resolution. The single
  * source of truth for the request contract, shared by the client and service. */
