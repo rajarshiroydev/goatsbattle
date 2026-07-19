@@ -2,31 +2,33 @@
 import Layout from '../layouts/Layout.astro';
 import MarqueeCarousel from '../components/MarqueeCarousel.tsx';
 import type { MarqueeBattle } from '../components/MarqueeCarousel.tsx';
-import EventRow from '../components/EventRow.astro';
+import WorldCupHomeHero from '../components/WorldCupHomeHero.tsx';
+import WorldCupHomeFeed from '../components/WorldCupHomeFeed.tsx';
+import type { FloorFeedEvent } from '../components/FloorEventRow.tsx';
 import { getStaticBattleSummaries } from '../lib/staticCatalog';
 import { worldCup2026Fixtures } from '../data/worldCup2026';
 import { FLOOR_FILTERS } from '../lib/floorFilters';
 import { arenaLabel, arenaEmoji, getArena } from '../data/arenas';
-import { flagEmoji } from '../lib/format';
 
 // Static-first launch shell. Mutable tallies remain in the battle/profile
 // islands; anonymous homepage traffic never invokes the Worker.
 const mostVoted = getStaticBattleSummaries('football').slice(0, 6);
 const remainingMatches = worldCup2026Fixtures.filter((fixture) => fixture.matchNumber >= 101);
-const nextMatch = remainingMatches.find((fixture) => fixture.status === 'scheduled') ?? remainingMatches[0];
-if (!nextMatch) throw new Error('No World Cup knockout fixtures are available for the homepage hero.');
-const nextMatchStage = nextMatch.stage
-  .replace(/-/g, ' ')
-  .replace(/\b\w/g, (letter) => letter.toUpperCase());
-const nextMatchKickoff = new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'UTC',
-  timeZoneName: 'short',
-}).format(new Date(nextMatch.kickoff));
+const homeEvents: FloorFeedEvent[] = remainingMatches.map((event) => ({
+  id: event.id,
+  competition: 'World Cup 2026',
+  kickoff: event.kickoff,
+  homeTeam: event.homeTeam,
+  awayTeam: event.awayTeam,
+  homeCode: event.homeCode,
+  awayCode: event.awayCode,
+  homeScore: event.homeScore,
+  awayScore: event.awayScore,
+  status: event.status,
+  venue: event.venue,
+  goats: [],
+  commentCount: 0,
+}));
 
 // Marquee cards for the "Happening Now" carousel (left = lime, right = red).
 const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
@@ -49,48 +51,7 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
 ---
 
 <Layout>
-  <section class="border-b border-hairline overflow-x-clip"
-    style="background: radial-gradient(ellipse 80% 75% at 18% 115%, rgba(200,255,0,0.11), transparent 62%)">
-    <div class="page-container py-11">
-      <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-12 items-center">
-        <div>
-          <span class="chip chip-active">World Cup 2026 · Match {nextMatch.matchNumber}</span>
-          <h1 class="mt-4 font-headline font-black uppercase text-ink leading-[0.88] tracking-tight text-[clamp(3rem,7.5vw,72px)]">
-            The world is on <span class="text-lime">the floor.</span>
-          </h1>
-          <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-md">
-            Follow all 104 matches, then make the case in the main match thread. The {nextMatchStage.toLowerCase()} is ready for your take.
-          </p>
-          <div class="mt-6 flex flex-wrap gap-2.5">
-            <a href={`/floor/${nextMatch.id}`} class="btn btn-primary text-base px-6 py-3">Join the discussion</a>
-            <a href="/world-cup" class="btn btn-secondary text-base px-6 py-3">View all 104 matches</a>
-          </div>
-        </div>
-
-        <a href={`/floor/${nextMatch.id}`} class="block bg-canvas-soft border border-hairline rounded-lg p-5 sm:p-6 hover:border-hairline-strong transition-colors">
-          <div class="flex items-center justify-between gap-3">
-            <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">{nextMatchStage} · Upcoming</span>
-            <span class="font-mono text-[10px] uppercase tracking-[0.12em] text-mute">Discuss →</span>
-          </div>
-          <div class="mt-7 grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
-            <div class="text-center min-w-0">
-              <span class="text-3xl" aria-hidden="true">{flagEmoji(nextMatch.homeCode ?? '')}</span>
-              <p class="mt-2 font-headline font-black uppercase text-xl sm:text-2xl text-ink truncate">{nextMatch.homeTeam}</p>
-            </div>
-            <span class="font-headline font-black italic text-2xl text-mute">vs</span>
-            <div class="text-center min-w-0">
-              <span class="text-3xl" aria-hidden="true">{flagEmoji(nextMatch.awayCode ?? '')}</span>
-              <p class="mt-2 font-headline font-black uppercase text-xl sm:text-2xl text-ink truncate">{nextMatch.awayTeam}</p>
-            </div>
-          </div>
-          <div class="mt-7 pt-4 border-t border-hairline text-center">
-            <p class="font-mono text-xs uppercase tracking-[0.1em] text-body">{nextMatchKickoff}</p>
-            <p class="mt-1 font-sans text-xs text-mute">{nextMatch.venue}</p>
-          </div>
-        </a>
-      </div>
-    </div>
-  </section>
+  <WorldCupHomeHero client:load fixtures={remainingMatches} />
 
   <section class="border-b border-hairline bg-canvas-soft py-8">
     <div class="page-container grid grid-cols-1 lg:grid-cols-[0.7fr_1.3fr] gap-6 lg:gap-10 items-center">
@@ -124,21 +85,7 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
 
       <!-- Stream -->
       <div class="mt-4 flex flex-col gap-2.5">
-        {remainingMatches.map((event) => <EventRow event={{
-          id: event.id,
-          competition: 'World Cup 2026',
-          kickoff: new Date(event.kickoff),
-          homeTeam: event.homeTeam,
-          awayTeam: event.awayTeam,
-          homeCode: event.homeCode,
-          awayCode: event.awayCode,
-          homeScore: event.homeScore,
-          awayScore: event.awayScore,
-          status: event.status,
-          venue: event.venue,
-          goats: [],
-          commentCount: 0,
-        }} />)}
+        <WorldCupHomeFeed client:load events={homeEvents} />
         <a href="/world-cup" class="self-center mt-1.5 chip">Open the World Cup hub ↓</a>
       </div>
 

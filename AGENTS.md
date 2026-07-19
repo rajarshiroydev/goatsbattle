@@ -233,6 +233,14 @@ Keep this list current. Each entry = symptom → cause → fix.
   Fix: `mapStatsApiWorldCupMatches` requires one exact normalized team-pair match and only
   uses kickoff as a 12-hour sanity bound; never overwrite canonical kickoff/stage/venue/URL,
   and pass team names through `displayProviderTeamName` until real teams are known.
+- **Resolved knockout teams can invalidate imported provider identities.** Symptom: a completed
+  knockout match remains 0–0 and its full provider timeline produces no public moments → Cause:
+  the match was imported while its participants were placeholders, so `match_sources.metadata`
+  retains obsolete team IDs and strict timeline normalization rejects every resolved-team event;
+  a coordinator that only refetches the final timeline cannot repair the stale score either → Fix:
+  update the match score/status and source team IDs atomically before every finished correction,
+  then retry any finalized full timeline that contains supported events but has zero materialized
+  provider moments; keep this repair bounded so it cannot become an endless provider poll.
 - **A lineup `404` is normal, while `confirmed: true` is not sufficient evidence.** Symptom:
   expected pre-announcement responses open the circuit breaker, or a 26-hours-early lineup
   with 11 starters and no bench creates false GOAT participation → Cause: the endpoint

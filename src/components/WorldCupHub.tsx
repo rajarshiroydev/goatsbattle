@@ -137,7 +137,7 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
           <div class="mt-2 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
               <h1 class="font-headline font-black uppercase text-ink text-5xl sm:text-6xl leading-[0.9]">The World Cup Floor</h1>
-              <p class="mt-3 max-w-2xl font-sans text-body">Every match has a thread. Four games remain; the greatness debates are already open.</p>
+              <p class="mt-3 max-w-2xl font-sans text-body">Every match has a thread. Follow the score, then make the case in the greatness debate.</p>
             </div>
             <span class="font-mono text-[11px] uppercase tracking-widest text-mute">104 matches · 1 tournament</span>
           </div>

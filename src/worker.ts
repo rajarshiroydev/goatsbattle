@@ -23,6 +23,10 @@ export default {
           now,
         });
         for (const candidate of candidates) {
+          // Let the bounded cron repair path refresh provider identities and
+          // rematerialize a finalized-but-empty timeline without racing the
+          // existing coordinator alarm for the same match.
+          if (candidate.needsRepair) continue;
           try {
             const coordinator = env.LIVE_MATCH_COORDINATOR.getByName(candidate.matchId);
             const status = await coordinator.start(candidate);

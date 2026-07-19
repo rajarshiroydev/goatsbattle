@@ -3,6 +3,7 @@ import { runInDurableObject } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import {
   COORDINATOR_HEALTHY_GRACE_MS,
+  FINISHED_CORRECTION_WORK,
   correctionDueAt,
   coordinatorRetryDelay,
 } from '../../src/durable/LiveMatchCoordinator';
@@ -82,6 +83,7 @@ describe('LiveMatchCoordinator runtime', () => {
       kickoff: new Date(now + 60 * 60_000).toISOString(),
       status: 'scheduled' as const,
       featured: true,
+      needsRepair: false,
     };
     await coordinator.start(config, now);
     await runInDurableObject(coordinator, async (_instance, state) => {
@@ -102,6 +104,7 @@ describe('LiveMatchCoordinator runtime', () => {
       kickoff: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
       status: 'finished' as const,
       featured: true,
+      needsRepair: false,
     };
     expect(await coordinator.start(config)).toEqual({ active: true, healthy: true });
     await runInDurableObject(coordinator, async (_instance, state) => {
@@ -129,5 +132,9 @@ describe('coordinator schedules', () => {
       finishedAt + 24 * 60 * 60_000,
       null,
     ]);
+  });
+
+  it('rechecks the finished score before finalizing each corrected timeline', () => {
+    expect(FINISHED_CORRECTION_WORK).toEqual(['status', 'final']);
   });
 });

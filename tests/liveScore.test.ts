@@ -58,3 +58,33 @@ test('does not overlay partial or non-live timelines', () => {
     provisional: false,
   });
 });
+
+test('repairs a finished score from a full materialized timeline', () => {
+  assert.deepEqual(deriveLiveScore({
+    status: 'finished',
+    timelineCoverage: 'full',
+    providerHomeScore: 0,
+    providerAwayScore: 0,
+    timelineHomeGoals: 4,
+    timelineAwayGoals: 6,
+  }), {
+    homeScore: 4,
+    awayScore: 6,
+    provisional: true,
+  });
+});
+
+test('does not invent a finished nil-nil score without materialized goals', () => {
+  assert.deepEqual(deriveLiveScore({
+    status: 'finished',
+    timelineCoverage: 'full',
+    providerHomeScore: 1,
+    providerAwayScore: 0,
+    timelineHomeGoals: null,
+    timelineAwayGoals: null,
+  }), {
+    homeScore: 1,
+    awayScore: 0,
+    provisional: false,
+  });
+});

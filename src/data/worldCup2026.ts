@@ -22,13 +22,17 @@ export interface WorldCupCanonicalFixture {
   status: 'scheduled' | 'finished';
 }
 
+/** Provider state older than this validated fallback must not overwrite the
+ * resolved knockout teams/results during hydration. */
+export const WORLD_CUP_FALLBACK_VALIDATED_AT = '2026-07-19T05:23:42.000Z';
+
 /**
- * Versioned launch snapshot, 2026-07-13.
+ * Versioned tournament fallback snapshot, 2026-07-19.
  *
  * Match numbering, stage graph, dates and venues follow FIFA's published 104-
  * match schedule. Match 101 uses FIFA's current 14:00 Dallas listing. Filled
- * teams/results are a fallback snapshot
- * of worldcup26.ir and are replaced only by validated score/status enrichment.
+ * teams/results are a validated fallback snapshot and are replaced at runtime
+ * by validated score/status enrichment.
  * No event, lineup, scorer, or GOAT-participation claims are stored here.
  */
 const FIXTURES: readonly FixtureTuple[] = [
@@ -132,10 +136,10 @@ const FIXTURES: readonly FixtureTuple[] = [
   [98,'qf','07/10/2026 12:00',16,'Spain','Belgium','ESP','BEL',2,1,true],
   [99,'qf','07/11/2026 17:00',8,'Norway','England','NOR','ENG',1,2,true],
   [100,'qf','07/11/2026 20:00',6,'Argentina','Switzerland','ARG','SUI',3,1,true],
-  [101,'sf','07/14/2026 14:00',4,'France','Spain','FRA','ESP',0,0,false],
-  [102,'sf','07/15/2026 15:00',7,'England','Argentina','ENG','ARG',0,0,false],
-  [103,'third','07/18/2026 17:00',8,'Loser Match 101','Loser Match 102',null,null,0,0,false],
-  [104,'final','07/19/2026 15:00',11,'Winner Match 101','Winner Match 102',null,null,0,0,false],
+  [101,'sf','07/14/2026 14:00',4,'France','Spain','FRA','ESP',0,2,true],
+  [102,'sf','07/15/2026 15:00',7,'England','Argentina','ENG','ARG',1,2,true],
+  [103,'third','07/18/2026 17:00',8,'France','England','FRA','ENG',4,6,true],
+  [104,'final','07/19/2026 15:00',11,'Spain','Argentina','ESP','ARG',0,0,false],
 ];
 
 const STAGES: Readonly<Record<RawStage, WorldCupStage>> = {
