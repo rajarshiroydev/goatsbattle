@@ -610,14 +610,16 @@ async function finalizeDurableMoments(
 async function shouldFetchFinalTimeline(query: Query, matchId: string, now: Date) {
   const [state] = await query.query(
     `SELECT state.mode, state.last_final_check_at AS "lastFinalCheckAt",
-            NOT EXISTS (
-              SELECT 1 FROM match_moments moment
-              WHERE moment.match_id = $1 AND moment.provider = $2
-            ) AND EXISTS (
-              SELECT 1 FROM jsonb_array_elements(state.events) event
-              WHERE event ->> 'type' IN (
-                'goal', 'yellow_card', 'red_card', 'yellow_red_card', 'substitution',
-                'penalty_awarded', 'penalty_scored', 'penalty_missed', 'penalty_saved', 'var'
+            (state.coverage = 'full'
+              AND NOT EXISTS (
+                SELECT 1 FROM match_moments moment
+                WHERE moment.match_id = $1 AND moment.provider = $2
+              ) AND EXISTS (
+                SELECT 1 FROM jsonb_array_elements(state.events) event
+                WHERE event ->> 'type' IN (
+                  'goal', 'yellow_card', 'red_card', 'yellow_red_card', 'substitution',
+                  'penalty_awarded', 'penalty_scored', 'penalty_missed', 'penalty_saved', 'var'
+                )
               )
             ) AS "needsRepair"
      FROM match_timeline_state state WHERE state.match_id = $1`,

@@ -26,12 +26,14 @@ export default function FloorFeed({ events }: Props) {
 
   useEffect(() => {
     let active = true;
+    let refreshGeneration = 0;
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
+      const generation = ++refreshGeneration;
       fetch('/api/world-cup-status')
         .then((response) => response.ok ? response.json() : Promise.reject())
         .then((data: { matches: Array<Partial<FloorFeedEvent> & { id: string }> }) => {
-          if (!active) return;
+          if (!active || generation !== refreshGeneration) return;
           const updates = new Map(data.matches.map((match) => [match.id, match]));
           setCurrentEvents((current) => current.map((event) => ({
             ...event,
