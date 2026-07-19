@@ -16,6 +16,7 @@ const expectedTree = process.env.EXPECTED_GIT_TREE ?? git('rev-parse', 'HEAD^{tr
 const allowEquivalentSha = process.env.ALLOW_EQUIVALENT_PREVIEW_SHA === 'true';
 const matchId = process.env.FEATURE_MATCH_ID ?? 'world-cup-2026-match-101';
 const canonicalMatchPath = `/floor/${matchId}/`;
+const requestTimeoutMs = 15_000;
 const unique = () => `${Date.now()}-${crypto.randomUUID()}`;
 const ignoredConsoleErrors = [
   "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.",
@@ -24,7 +25,23 @@ const ignoredConsoleErrors = [
 async function get(path) {
   const url = new URL(path, base);
   url.searchParams.set('feature_verify', unique());
-  return fetch(url, { redirect: 'follow', headers: { 'Cache-Control': 'no-cache' } });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    const response = await fetch(url, {
+      redirect: 'error',
+      signal: controller.signal,
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    const body = await response.arrayBuffer();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function json(path) {
@@ -102,6 +119,8 @@ try {
     const response = await page.goto(new URL(canonicalMatchPath, base).toString(), {
       waitUntil: 'networkidle',
     });
+    assert.equal(new URL(page.url()).origin, base.origin,
+      `browser navigation escaped the approved preview origin: ${page.url()}`);
     assert.equal(response?.status(), 200);
     await page.locator('button[title^="Tag this moment:"]').first().waitFor({ state: 'visible' });
     const renderedMoments = await page.locator('button[title^="Tag this moment:"]').count();
