@@ -28,6 +28,7 @@ export interface StatsApiClientOptions {
   apiKey: string;
   fetcher?: typeof fetch;
   reserveRequest?: (path: string) => Promise<void>;
+  requestTimeoutMs?: number;
 }
 
 async function boundedJson(response: Response): Promise<unknown> {
@@ -68,7 +69,7 @@ async function requestJson(path: string, options: StatsApiClientOptions): Promis
       accept: 'application/json',
       'user-agent': 'GOATSBattle/1.0',
     },
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(options.requestTimeoutMs ?? 10_000),
   });
   const payload = await boundedJson(response).catch((error) => {
     if (!response.ok) return null;

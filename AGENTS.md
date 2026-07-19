@@ -212,6 +212,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   `static.cloudflareinsights.com` and `cloudflareinsights.com`.
 
 ### TheStatsAPI / match data
+- **TheStatsAPI integration is polling, not an incoming webhook.** Symptom: a proposed test or
+  recovery path adds a public provider callback that production never uses → Cause: the actual flow
+  is the production scheduled Worker watchdog followed by Durable Object status/lineup/timeline
+  polling; WebSockets only fan persisted snapshots out to browsers → Fix: use the deterministic
+  provider HTTP simulator plus scheduled/alarm tests, and keep any database-backed CI run on an
+  ephemeral Neon branch rather than the shared preview database.
 - **A finished score on preview does not prove its development match data is current.** Symptom:
   a World Cup page shows the correct finished score while Match Moments is empty and the moments
   API still reports `scheduled` → Cause: preview has no cron and shares the development database,

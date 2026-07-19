@@ -38,7 +38,9 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
 - **tsx** ^4 — runs the `scripts/*.ts` tooling (DB migrations, imports, verification).
 - **Playwright** ^1.61 — UI screenshots (`npm run shot -- <route>`).
 - **Vitest** ^4.1 + `@cloudflare/vitest-pool-workers` ^0.18 — Worker-runtime tests for
-  Durable Object storage, alarms, WebSockets, and provider quota coordination.
+  Durable Object storage, alarms, WebSockets, and provider quota coordination. The deterministic
+  TheStatsAPI simulator runs as a separate blocking feature-test step in CI without provider or
+  database credentials.
 
 ## External services / providers
 - **Neon** — database (prod + dev projects).
