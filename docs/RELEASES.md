@@ -28,9 +28,11 @@ Only production has the custom domains and every-minute cron.
 3. Deploy the committed candidate with `npm run worker:deploy:preview`. The command runs the full
    release checks, verifies the generated preview bindings, and stamps the Git commit and tree in
    Cloudflare's version metadata and `/api/version`.
-4. Record the preview Worker version ID. Test auth, comments, votes, moments, live status, mobile
-   UI, headers, and the changed feature on preview-specific data. Confirm
-   `https://goatsbattle-preview.roystark.workers.dev/api/version` reports the expected Git tree.
+4. Record the preview Worker version ID. The guarded preview command automatically runs the
+   read-only API/browser gate in `npm run test:feature:preview`; any failure means the candidate is
+   not ready. Run the applicable disposable-data and authenticated smokes from
+   [FEATURE-TESTING.md](FEATURE-TESTING.md), including auth, comments, votes, moments, live status,
+   mobile UI and the changed feature. Confirm `/api/version` reports the expected Git tree.
 5. Merge the reviewed PR to `main`. If the merge/squash changes the Git tree, redeploy `main` to
    preview and repeat verification. A different commit SHA is acceptable only when its Git tree
    is identical to the tested preview tree.
@@ -47,6 +49,7 @@ Only production has the custom domains and every-minute cron.
 
    The command refuses a dirty tree, a non-`main` branch, a stale `origin/main`, an inactive
    preview version, or a preview version whose recorded Git tree differs from production HEAD.
+   It also reruns the read-only preview feature gate before changing production.
 8. Verify `https://goatsbattle.com/api/version`, smoke-test the public routes, and inspect logs.
 
 Deployments are manual. Pushing or merging `main` runs CI but does not deploy either Worker.

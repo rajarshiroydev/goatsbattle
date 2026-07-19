@@ -54,9 +54,14 @@ npm run test:worker
 
 Worker packaging and release validation are documented in [docs/RELEASES.md](docs/RELEASES.md). Production releases are manual, approval-gated, and must use the repository's guarded workflow.
 
+The full pre-production feature matrix—including preview browser checks, disposable database
+smokes, authentication, realtime behavior, accessibility and performance—is documented in
+[docs/FEATURE-TESTING.md](docs/FEATURE-TESTING.md).
+
 ## Project guidance
 
 - [AGENTS.md](AGENTS.md) — framework conventions, safety rules, and hard-won engineering gotchas
 - [STACK.md](STACK.md) — current architecture and external services
 - [docs/RELEASES.md](docs/RELEASES.md) — protected preview and production release process
+- [docs/FEATURE-TESTING.md](docs/FEATURE-TESTING.md) — feature coverage and promotion gates
 - [DATABASE-OPERATIONS.md](DATABASE-OPERATIONS.md) — database targeting, migrations, verification, and recovery

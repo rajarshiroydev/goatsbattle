@@ -212,6 +212,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   `static.cloudflareinsights.com` and `cloudflareinsights.com`.
 
 ### TheStatsAPI / match data
+- **A finished score on preview does not prove its development match data is current.** Symptom:
+  a World Cup page shows the correct finished score while Match Moments is empty and the moments
+  API still reports `scheduled` → Cause: preview has no cron and shares the development database,
+  while the static catalog fallback can correct the public scorecard without populating provider
+  timeline tables → Fix: refresh and backfill the guarded development data, verify the resulting
+  rows, and require the deployed-preview feature gate before treating a release candidate as ready.
 - **A live match can have no timeline clock for several minutes.** Symptom: the scorecard says
   LIVE but shows no clock after kickoff → Cause: the provider match resource can flip to
   `live` about two minutes after the real whistle, then `/live-timeline` can remain empty for
