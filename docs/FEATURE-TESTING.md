@@ -25,7 +25,6 @@ Deterministic checks used on every pull request:
 
 ```sh
 npm run release:check
-npm run test:feature:stats-api
 npm run worker:verify-build:production
 npm run worker:dry-run
 ```
