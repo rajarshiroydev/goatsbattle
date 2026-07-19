@@ -76,6 +76,16 @@ run('npm', ['run', `worker:verify-build:${environment}`], {
   env: { ...process.env, RELEASE_SHA: sha, RELEASE_TREE: tree },
 });
 
+// Production promotion is allowed only while the active, tree-matched preview
+// still passes the read-only API and hydrated-browser feature gate.
+if (environment === 'production') {
+  run('npm', ['run', 'test:feature:preview'], {
+    // A reviewed merge commit may have a different SHA from its preview
+    // candidate while preserving the exact tested Git tree.
+    env: { ...process.env, ALLOW_EQUIVALENT_PREVIEW_SHA: 'true' },
+  });
+}
+
 const secretsFile = environment === 'preview' ? '.dev.vars.preview' : '.env.production';
 const message = [
   `git-sha=${sha}`,
@@ -90,5 +100,11 @@ run('./node_modules/.bin/wrangler', [
   '--secrets-file', secretsFile,
   '--message', message,
 ]);
+
+// A preview upload is not a successful release candidate until its deployed
+// APIs, data readiness, security headers, and hydrated moments UI all pass.
+if (environment === 'preview') {
+  run('npm', ['run', 'test:feature:preview']);
+}
 
 console.log(`✓ Deployed ${environment} from ${sha} (tree ${tree}).`);

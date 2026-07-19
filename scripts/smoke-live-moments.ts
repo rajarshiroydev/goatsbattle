@@ -74,10 +74,17 @@ async function main() {
     const provisional = await fetchFeed();
     if (!provisional.liveEnabled) throw new Error('Local live-moment gate is disabled.');
     if (!provisional.moments.some((moment) =>
-      moment.id === momentId && moment.verificationStatus === 'provisional')) {
+      moment.id === momentId && moment.verificationStatus === 'active')) {
       throw new Error('Moment API did not expose the provisional smoke event.');
     }
-    console.log('✓ Provisional event was exposed by the live API.');
+    const [provisionalRow] = await query`
+      SELECT verification_status AS "verificationStatus"
+      FROM match_moments WHERE id = ${momentId}
+    `;
+    if (provisionalRow?.verificationStatus !== 'provisional') {
+      throw new Error('Smoke event was not stored as provisional.');
+    }
+    console.log('✓ Provisional event was stored and exposed as an active public moment.');
 
     const retracted = await persistStatsApiMoments(
       query,
@@ -89,10 +96,18 @@ async function main() {
     );
     if (retracted.retracted !== 1) throw new Error(`Expected one retraction: ${JSON.stringify(retracted)}`);
     const corrected = await fetchFeed();
-    if (corrected.moments.some((moment) => moment.id === momentId)) {
-      throw new Error('Moment API still exposed the retracted smoke event.');
+    const correctedMoment = corrected.moments.find((moment) => moment.id === momentId);
+    if (correctedMoment?.verificationStatus !== 'corrected') {
+      throw new Error('Moment API did not expose the retracted event as source-corrected history.');
     }
-    console.log('✓ Retracted event disappeared from the taggable live feed.');
+    const [retractedRow] = await query`
+      SELECT verification_status AS "verificationStatus"
+      FROM match_moments WHERE id = ${momentId}
+    `;
+    if (retractedRow?.verificationStatus !== 'retracted') {
+      throw new Error('Smoke event was not stored as retracted.');
+    }
+    console.log('✓ Retracted event was retained durably and exposed as source-corrected history.');
 
     const finalized = await persistStatsApiMoments(
       query,
@@ -105,10 +120,17 @@ async function main() {
     if (finalized.written !== 1) throw new Error(`Expected one final write: ${JSON.stringify(finalized)}`);
     const finalFeed = await fetchFeed();
     const finalMoment = finalFeed.moments.find((moment) => moment.id === momentId);
-    if (finalMoment?.verificationStatus !== 'confirmed') {
-      throw new Error('Final snapshot did not promote the smoke event to confirmed.');
+    if (finalMoment?.verificationStatus !== 'active') {
+      throw new Error('Final snapshot was not exposed as an active public moment.');
     }
-    console.log('✓ Final snapshot promoted the same durable event to confirmed.');
+    const [confirmedRow] = await query`
+      SELECT verification_status AS "verificationStatus"
+      FROM match_moments WHERE id = ${momentId}
+    `;
+    if (confirmedRow?.verificationStatus !== 'confirmed') {
+      throw new Error('Final snapshot did not promote the stored smoke event to confirmed.');
+    }
+    console.log('✓ Final snapshot promoted the stored event and restored it to the public feed.');
   } finally {
     if (matchCreated) await query`DELETE FROM matches WHERE id = ${matchId}`;
   }
