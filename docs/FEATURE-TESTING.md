@@ -25,9 +25,51 @@ Deterministic checks used on every pull request:
 
 ```sh
 npm run release:check
+npm run test:feature:stats-api
 npm run worker:verify-build:production
 npm run worker:dry-run
 ```
+
+`release:check` includes the provider feature simulation. CI shows it as a separate named step so
+a provider-contract failure is distinguishable from ordinary unit or Worker-runtime failures.
+
+## TheStatsAPI feature simulator
+
+`tests/support/theStatsApiSimulator.ts` is a deterministic HTTP double for the exact provider
+endpoints used by GOATSBattle. It requires no API key, provider network access, clock waiting, or
+database connection. The simulator is test-only and is never bundled into the Worker.
+
+The blocking `npm run test:feature:stats-api` suite covers:
+
+- two-page World Cup import, request paths, bearer authentication, content negotiation, user agent,
+  shared quota reservation, missing credentials and request deadlines;
+- scheduled lineup 404; unconfirmed, short-XI, missing-bench, duplicate-player and premature lineup
+  rejection; and complete official acceptance;
+- scheduled → live → finished resources, an initially empty live timeline, a timeline goal leading
+  the match score, VAR removal, partial final coverage, full finalization and late correction;
+- provider event normalization for goals, cards, substitutions, penalties and conservative VAR
+  details, plus stable event identities and changed-snapshot hashes;
+- 429 responses, malformed JSON, oversized bodies, stalled requests, coordinator ownership,
+  generic-refresh exclusion, fallback selection and total-provider failure;
+- the real Durable Object alarm state machine from live polling through an incomplete-final retry
+  and a successful correction slot.
+
+The upstream service sends no webhook to GOATSBattle. The production flow is a scheduled Worker
+watchdog followed by per-match Durable Object polling; WebSockets broadcast persisted snapshots to
+browsers. Tests therefore simulate provider HTTP responses and invoke scheduled/alarm behavior,
+instead of adding a non-production webhook endpoint.
+
+### Database-backed provider integration
+
+The deterministic suite deliberately stops at the Postgres boundary. SQL persistence, public API
+reads and browser rendering must eventually run in a separate CI job against an ephemeral Neon
+branch created for that workflow run, migrated from scratch, verified by row counts and deleted in
+an always-run cleanup step. It must never use the shared development/preview database.
+
+Add that job only after a least-privilege Neon CI credential and reliable branch cleanup are in
+place. Keep it separate from the fast required simulator step initially; promote it to a required
+check after repeated runs prove it isolated and non-flaky. Until then, the guarded disposable
+development smoke and deployed-preview verifier remain the persistence and rendering gates.
 
 Read-only deployed-preview verification:
 
@@ -129,11 +171,11 @@ production polling window.
 ## Incremental implementation plan
 
 1. **Current foundation:** repaired live-moment lifecycle smoke, read-only preview API/browser gate,
-   and automatic preview/promotion enforcement.
+   automatic preview/promotion enforcement, and the blocking deterministic TheStatsAPI simulator.
 2. **Community lifecycle:** disposable authenticated comment/reply/vote/report/stat-tag smoke with
    cleanup verification.
-3. **Realtime lifecycle:** deterministic Worker tests for alarms and WebSocket/REST race recovery,
-   plus a preview multi-page socket smoke.
+3. **Realtime lifecycle:** expand the current provider-driven alarm test with WebSocket/REST race
+   recovery and add a preview multi-page socket smoke.
 4. **Browser regression suite:** Playwright flows for navigation, battles, rankings, comments and
    World Cup surfaces with stable semantic selectors.
 5. **Quality budgets:** reviewed screenshot baselines, accessibility checks and performance budgets.

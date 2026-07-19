@@ -49,6 +49,7 @@ Run the core checks before submitting a change:
 ```sh
 npm run typecheck
 npm test
+npm run test:feature:stats-api
 npm run test:worker
 ```
 

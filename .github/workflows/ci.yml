@@ -25,7 +25,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run release:check
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Unit and contract tests
+        run: npm test
+      - name: TheStatsAPI feature simulation
+        run: npm run test:feature:stats-api
+      - name: Worker and Durable Object tests
+        run: npm run test:worker
       # Both builds are intentional: Astro flattens environment-specific Worker
       # bindings at build time, so production verification cannot validate the
       # separate preview config used by the Wrangler dry run.
