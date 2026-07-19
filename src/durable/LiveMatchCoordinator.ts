@@ -16,6 +16,7 @@ const STATUS_MS = 60_000;
 export const COORDINATOR_HEALTHY_GRACE_MS = STATUS_MS + 2 * POLL_MS;
 const CORRECTION_OFFSETS = [0, 5 * 60_000, 15 * 60_000, 60 * 60_000, 6 * 60 * 60_000, 24 * 60 * 60_000];
 const FAILURE_BACKOFF = [10_000, 20_000, 40_000, 60_000];
+export const FINISHED_CORRECTION_WORK = ['status', 'final'] as const;
 
 export const correctionDueAt = (finishedAt: number, correctionIndex: number): number | null => {
   const offset = CORRECTION_OFFSETS[correctionIndex];
@@ -220,8 +221,23 @@ export class LiveMatchCoordinator extends DurableObject<Env> {
       if (state.last_status === 'finished') {
         const dueAt = correctionDueAt(state.finished_at, state.correction_index) ?? Number.POSITIVE_INFINITY;
         if (now >= dueAt) {
-          const final = await this.runWork(config, 'final', now);
-          if (final) {
+          // Providers can mark a match finished before their match resource has
+          // received its final score. Recheck score/team identity at the same
+          // bounded correction slots used for the final timeline so late
+          // provider corrections do not leave a finished score stranded.
+          const [statusWork, finalWork] = FINISHED_CORRECTION_WORK;
+          const status = await this.runWork(config, statusWork, now);
+          if (status) {
+            this.ctx.storage.sql.exec(
+              `UPDATE coordinator_state
+               SET last_status = ?, last_status_at = ?, last_success_at = ?,
+                   failure_count = 0, next_attempt_at = 0, pending_broadcast = 1
+               WHERE id = 1`,
+              status.matchStatus, now, now,
+            );
+          }
+          const final = status ? await this.runWork(config, finalWork, now) : null;
+          if (status && final) {
             if (!final.finalized) throw new Error(`Final timeline is incomplete for ${config.match_id}.`);
             this.ctx.storage.sql.exec(
               `UPDATE coordinator_state

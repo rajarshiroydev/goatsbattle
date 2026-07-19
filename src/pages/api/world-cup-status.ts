@@ -12,7 +12,11 @@ import {
 import { deriveLiveMatchClock } from '../../lib/liveMatchClock';
 import { deriveLiveScore } from '../../lib/liveScore';
 import { THE_STATS_API_PROVIDER } from '../../lib/theStatsApi';
-import { worldCup2026Fixtures } from '../../data/worldCup2026';
+import { applyWorldCupFallbackSnapshot, resolveWorldCupKnockoutTeams } from '../../lib/worldCupBracket';
+import {
+  WORLD_CUP_FALLBACK_VALIDATED_AT,
+  worldCup2026Fixtures,
+} from '../../data/worldCup2026';
 
 export const prerender = false;
 
@@ -51,6 +55,8 @@ export const GET: APIRoute = async () => {
       id: matches.id,
       homeTeam: matches.homeTeam,
       awayTeam: matches.awayTeam,
+      homeCode: matches.homeCode,
+      awayCode: matches.awayCode,
       homeScore: matches.homeScore,
       awayScore: matches.awayScore,
       homePenaltyScore: matches.homePenaltyScore,
@@ -89,7 +95,11 @@ export const GET: APIRoute = async () => {
     goatsByMatch.set(goat.matchId, [...(goatsByMatch.get(goat.matchId) ?? []), goat]);
   }
 
-  const remaining = rows.filter((row) => row.id.startsWith('world-cup-2026-match-'));
+  const remaining = resolveWorldCupKnockoutTeams(applyWorldCupFallbackSnapshot(
+    rows.filter((row) => row.id.startsWith('world-cup-2026-match-')),
+    worldCup2026Fixtures,
+    WORLD_CUP_FALLBACK_VALIDATED_AT,
+  ));
   return new Response(JSON.stringify({
     matches: remaining.map((row) => {
       const kickoff = row.kickoff.getTime();

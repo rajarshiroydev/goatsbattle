@@ -11,7 +11,7 @@ import {
   validateStatsApiTimeline,
   type StatsApiMatch,
 } from '../src/lib/theStatsApi';
-import { normalizeStatsApiSourceRow } from '../src/lib/theStatsApiSync';
+import { normalizeStatsApiMoment, normalizeStatsApiSourceRow } from '../src/lib/theStatsApiSync';
 
 const rawMatch = (index: number) => {
   const fixture = worldCup2026Fixtures[index];
@@ -50,7 +50,7 @@ test('validates and maps all 104 provider fixtures to canonical match routes', (
   const mapped = mapStatsApiWorldCupMatches(page.matches, worldCup2026Fixtures);
   assert.equal(mapped.length, 104);
   assert.equal(mapped[100].fixture.id, 'world-cup-2026-match-101');
-  assert.equal(mapped[103].provider.homeTeam.name, 'W101');
+  assert.equal(mapped[103].provider.homeTeam.name, 'Spain');
 });
 
 test('rejects a provider match that cannot map by both teams', () => {
@@ -174,4 +174,48 @@ test('normalizes Neon timestamp strings before live sync date arithmetic', () =>
     () => normalizeStatsApiSourceRow({ ...source, kickoff: 'not-a-date' }),
     /Invalid kickoff timestamp/,
   );
+});
+
+test('uses refreshed knockout team identities when normalizing timeline moments', () => {
+  const event = validateStatsApiTimeline({
+    data: {
+      match_id: 'mt_knockout',
+      coverage: 'full',
+      events: [{
+        sequence: 1,
+        minute: 3,
+        extra_time: 0,
+        period: 'first_half',
+        type: 'goal',
+        team: { id: 'tm_england', name: 'England' },
+        player: { id: 'pl_rice', name: 'Declan Rice' },
+      }],
+    },
+    meta: { coverage: 'full' },
+  }, 'mt_knockout').events[0];
+
+  assert.equal(normalizeStatsApiMoment(
+    event,
+    'mt_knockout',
+    'tm_placeholder_home',
+    'tm_placeholder_away',
+  ), null);
+  assert.deepEqual(normalizeStatsApiMoment(
+    event,
+    'mt_knockout',
+    'tm_france',
+    'tm_england',
+  ), {
+    providerEventId: 'mt_knockout:first_half:1',
+    providerSequence: 1,
+    period: 'first_half',
+    minute: 3,
+    extra: 0,
+    type: 'goal',
+    team: 'away',
+    providerTeamId: 'tm_england',
+    providerPlayerId: 'pl_rice',
+    playerName: 'Declan Rice',
+    detail: null,
+  });
 });

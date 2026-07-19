@@ -84,6 +84,7 @@ export interface StatsApiCoordinatorMatch {
   kickoff: string;
   status: AppStatus;
   featured: boolean;
+  needsRepair?: boolean;
 }
 
 export async function listStatsApiCoordinatorMatches(options: {
@@ -93,7 +94,24 @@ export async function listStatsApiCoordinatorMatches(options: {
   const query = neon(options.databaseUrl);
   const rows = await query.query(
     `SELECT source.match_id AS "matchId", source.provider_match_id AS "providerMatchId",
-            match.kickoff, match.status
+            match.kickoff, match.status,
+            EXISTS (
+              SELECT 1
+              FROM match_timeline_state state
+              WHERE state.match_id = match.id
+                AND state.coverage = 'full'
+                AND NOT EXISTS (
+                  SELECT 1 FROM match_moments moment
+                  WHERE moment.match_id = match.id AND moment.provider = $1
+                )
+                AND EXISTS (
+                  SELECT 1 FROM jsonb_array_elements(state.events) event
+                  WHERE event ->> 'type' IN (
+                    'goal', 'yellow_card', 'red_card', 'yellow_red_card', 'substitution',
+                    'penalty_awarded', 'penalty_scored', 'penalty_missed', 'penalty_saved', 'var'
+                  )
+                )
+            ) AS "needsRepair"
      FROM match_sources source
      JOIN matches match ON match.id = source.match_id
      WHERE source.provider = $1 AND source.role = 'score'
@@ -103,20 +121,32 @@ export async function listStatsApiCoordinatorMatches(options: {
            AND match.kickoff BETWEEN $2::timestamptz - interval '5 hours'
                                  AND $2::timestamptz + interval '2 hours')
          OR (match.status = 'finished'
-           AND match.kickoff BETWEEN $2::timestamptz - interval '30 hours'
+           AND match.kickoff BETWEEN $2::timestamptz - interval '7 days'
                                  AND $2::timestamptz)
        )
      ORDER BY CASE WHEN match.status = 'live' THEN 0 ELSE 1 END, match.kickoff`,
     [THE_STATS_API_PROVIDER, options.now],
-  ) as Array<{ matchId: string; providerMatchId: string; kickoff: Date | string; status: AppStatus }>;
-  return rows.map((row, index) => ({
-    matchId: row.matchId,
-    provider: THE_STATS_API_PROVIDER,
-    providerMatchId: row.providerMatchId,
-    kickoff: new Date(row.kickoff).toISOString(),
-    status: row.status,
-    featured: index === 0,
-  }));
+  ) as Array<{
+    matchId: string;
+    providerMatchId: string;
+    kickoff: Date | string;
+    status: AppStatus;
+    needsRepair: boolean;
+  }>;
+  let featuredAssigned = false;
+  return rows.map((row) => {
+    const featured = !row.needsRepair && !featuredAssigned;
+    if (featured) featuredAssigned = true;
+    return {
+      matchId: row.matchId,
+      provider: THE_STATS_API_PROVIDER,
+      providerMatchId: row.providerMatchId,
+      kickoff: new Date(row.kickoff).toISOString(),
+      status: row.status,
+      featured,
+      needsRepair: row.needsRepair,
+    };
+  });
 }
 
 export async function reserveStatsApiRequest(query: Query, now: Date, path: string) {
@@ -222,34 +252,71 @@ async function updateScore(
   const nextStatus = appStatus(match.status);
   assertSafeStatusTransition(source.status, nextStatus);
   const score = displayScore(match.score);
-  const updated = await query`
-    UPDATE matches
-    SET home_team = ${displayProviderTeamName(match.homeTeam.name, source.homeTeam)},
-        away_team = ${displayProviderTeamName(match.awayTeam.name, source.awayTeam)},
-        home_score = ${score.home},
-        away_score = ${score.away},
-        home_penalty_score = ${score.penaltiesHome},
-        away_penalty_score = ${score.penaltiesAway},
-        status = ${nextStatus},
-        source_status = 'fresh',
-        last_synced_at = ${now}
-    WHERE id = ${source.matchId}
-      AND status = ${source.status}
-      AND (last_synced_at IS NULL OR last_synced_at <= ${now})
-    RETURNING id
-  `;
-  if (updated.length === 0) {
+  const homeTeam = displayProviderTeamName(match.homeTeam.name, source.homeTeam);
+  const awayTeam = displayProviderTeamName(match.awayTeam.name, source.awayTeam);
+  const [updated] = await query.query(
+    `WITH updated_match AS (
+       UPDATE matches
+       SET home_team = $3,
+           away_team = $4,
+           home_score = $5,
+           away_score = $6,
+           home_penalty_score = $7,
+           away_penalty_score = $8,
+           status = $9,
+           source_status = 'fresh',
+           last_synced_at = $10
+       WHERE id = $1
+         AND status = $2
+         AND (last_synced_at IS NULL OR last_synced_at <= $10)
+       RETURNING id
+     ), updated_sources AS (
+       UPDATE match_sources
+       SET metadata = metadata || jsonb_build_object(
+             'homeTeamId', $11::text,
+             'awayTeamId', $12::text
+           ),
+           last_attempt_at = $10,
+           last_success_at = $10,
+           status = 'active',
+           updated_at = $10
+       WHERE match_id IN (SELECT id FROM updated_match)
+         AND provider = $13
+       RETURNING role
+     )
+     SELECT
+       (SELECT count(*)::int FROM updated_match) AS "matchesUpdated",
+       (SELECT count(*)::int FROM updated_sources) AS "sourcesUpdated"`,
+    [
+      source.matchId,
+      source.status,
+      homeTeam,
+      awayTeam,
+      score.home,
+      score.away,
+      score.penaltiesHome,
+      score.penaltiesAway,
+      nextStatus,
+      now,
+      match.homeTeam.id,
+      match.awayTeam.id,
+      THE_STATS_API_PROVIDER,
+    ],
+  ) as Array<{ matchesUpdated: number; sourcesUpdated: number }>;
+  if (Number(updated?.matchesUpdated ?? 0) === 0) {
     throw new Error(`Concurrent score refresh superseded ${source.matchId}.`);
   }
-  await query`
-    UPDATE match_sources
-    SET last_attempt_at = ${now}, last_success_at = ${now}, status = 'active', updated_at = ${now}
-    WHERE match_id = ${source.matchId}
-      AND provider = ${THE_STATS_API_PROVIDER}
-  `;
+  if (Number(updated?.sourcesUpdated ?? 0) === 0) {
+    throw new Error(`Provider metadata refresh missed ${source.matchId}.`);
+  }
   source.status = nextStatus;
-  source.homeTeam = displayProviderTeamName(match.homeTeam.name, source.homeTeam);
-  source.awayTeam = displayProviderTeamName(match.awayTeam.name, source.awayTeam);
+  source.homeTeam = homeTeam;
+  source.awayTeam = awayTeam;
+  source.metadata = {
+    ...source.metadata,
+    homeTeamId: match.homeTeam.id,
+    awayTeamId: match.awayTeam.id,
+  };
 }
 
 async function persistLineup(
@@ -385,7 +452,7 @@ async function persistTimelineSnapshot(
   };
 }
 
-function normalizeMoment(
+export function normalizeStatsApiMoment(
   event: StatsApiTimelineEvent,
   providerMatchId: string,
   homeTeamId: string,
@@ -450,7 +517,7 @@ export async function persistStatsApiMoments(
   const awayTeamId = String(source.metadata.awayTeamId ?? '');
   if (!homeTeamId || !awayTeamId) throw new Error('Match source lacks provider team IDs.');
   const moments = timeline.events
-    .map((event) => normalizeMoment(event, source.providerMatchId, homeTeamId, awayTeamId))
+    .map((event) => normalizeStatsApiMoment(event, source.providerMatchId, homeTeamId, awayTeamId))
     .filter((moment): moment is NormalizedMoment => moment !== null);
   const databaseMoments = moments.map((moment) => ({
     provider_event_id: moment.providerEventId,
@@ -542,11 +609,22 @@ async function finalizeDurableMoments(
 
 async function shouldFetchFinalTimeline(query: Query, matchId: string, now: Date) {
   const [state] = await query.query(
-    `SELECT mode, last_final_check_at AS "lastFinalCheckAt"
-     FROM match_timeline_state WHERE match_id = $1`,
-    [matchId],
-  ) as Array<{ mode: string; lastFinalCheckAt: Date | null }>;
-  if (state?.mode === 'finalized') return false;
+    `SELECT state.mode, state.last_final_check_at AS "lastFinalCheckAt",
+            NOT EXISTS (
+              SELECT 1 FROM match_moments moment
+              WHERE moment.match_id = $1 AND moment.provider = $2
+            ) AND EXISTS (
+              SELECT 1 FROM jsonb_array_elements(state.events) event
+              WHERE event ->> 'type' IN (
+                'goal', 'yellow_card', 'red_card', 'yellow_red_card', 'substitution',
+                'penalty_awarded', 'penalty_scored', 'penalty_missed', 'penalty_saved', 'var'
+              )
+            ) AS "needsRepair"
+     FROM match_timeline_state state WHERE state.match_id = $1`,
+    [matchId, THE_STATS_API_PROVIDER],
+  ) as Array<{ mode: string; lastFinalCheckAt: Date | null; needsRepair: boolean }>;
+  if (state?.mode === 'finalized' && !state.needsRepair) return false;
+  if (state?.needsRepair) return true;
   return !state?.lastFinalCheckAt
     || now.getTime() - new Date(state.lastFinalCheckAt).getTime() >= FINAL_RECHECK_MS;
 }
@@ -737,8 +815,33 @@ export async function refreshTheStatsApiWorldCup(options: {
      JOIN matches match ON match.id = source.match_id
      WHERE source.provider = $1 AND source.role = 'score'
        AND source.status IN ('active', 'degraded')
-       AND match.kickoff BETWEEN $2::timestamptz - interval '5 hours'
-                             AND $2::timestamptz + interval '2 hours'
+       AND (
+         match.kickoff BETWEEN $2::timestamptz - interval '5 hours'
+                           AND $2::timestamptz + interval '2 hours'
+         OR (
+           match.status = 'finished'
+           AND match.kickoff BETWEEN $2::timestamptz - interval '7 days' AND $2::timestamptz
+           AND (source.last_attempt_at IS NULL
+             OR source.last_attempt_at <= $2::timestamptz - interval '15 minutes')
+           AND EXISTS (
+             SELECT 1
+             FROM match_timeline_state state
+             WHERE state.match_id = match.id
+               AND state.coverage = 'full'
+               AND NOT EXISTS (
+                 SELECT 1 FROM match_moments moment
+                 WHERE moment.match_id = match.id AND moment.provider = $1
+               )
+               AND EXISTS (
+                 SELECT 1 FROM jsonb_array_elements(state.events) event
+                 WHERE event ->> 'type' IN (
+                   'goal', 'yellow_card', 'red_card', 'yellow_red_card', 'substitution',
+                   'penalty_awarded', 'penalty_scored', 'penalty_missed', 'penalty_saved', 'var'
+                 )
+               )
+           )
+         )
+       )
      ORDER BY match.kickoff`,
     [THE_STATS_API_PROVIDER, options.now],
   ) as DatabaseSourceRow[];

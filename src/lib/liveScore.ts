@@ -7,8 +7,9 @@ export interface LiveScoreOverlay {
 /**
  * TheStatsAPI's timeline can lead its match resource by several minutes. While
  * a match is live and the timeline has full coverage, its active goal moments
- * are the freshest score authority. Outside that gate, keep the match resource
- * unchanged.
+ * are the freshest score authority. A full finalized timeline also protects a
+ * finished match from a provider match resource that was marked finished before
+ * its score fields caught up. Outside those gates, keep the match resource unchanged.
  */
 export function deriveLiveScore(options: {
   status: string;
@@ -27,7 +28,10 @@ export function deriveLiveScore(options: {
     timelineAwayGoals,
   } = options;
 
-  if (status !== 'live' || timelineCoverage !== 'full') {
+  const hasTimelineScore = timelineHomeGoals !== null && timelineAwayGoals !== null;
+  const useTimeline = timelineCoverage === 'full'
+    && (status === 'live' || (status === 'finished' && hasTimelineScore));
+  if (!useTimeline) {
     return {
       homeScore: providerHomeScore,
       awayScore: providerAwayScore,
