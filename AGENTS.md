@@ -144,10 +144,11 @@ Keep this list current. Each entry = symptom → cause → fix.
   Cloudflare-side cause was not observable); alarms owned by older Durable Objects can continue
   afterward and make unrelated source timestamps look partially alive → Fix: compare the raw
   provider response, production DB state, and a tail spanning a cron boundary; with explicit
-  production approval, reapply only the existing trigger from the verified flattened
-  `dist/server/wrangler.json` using `wrangler triggers deploy`, then require consecutive cron
-  events plus advancing coordinator snapshots/public freshness before declaring recovery. The
-  root `wrangler.jsonc` is not a valid direct deployment config for this Astro build.
+  production approval, reapply the unchanged trigger only by taking the verified `main` tree
+  through the guarded preview and production workflow in `docs/RELEASES.md`; never substitute the
+  experimental raw `wrangler triggers deploy` command. Then require consecutive cron events plus
+  advancing coordinator snapshots/public freshness before declaring recovery. The root
+  `wrangler.jsonc` is not a valid direct deployment config for this Astro build.
 - **Dirty feature work is not a reason to bypass the release clean-tree guard.** Symptom: a
   reviewed `main` tree is ready to promote but the shared working directory contains unrelated
   uncommitted work → Cause: `release-worker.mjs` intentionally refuses every dirty tree, even when
@@ -395,12 +396,13 @@ Keep this list current. Each entry = symptom → cause → fix.
   the container. Reserve the marquee treatment for genuinely long, low-value strips like the
   scoreline tickers. Note `xl:` not `lg:` for 4-up — at 1024px the cards drop to ~228px and
   long names like ARGENTINA truncate.
-- **The homepage is a static zero-tally shell — percentages must hydrate, not SSR.**
+- **The homepage document is a static zero-tally shell — percentages must hydrate, not SSR.**
   Symptom: a hero/ticker built from `getStaticBattleSummaries` renders every battle at 50/50
   with "0 votes" → Cause: the static-first launch deliberately keeps anonymous homepage
-  traffic off the Worker/Neon, so the catalog zeroes all mutable tallies → Fix: render the
+  rendering off the Worker/Neon, so the catalog zeroes all mutable tallies → Fix: render the
   50/50 placeholder server-side and hydrate real numbers in the island via
-  `useBattleTallies` (`src/lib/homeBattleTallies.ts`) → `/api/home-battles`. Do not
+  `useBattleTallies` (`src/lib/homeBattleTallies.ts`) → the route-scoped Cache API in
+  `/api/home-battles`. Do not
   reintroduce `export const prerender = false` on `src/pages/index.astro` to get live numbers.
 - **Two islands showing the same live data must share one fetch, not just one interval.**
   Symptom: the homepage fires N identical `/api/world-cup-status` (or `/api/home-battles`)
@@ -409,11 +411,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   module-level singletons — `src/lib/useWorldCupStatus.ts` (one interval + subscriber fan-out)
   and `src/lib/homeBattleTallies.ts` (one memoized in-flight promise). Verify with
   `performance.getEntriesByType('resource')` after a reload: one request per endpoint.
-- **A memoized in-flight promise must be cleared on rejection.** Symptom: one transient 5xx
+- **A memoized in-flight promise must retry and be cleared on rejection.** Symptom: one transient 5xx
   leaves every island sharing the memo on placeholder data until a full page reload → Cause: a
-  `let pending = fetch(...)` singleton caches the *failure* forever, since `.catch` resolves it
-  to a fallback value that is then returned to all later callers → Fix: set `pending = null`
-  inside the `catch` before returning the fallback, so the next caller retries.
+  `let pending = fetch(...)` singleton caches the *failure* forever, or a route converts the
+  failure into a successful empty array that cannot be distinguished from real data → Fix: keep
+  query failures as non-cacheable 5xx responses, retry the shared request with bounded backoff,
+  and set `pending = null` before rethrowing the final rejection so a later caller can retry.
 - **A generic `{...match, ...update}` merge silently breaks the live clock.** Symptom: the
   clock jumps backwards after a refresh or reconnect → Cause: spreading the update replaces the
   clock *anchor* wholesale, which is exactly what `recalibrateLiveMatchClock` exists to
