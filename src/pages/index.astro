@@ -2,7 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import MarqueeCarousel from '../components/MarqueeCarousel.tsx';
 import type { MarqueeBattle } from '../components/MarqueeCarousel.tsx';
-import WorldCupHomeHero from '../components/WorldCupHomeHero.tsx';
+import BattleTicker from '../components/BattleTicker.tsx';
+import WorldCupMatchGrid from '../components/WorldCupMatchGrid.tsx';
 import WorldCupHomeFeed from '../components/WorldCupHomeFeed.tsx';
 import type { FloorFeedEvent } from '../components/FloorEventRow.tsx';
 import { getStaticBattleSummaries } from '../lib/staticCatalog';
@@ -31,6 +32,8 @@ const homeEvents: FloorFeedEvent[] = remainingMatches.map((event) => ({
 }));
 
 // Marquee cards for the "Happening Now" carousel (left = lime, right = red).
+// Percentages ship as the static 50/50 placeholder and are replaced with live
+// tallies by the island once it mounts.
 const marquee: MarqueeBattle[] = mostVoted.slice(0, 5).map((s) => ({
   slug: s.slug,
   arenaLabel: arenaLabel(s.arena),
@@ -48,28 +51,110 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
   active: f.key === 'top', // "Top" leads the preview (matches the fetch above)
 }));
 
+// Ticker one is an island: it shares the carousel's tally request so the strip
+// and the card above it can never quote different percentages for a battle.
+const tickerCallouts = ['Settle the debate', "Who's your GOAT?", 'The floor is open'];
+
+// Ticker two — the rest of the tournament's scoreline, so the World Cup
+// section is bracketed by results the marquee deck doesn't already show.
+const playedMatches = worldCup2026Fixtures.filter(
+  (fixture) => fixture.matchNumber < 101
+    && fixture.homeScore !== null
+    && fixture.awayScore !== null,
+);
+const scoreTicker: string[] = playedMatches
+  .slice(-18)
+  .map((m) => `${m.homeTeam} ${m.homeScore}–${m.awayScore} ${m.awayTeam}`);
 ---
 
 <Layout>
-  <WorldCupHomeHero client:load fixtures={remainingMatches} />
 
-  <section class="border-b border-hairline bg-canvas-soft py-8">
-    <div class="page-container grid grid-cols-1 lg:grid-cols-[0.7fr_1.3fr] gap-6 lg:gap-10 items-center">
-      <div>
-        <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-lime">Evergreen football</span>
-        <h2 class="mt-2 font-headline font-black uppercase text-3xl text-ink">The GOAT debate continues</h2>
-        <p class="mt-2 font-sans text-sm leading-relaxed text-body">Vote on football's defining head-to-heads, or see where every legend ranks.</p>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <a href="/rankings/football" class="btn btn-primary text-sm px-5 py-2.5">Football rankings</a>
-          <a href="/arenas" class="btn btn-secondary text-sm px-5 py-2.5">Other arenas</a>
+  <!-- ══════════════════════════════════════════
+       HERO — "Who's the GOAT?" + battle carousel
+  ══════════════════════════════════════════ -->
+  <section class="border-b border-hairline overflow-x-clip"
+    style="background: radial-gradient(ellipse 80% 60% at 20% 120%, rgba(200,255,0,0.08), transparent 60%)">
+    <div class="page-container py-11">
+      <div class="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-10 items-center">
+
+        <div>
+          <h1 class="font-headline font-black uppercase text-ink leading-[0.88] tracking-tight"
+            style="font-size: clamp(3.25rem, 8vw, 76px)">
+            Who's the <span class="text-lime">Goat?</span>
+          </h1>
+          <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-md">
+            Vote across four arenas, then take it to The Floor — where the world argues it out, one take at a time.
+          </p>
+          <div class="mt-6 flex flex-wrap gap-2.5">
+            <a href="#floor" class="btn btn-primary text-base px-6 py-3">Join the floor ↓</a>
+            <a href="/arenas" class="btn btn-secondary text-base px-6 py-3">Browse arenas</a>
+          </div>
         </div>
-      </div>
-      <div class="w-full min-w-0">
-        <MarqueeCarousel client:load battles={marquee} />
+
+        <div class="w-full max-w-[440px] mx-auto lg:mr-0 lg:ml-auto">
+          <MarqueeCarousel client:load battles={marquee} />
+        </div>
+
       </div>
     </div>
   </section>
 
+  <!-- ══════════════════════════════════════════
+       TICKER ONE — the battle board
+  ══════════════════════════════════════════ -->
+  <BattleTicker client:load battles={marquee} callouts={tickerCallouts} />
+
+  <!-- ══════════════════════════════════════════
+       WORLD CUP — one section: intro + match rail.
+       Static markup: with the fixture card gone, nothing here depends on live
+       match data, so only the rail below needs to be an island.
+  ══════════════════════════════════════════ -->
+  <section class="border-b border-hairline pt-11 pb-11" aria-labelledby="wc-matches-heading"
+    style="background: radial-gradient(ellipse 80% 75% at 18% 115%, rgba(200,255,0,0.11), transparent 62%)">
+    <div class="page-container">
+      <div class="max-w-2xl">
+        <h2 id="wc-matches-heading"
+          class="font-headline font-black uppercase text-ink leading-[0.9] tracking-tight text-[clamp(2.5rem,6vw,60px)]">
+          The road to the <span class="text-lime">final.</span>
+        </h2>
+        <p class="mt-4 font-sans text-body text-base leading-relaxed max-w-md">
+          The matches that decide the World Cup — pick one and make your case in the match thread.
+        </p>
+        <div class="mt-6">
+          <a href="/world-cup" class="btn btn-secondary text-base px-6 py-3">View all 104 matches</a>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <WorldCupMatchGrid client:load fixtures={remainingMatches} />
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       TICKER TWO — tournament scorelines
+  ══════════════════════════════════════════ -->
+  {scoreTicker.length > 0 && (
+    <section class="marquee border-b border-hairline bg-canvas-soft overflow-hidden"
+      style="--marquee-duration: 60s" aria-label="World Cup scores">
+      <div class="marquee-track flex items-center whitespace-nowrap py-2.5">
+        {[0, 1].map((dup) => (
+          <div class="marquee-group flex items-center shrink-0" aria-hidden={dup === 1 ? 'true' : undefined}>
+            {scoreTicker.map((item) => (
+              <span class="flex items-center">
+                <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-body px-6">{item}</span>
+                <span class="w-1 h-1 rounded-full bg-red shrink-0"></span>
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- ══════════════════════════════════════════
+       THE FLOOR — match debate stream (preview)
+  ══════════════════════════════════════════ -->
   <section id="floor" class="pt-[22px] pb-8 scroll-mt-[60px]">
     <div class="page-container">
 
@@ -86,7 +171,7 @@ const floorChips = FLOOR_FILTERS.map((f) => ({
       <!-- Stream -->
       <div class="mt-4 flex flex-col gap-2.5">
         <WorldCupHomeFeed client:load events={homeEvents} />
-        <a href="/world-cup" class="self-center mt-1.5 chip">Open the World Cup hub ↓</a>
+        <a href="/floor" class="self-center mt-1.5 chip">Enter the floor ↓</a>
       </div>
 
     </div>

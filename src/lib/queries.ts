@@ -159,6 +159,28 @@ export async function getBattleSummary(slug: string): Promise<BattleSummary | nu
   return row ? toSummary(row) : null;
 }
 
+/**
+ * Live tallies for a known set of battles, in one round trip. The homepage
+ * renders a static zero-tally shell (see `getStaticBattleSummaries`) and its
+ * carousel island hydrates from this — so anonymous page views stay off the
+ * database while the numbers on screen are still real.
+ */
+export async function getBattleSummaries(slugs: string[]): Promise<BattleSummary[]> {
+  if (slugs.length === 0) return [];
+  const rows = await db
+    .select({
+      id: battles.id,
+      entityA: battles.entityA,
+      entityB: battles.entityB,
+      votesA: battles.votesA,
+      votesB: battles.votesB,
+    })
+    .from(battles)
+    .where(inArray(battles.id, slugs));
+
+  return rows.map(toSummary).filter((s): s is BattleSummary => s !== null);
+}
+
 // ── The Floor: football match events ─────────────────────────────────────────
 
 /** A goat that played in a match, enriched with its display data. */
