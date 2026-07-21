@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
+import { formatLiveMatchClockLabel } from '../lib/liveMatchClock';
 import { useWorldCupStatus } from '../lib/useWorldCupStatus';
 import type { WorldCupHubMatch } from './WorldCupHub';
 
@@ -28,10 +30,14 @@ function description(match: WorldCupHubMatch) {
   return `${kickoffLabel(match.kickoff)} · ${match.venue}`;
 }
 
-function MatchCard({ match }: { match: WorldCupHubMatch }) {
+function MatchCard({ match, now }: { match: WorldCupHubMatch; now: number }) {
   const live = match.status === 'live';
   const finished = match.status === 'finished';
   const hasScore = match.homeScore !== null && match.awayScore !== null;
+  // Shows the observation-anchored approximate clock while a live match has no
+  // timeline yet, and stops rendering it once that grace period lapses — all
+  // handled inside formatLiveMatchClockLabel. Falls back to a plain "Live".
+  const clockLabel = live ? formatLiveMatchClockLabel(match.matchClock ?? null, now) : null;
 
   return (
     <a
@@ -44,7 +50,7 @@ function MatchCard({ match }: { match: WorldCupHubMatch }) {
         </span>
         <span class="flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-mute">
           {live && <span class="live-dot" aria-hidden="true"></span>}
-          {live ? 'Live' : finished ? 'Full time' : `Match ${match.matchNumber}`}
+          {live ? (clockLabel ?? 'Live') : finished ? 'Full time' : `Match ${match.matchNumber}`}
         </span>
       </div>
 
@@ -84,11 +90,22 @@ function MatchCard({ match }: { match: WorldCupHubMatch }) {
  */
 export default function WorldCupMatchGrid({ fixtures }: { fixtures: WorldCupHubMatch[] }) {
   const matches = useWorldCupStatus(fixtures);
+  const [now, setNow] = useState(() => Date.now());
+  const hasLive = matches.some((match) => match.status === 'live');
+
+  // The clock is projected from its anchor, so it only needs a local tick while
+  // something is actually live — not on a page of finished fixtures.
+  useEffect(() => {
+    if (!hasLive) return;
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(tick);
+  }, [hasLive]);
+
   if (matches.length === 0) return null;
 
   return (
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      {matches.map((match) => <MatchCard key={match.id} match={match} />)}
+      {matches.map((match) => <MatchCard key={match.id} match={match} now={now} />)}
     </div>
   );
 }

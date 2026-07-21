@@ -20,7 +20,13 @@ function load(slugs: string[]) {
   pending = fetch(`/api/home-battles?${query}`)
     .then((response) => response.ok ? response.json() : Promise.reject())
     .then((rows: BattleTally[]) => new Map(rows.map((row) => [row.slug, row])))
-    .catch(() => new Map<string, BattleTally>());
+    .catch(() => {
+      // Clear the memo on failure. Otherwise one transient 5xx would be cached
+      // for the whole page lifetime and every island sharing this module would
+      // be stuck on placeholder tallies until a full reload.
+      pending = null;
+      return new Map<string, BattleTally>();
+    });
   return pending;
 }
 

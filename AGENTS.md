@@ -391,7 +391,7 @@ Keep this list current. Each entry = symptom → cause → fix.
   had to go full-bleed to look right, breaking the shared `.page-container` width → Cause: an
   infinite carousel needs to bleed past the gutter for its cards to peek, and it hides content
   behind motion → Fix: with only ~4 items a plain responsive grid
-  (`WorldCupMatchGrid.tsx`, `grid-cols-1 sm:2 xl:4`) shows everything at once and stays inside
+  (`WorldCupMatchGrid.tsx`, `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`) shows everything at once and stays inside
   the container. Reserve the marquee treatment for genuinely long, low-value strips like the
   scoreline tickers. Note `xl:` not `lg:` for 4-up — at 1024px the cards drop to ~228px and
   long names like ARGENTINA truncate.
@@ -409,6 +409,17 @@ Keep this list current. Each entry = symptom → cause → fix.
   module-level singletons — `src/lib/useWorldCupStatus.ts` (one interval + subscriber fan-out)
   and `src/lib/homeBattleTallies.ts` (one memoized in-flight promise). Verify with
   `performance.getEntriesByType('resource')` after a reload: one request per endpoint.
+- **A memoized in-flight promise must be cleared on rejection.** Symptom: one transient 5xx
+  leaves every island sharing the memo on placeholder data until a full page reload → Cause: a
+  `let pending = fetch(...)` singleton caches the *failure* forever, since `.catch` resolves it
+  to a fallback value that is then returned to all later callers → Fix: set `pending = null`
+  inside the `catch` before returning the fallback, so the next caller retries.
+- **A generic `{...match, ...update}` merge silently breaks the live clock.** Symptom: the
+  clock jumps backwards after a refresh or reconnect → Cause: spreading the update replaces the
+  clock *anchor* wholesale, which is exactly what `recalibrateLiveMatchClock` exists to
+  prevent — easy to reintroduce when factoring per-island pollers into one shared hook → Fix:
+  `useWorldCupStatus` special-cases `matchClock` and reconciles it through
+  `recalibrateLiveMatchClock`; only spread the other fields.
 - **Nav labels wrap before the `lg` breakpoint hides them.** Symptom: "The Floor" / "Face Off"
   / "Champion Mode" go two-line and bloat the header in the ~1024–1200px band → Cause: the
   desktop nav appears at `lg` (1024px) but the links have no wrap guard → Fix: `whitespace-nowrap`

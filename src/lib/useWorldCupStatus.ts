@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { recalibrateLiveMatchClock, type LiveClockState } from './liveMatchClock';
 
 /** Partial match rows keyed by match id, as served by /api/world-cup-status. */
 export type WorldCupStatusUpdates = Map<string, Record<string, unknown>>;
@@ -54,10 +55,22 @@ function subscribe(subscriber: Subscriber) {
 export function useWorldCupStatus<T extends { id: string }>(fixtures: T[]): T[] {
   const [matches, setMatches] = useState(fixtures);
   useEffect(() => subscribe((updates) => {
-    setMatches((current) => current.map((match) => ({
-      ...match,
-      ...(updates.get(match.id) ?? {}),
-    })));
+    setMatches((current) => current.map((match) => {
+      const update = updates.get(match.id);
+      if (!update) return match;
+      const merged = { ...match, ...update } as T & { matchClock?: LiveClockState | null };
+      // A live clock must never have its anchor replaced wholesale: a response
+      // that lands after local wall-time projection would make the clock jump
+      // backwards. Reconcile through recalibrate instead. Callers without a
+      // matchClock field (e.g. the floor feed) are unaffected.
+      if ('matchClock' in update) {
+        merged.matchClock = recalibrateLiveMatchClock(
+          (match as { matchClock?: LiveClockState | null }).matchClock ?? null,
+          (update.matchClock as LiveClockState | null | undefined) ?? null,
+        );
+      }
+      return merged;
+    }));
   }), []);
   return matches;
 }
