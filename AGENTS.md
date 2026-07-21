@@ -136,6 +136,19 @@ Keep this list current. Each entry = symptom → cause → fix.
   `docs/RELEASES.md`: deploy only clean commits, test the candidate on preview, and promote
   only a `main` tree that matches the active tested preview version. Never deploy arbitrary
   uncommitted work directly to production.
+- **A deployed production Cron Trigger can stop delivering while the Worker stays healthy.**
+  Symptom: the provider is serving a live match, but production remains `scheduled`,
+  `provider_sync_state` stops advancing, and a live tail shows ordinary HTTP traffic but no
+  scheduled invocation even though the active Worker exposes `scheduled` and the release log
+  recorded `* * * * *` → Cause: the Cloudflare Cron Trigger stopped delivering (the exact
+  Cloudflare-side cause was not observable); alarms owned by older Durable Objects can continue
+  afterward and make unrelated source timestamps look partially alive → Fix: compare the raw
+  provider response, production DB state, and a tail spanning a cron boundary; with explicit
+  production approval, reapply the unchanged trigger only by taking the verified `main` tree
+  through the guarded preview and production workflow in `docs/RELEASES.md`; never substitute the
+  experimental raw `wrangler triggers deploy` command. Then require consecutive cron events plus
+  advancing coordinator snapshots/public freshness before declaring recovery. The root
+  `wrangler.jsonc` is not a valid direct deployment config for this Astro build.
 - **Dirty feature work is not a reason to bypass the release clean-tree guard.** Symptom: a
   reviewed `main` tree is ready to promote but the shared working directory contains unrelated
   uncommitted work → Cause: `release-worker.mjs` intentionally refuses every dirty tree, even when
@@ -366,6 +379,56 @@ Keep this list current. Each entry = symptom → cause → fix.
 - **Tailwind v4:** custom colours via `@theme` in `src/styles/global.css`; `bg-lime/5` and
   arbitrary `text-[11px]` work, but **`h-13` does NOT exist** (standard scale only). Player
   accent colours must be vivid / mid-luminance so they read as both fills and on-dark text.
+
+### Homepage / marquees
+- **A `gap` on a marquee track breaks the seamless loop.** Symptom: a `-50%` infinite
+  ticker (`.marquee-track` in `global.css`) visibly stutters at the loop
+  point → Cause: with two duplicated groups, a gap on the flex *track* makes the total width
+  `group + gap + group`, so half the track is `group + gap/2`, not one group → Fix: put no gap
+  on the track; give each group its own internal gap **plus a matching trailing padding**
+  (`flex gap-4 pr-4`), so the track is exactly `2 × (group + gap)`. Assert it in the browser:
+  `group.width === track.width / 2`. Always `aria-hidden` the duplicate group.
+- **Don't reach for a carousel to show a handful of items.** Symptom: a homepage match rail
+  had to go full-bleed to look right, breaking the shared `.page-container` width → Cause: an
+  infinite carousel needs to bleed past the gutter for its cards to peek, and it hides content
+  behind motion → Fix: with only ~4 items a plain responsive grid
+  (`WorldCupMatchGrid.tsx`, `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`) shows everything at once and stays inside
+  the container. Reserve the marquee treatment for genuinely long, low-value strips like the
+  scoreline tickers. Note `xl:` not `lg:` for 4-up — at 1024px the cards drop to ~228px and
+  long names like ARGENTINA truncate.
+- **The homepage document is a static zero-tally shell — percentages must hydrate, not SSR.**
+  Symptom: a hero/ticker built from `getStaticBattleSummaries` renders every battle at 50/50
+  with "0 votes" → Cause: the static-first launch deliberately keeps anonymous homepage
+  rendering off the Worker/Neon, so the catalog zeroes all mutable tallies → Fix: render the
+  50/50 placeholder server-side and hydrate real numbers in the island via
+  `useBattleTallies` (`src/lib/homeBattleTallies.ts`) → the route-scoped Cache API in
+  `/api/home-battles`. Do not
+  reintroduce `export const prerender = false` on `src/pages/index.astro` to get live numbers.
+- **Two islands showing the same live data must share one fetch, not just one interval.**
+  Symptom: the homepage fires N identical `/api/world-cup-status` (or `/api/home-battles`)
+  requests per load, and the carousel and its ticker can quote *different* percentages for the
+  same battle → Cause: each island ran its own `useEffect` poller with its own state → Fix:
+  module-level singletons — `src/lib/useWorldCupStatus.ts` (one interval + subscriber fan-out)
+  and `src/lib/homeBattleTallies.ts` (one memoized in-flight promise). Verify with
+  `performance.getEntriesByType('resource')` after a reload: one request per endpoint.
+- **A memoized in-flight promise must retry and be cleared on rejection.** Symptom: one transient 5xx
+  leaves every island sharing the memo on placeholder data until a full page reload → Cause: a
+  `let pending = fetch(...)` singleton caches the *failure* forever, or a route converts the
+  failure into a successful empty array that cannot be distinguished from real data → Fix: keep
+  query failures as non-cacheable 5xx responses, retry the shared request with bounded backoff,
+  and set `pending = null` before rethrowing the final rejection so a later caller can retry.
+- **A generic `{...match, ...update}` merge silently breaks the live clock.** Symptom: the
+  clock jumps backwards after a refresh or reconnect → Cause: spreading the update replaces the
+  clock *anchor* wholesale, which is exactly what `recalibrateLiveMatchClock` exists to
+  prevent — easy to reintroduce when factoring per-island pollers into one shared hook → Fix:
+  `useWorldCupStatus` special-cases `matchClock` and reconciles it through
+  `recalibrateLiveMatchClock`; only spread the other fields.
+- **Nav labels wrap before the `lg` breakpoint hides them.** Symptom: "The Floor" / "Face Off"
+  / "Champion Mode" go two-line and bloat the header in the ~1024–1200px band → Cause: the
+  desktop nav appears at `lg` (1024px) but the links have no wrap guard → Fix: `whitespace-nowrap`
+  on the nav link class in `src/layouts/Layout.astro`. Adding a seventh tab reintroduces it —
+  World Cup was removed because every match is already reachable from The Floor (`/floor` keeps
+  `/world-cup` in its `match` array so the tab still highlights there).
 
 ## Documentation
 

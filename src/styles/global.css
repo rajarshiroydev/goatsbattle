@@ -261,4 +261,25 @@
   @media (prefers-reduced-motion: reduce) {
     .live-dot { animation: none; }
   }
+
+  /* ── Seamless marquee (scoreline tickers) ─────────────────────────────────
+     Renders two identical groups and slides left by exactly half the track
+     width, so the loop point is invisible. The second group must be
+     aria-hidden, and each group must carry its own trailing gap — a gap on the
+     track itself breaks the -50% seam. Set --marquee-duration to tune speed. */
+  .marquee-track {
+    width: max-content;
+    animation: gb-marquee var(--marquee-duration, 45s) linear infinite;
+  }
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+  @keyframes gb-marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+  }
 }

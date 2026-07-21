@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 
 const LINKS = [
-  { href: '/world-cup', label: 'World Cup' },
   { href: '/floor', label: 'The Floor' },
   { href: '/goats', label: 'Goats' },
   { href: '/rankings', label: 'Rankings' },

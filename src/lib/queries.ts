@@ -43,6 +43,14 @@ interface BattleRow {
   votesB: number;
 }
 
+const battleColumns = {
+  id: battles.id,
+  entityA: battles.entityA,
+  entityB: battles.entityB,
+  votesA: battles.votesA,
+  votesB: battles.votesB,
+};
+
 function toSummary(row: BattleRow): BattleSummary | null {
   const a = getEntityBySlug(row.entityA);
   const b = getEntityBySlug(row.entityB);
@@ -125,13 +133,7 @@ export async function getHeadToHeadRecordForEntity(
   slug: string,
 ): Promise<BattleSummary[]> {
   const rows = await db
-    .select({
-      id: battles.id,
-      entityA: battles.entityA,
-      entityB: battles.entityB,
-      votesA: battles.votesA,
-      votesB: battles.votesB,
-    })
+    .select(battleColumns)
     .from(battles)
     .where(or(eq(battles.entityA, slug), eq(battles.entityB, slug)));
 
@@ -145,18 +147,28 @@ export async function getHeadToHeadRecordForEntity(
 /** Live tally for a single battle, used by the results/vote API endpoints. */
 export async function getBattleSummary(slug: string): Promise<BattleSummary | null> {
   const [row] = await db
-    .select({
-      id: battles.id,
-      entityA: battles.entityA,
-      entityB: battles.entityB,
-      votesA: battles.votesA,
-      votesB: battles.votesB,
-    })
+    .select(battleColumns)
     .from(battles)
     .where(sql`${battles.id} = ${slug}`)
     .limit(1);
 
   return row ? toSummary(row) : null;
+}
+
+/**
+ * Live tallies for a known set of battles, in one round trip. The homepage
+ * renders a static zero-tally shell (see `getStaticBattleSummaries`) and its
+ * carousel island hydrates from this — so anonymous page views stay off the
+ * database while the numbers on screen are still real.
+ */
+export async function getBattleSummaries(slugs: string[]): Promise<BattleSummary[]> {
+  if (slugs.length === 0) return [];
+  const rows = await db
+    .select(battleColumns)
+    .from(battles)
+    .where(inArray(battles.id, slugs));
+
+  return rows.map(toSummary).filter((s): s is BattleSummary => s !== null);
 }
 
 // ── The Floor: football match events ─────────────────────────────────────────

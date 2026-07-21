@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { useBattleTallies } from '../lib/homeBattleTallies';
 
 export interface MarqueeBattle {
   slug: string;
@@ -27,7 +28,14 @@ interface Props {
 export default function MarqueeCarousel({ battles }: Props) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
-  const n = battles.length;
+  // The page renders a static zero-tally shell so anonymous views never touch
+  // the database; the real percentages arrive here, after mount.
+  const deck = useBattleTallies(battles, (b, tally) => ({
+    ...b,
+    leftPct: tally.leftPct,
+    votes: tally.total.toLocaleString(),
+  }));
+  const n = deck.length;
 
   useEffect(() => {
     if (n <= 1 || paused) return;
@@ -59,8 +67,11 @@ export default function MarqueeCarousel({ battles }: Props) {
     >
       {/* Card stage — fills the column so the centre card's top sits flush
           with the hero heading on the left. */}
-      <div class="relative flex-1 min-h-[280px] overflow-hidden [perspective:1400px]">
-        {battles.map((b, j) => {
+      {/* No overflow-hidden here: the neighbouring cards are meant to spill past
+          the column and peek. The hero section's own overflow-x-clip stops that
+          spill from producing a horizontal scrollbar. */}
+      <div class="relative flex-1 min-h-[280px] [perspective:1400px]">
+        {deck.map((b, j) => {
           const off = offsetOf(j);
           const abs = Math.abs(off);
           const isCenter = off === 0;
@@ -81,9 +92,8 @@ export default function MarqueeCarousel({ battles }: Props) {
             >
               <div class="h-full flex flex-col bg-canvas-soft border border-hairline rounded-lg overflow-hidden"
                 style="box-shadow: 0 12px 40px rgba(0,0,0,0.55)">
-                {/* header */}
-                <div class="flex items-center justify-between px-4 py-3 border-b border-hairline shrink-0">
-                  <span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-mute">Marquee battle</span>
+                {/* header — arena tag only, right-aligned */}
+                <div class="flex items-center justify-end px-4 py-3 border-b border-hairline shrink-0">
                   <span class="font-mono text-[10.5px] uppercase tracking-[0.16em]" style={`color:${b.arenaAccent}`}>
                     {b.arenaEmoji} {b.arenaLabel}
                   </span>
@@ -131,7 +141,7 @@ export default function MarqueeCarousel({ battles }: Props) {
           >←</button>
 
           <div class="flex items-center gap-[7px]">
-            {battles.map((_, idx) => (
+            {deck.map((_, idx) => (
               <button
                 key={idx}
                 type="button"
