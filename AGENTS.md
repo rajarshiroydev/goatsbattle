@@ -172,9 +172,9 @@ Keep this list current. Each entry = symptom → cause → fix.
   the new preview version at 100% with correct Git annotations, but the immediate cache-busted
   `/api/version` release gate still sees the previous SHA → Cause: version propagation can trail the
   deployment response even when HTTP caching is disabled → Fix: the preview verifier polls unique,
-  no-cache version requests for up to 60 seconds while still requiring the exact environment,
-  SHA (unless an equivalent merge tree is explicitly allowed), and tree; never weaken or skip the
-  parity assertions.
+  no-cache version requests (including transient 404/5xx responses) for up to 60 seconds while still
+  requiring the exact environment, SHA (unless an equivalent merge tree is explicitly allowed), and
+  tree; never weaken or skip the parity assertions.
 - **The Astro Cloudflare adapter emits an env-FLATTENED redirected config** at
   `dist/server/wrangler.json` selected by `CLOUDFLARE_ENV` at BUILD time. So the deploy
   scripts run a bare `wrangler deploy` with **no `--env` flag** — adding one breaks (the
