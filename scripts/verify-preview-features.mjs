@@ -51,7 +51,19 @@ async function json(path) {
   return response.json();
 }
 
-const version = await json('/api/version');
+// A newly activated Worker can briefly reach an edge after the previous
+// version even with a unique URL and no-cache request headers. Wait for the
+// exact release metadata, but keep a hard deadline and never relax tree parity.
+const versionDeadline = Date.now() + 60_000;
+let version;
+do {
+  version = await json('/api/version');
+  const shaMatches = allowEquivalentSha || version.gitSha === expectedSha;
+  if (version.environment === 'preview' && shaMatches && version.gitTree === expectedTree) break;
+  if (Date.now() >= versionDeadline) break;
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+} while (true);
+
 assert.equal(version.environment, 'preview');
 if (!allowEquivalentSha) {
   assert.equal(version.gitSha, expectedSha, 'preview Git SHA does not match the tested checkout');
