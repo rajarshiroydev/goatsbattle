@@ -142,3 +142,9 @@ The next steps are to expand beyond football, build synchronized creator watch-a
 - [docs/FEATURE-TESTING.md](docs/FEATURE-TESTING.md) — feature and promotion coverage
 - [docs/RELEASES.md](docs/RELEASES.md) — preview and production release process
 - [DATABASE-OPERATIONS.md](DATABASE-OPERATIONS.md) — database setup, migrations, and recovery
+
+## Development Disclosure
+
+GOATSBattle was initially prototyped with Claude Code. When the GPT-5.6 models became available, I began using Codex with GPT-5.6 Sol and soon made it my primary development environment. For my account and workflow, its availability—without the five-hour usage windows and daily resets I had been working around—made it the better fit. More importantly, most of the project's technically demanding systems including the live World Cup pipeline, Durable Object Coordination, Mutable Timeline Correction, WebSocket Delivery, Deterministic Provider Simulator, and Guarded Preview-to-Production release process were architected, implemented, reviewed, and verified through Codex sessions.
+
+What made this workflow effective was its consistency across long, interconnected tasks. Codex kept repository constraints and earlier engineering decisions in view, translated product intent into explicit technical trade-offs, preserved intentional UI work, and repeatedly ran the required type, test, security, preview, tree-parity, and production checks. The guarded release process and my explicit approval—not the model—remained the authority for promotion. I remained responsible for the product direction and final decisions; Codex with GPT-5.6 Sol supplied the engineering rigor and iteration speed that helped turn the initial prototype into a production-ready system during the Submission Period.
