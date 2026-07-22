@@ -51,7 +51,31 @@ async function json(path) {
   return response.json();
 }
 
-const version = await json('/api/version');
+// A newly activated Worker can briefly reach an edge after the previous
+// version even with a unique URL and no-cache request headers. Wait for the
+// exact release metadata, but keep a hard deadline and never relax tree parity.
+const versionDeadline = Date.now() + 60_000;
+let version;
+let transientVersionStatus;
+do {
+  const response = await get('/api/version');
+  if (response.status === 200) {
+    assert.match(response.headers.get('content-type') ?? '', /application\/json/);
+    version = await response.json();
+    transientVersionStatus = undefined;
+    const shaMatches = allowEquivalentSha || version.gitSha === expectedSha;
+    if (version.environment === 'preview' && shaMatches && version.gitTree === expectedTree) break;
+  } else if (response.status === 404 || response.status >= 500) {
+    version = undefined;
+    transientVersionStatus = response.status;
+  } else {
+    assert.equal(response.status, 200, `/api/version returned ${response.status}`);
+  }
+  if (Date.now() >= versionDeadline) break;
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+} while (true);
+
+assert.ok(version, `/api/version remained unavailable (last status ${String(transientVersionStatus)})`);
 assert.equal(version.environment, 'preview');
 if (!allowEquivalentSha) {
   assert.equal(version.gitSha, expectedSha, 'preview Git SHA does not match the tested checkout');

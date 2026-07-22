@@ -854,6 +854,10 @@ function Composer({
   const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
   const [tags, setTags] = useState<CommentStatTag[]>([]);
+  // Keep the submitted set synchronous with picker actions. Preact may batch
+  // setState across a fast Add → Post sequence, while a ref is updated before
+  // the next click and cannot submit the previous render's tag array.
+  const tagsRef = useRef<CommentStatTag[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickGoat, setPickGoat] = useState('');
   const [pickStat, setPickStat] = useState('');
@@ -882,29 +886,35 @@ function Composer({
   }, [focusSignal]);
 
   function addTag() {
-    if (!activeGoat || !pickStat || tags.length >= MAX_STAT_TAGS) return;
+    if (!activeGoat || !pickStat || tagsRef.current.length >= MAX_STAT_TAGS) return;
     const stat = activeGoat.stats.find((s) => s.label === pickStat);
     if (!stat) return;
-    if (tags.some((t) => t.goatSlug === activeGoat.slug && t.statLabel === stat.label)) return;
-    setTags((prev) => [
-      ...prev,
+    if (tagsRef.current.some((t) => t.goatSlug === activeGoat.slug && t.statLabel === stat.label)) return;
+    const next = [
+      ...tagsRef.current,
       { goatSlug: activeGoat.slug, goatShortName: activeGoat.shortName, statLabel: stat.label, value: stat.value, ...(stat.unit ? { unit: stat.unit } : {}) },
-    ]);
+    ];
+    tagsRef.current = next;
+    setTags(next);
     setPickStat('');
   }
 
   function removeTag(i: number) {
-    setTags((prev) => prev.filter((_, idx) => idx !== i));
+    const next = tagsRef.current.filter((_, idx) => idx !== i);
+    tagsRef.current = next;
+    setTags(next);
   }
 
   async function submit() {
     const body = value.trim();
     if (!body || pending) return;
     setPending(true);
-    const ok = await onSubmit(body, tags.map((t) => ({ goatSlug: t.goatSlug, statLabel: t.statLabel })));
+    const submittedTags = tagsRef.current.map((t) => ({ goatSlug: t.goatSlug, statLabel: t.statLabel }));
+    const ok = await onSubmit(body, submittedTags);
     setPending(false);
     if (ok) {
       setValue('');
+      tagsRef.current = [];
       setTags([]);
       setPickerOpen(false);
     }
@@ -912,6 +922,7 @@ function Composer({
 
   function cancel() {
     setValue('');
+    tagsRef.current = [];
     setTags([]);
     setPickerOpen(false);
     textareaRef.current?.blur();
