@@ -7,7 +7,7 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
 
 ## Runtime & framework
 - **Node** ≥ 22.12 (`engines.node`).
-- **Astro** ^7.0.3 — SSR + static hybrid. Config in `astro.config.mjs`.
+- **Astro** ^7.1.3 — SSR + static hybrid. Config in `astro.config.mjs`.
 - **Preact** ^10.29 via `@astrojs/preact` ^6 — interactive islands (no React).
 - **Tailwind CSS** v4 (`tailwindcss` + `@tailwindcss/vite` ^4.3) — design tokens via
   `@theme` in `src/styles/global.css`; full "Stadium Gate" spec in
@@ -24,7 +24,7 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
 - **Zod** ^4 — API input validation (`src/lib/apiValidation.ts`).
 
 ## Hosting, build & deploy
-- **Cloudflare Workers** via `@astrojs/cloudflare` ^14 + **wrangler** ^4.110. Config in
+- **Cloudflare Workers** via `@astrojs/cloudflare` ^14.1.4 + **wrangler** ^4.113. Config in
   `wrangler.jsonc` (env-flattened redirected config at build via `CLOUDFLARE_ENV`).
 - **Cloudflare Durable Objects** — per-match live ingestion/WebSocket coordination plus a
   per-provider request broker; SQLite-backed alarms and hibernating WebSockets are tested in
@@ -37,10 +37,13 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
   (`prerenderEnvironment: 'node'`) since resvg is a native binary that won't run in workerd.
 - **tsx** ^4 — runs the `scripts/*.ts` tooling (DB migrations, imports, verification).
 - **Playwright** ^1.61 — UI screenshots (`npm run shot -- <route>`).
-- **Vitest** ^4.1 + `@cloudflare/vitest-pool-workers` ^0.18 — Worker-runtime tests for
+- **Vitest** ^4.1 + `@cloudflare/vitest-pool-workers` ^0.18.7 — Worker-runtime tests for
   Durable Object storage, alarms, WebSockets, and provider quota coordination. The deterministic
   TheStatsAPI simulator runs as a separate blocking feature-test step in CI without provider or
   database credentials.
+- **Sharp** 0.35.3 is enforced through `overrides` until Miniflare stops pinning its vulnerable
+  0.34.x line; it is build/test image tooling and is covered by both Worker tests and environment
+  builds before release.
 
 ## External services / providers
 - **Neon** — database (prod + dev projects).

@@ -345,6 +345,11 @@ Keep this list current. Each entry = symptom → cause → fix.
   silently discard unknown pairs or leave the comment committed after a tag failure → Fix: reject
   every unresolved GOAT/stat pair with `400`, deduplicate validated inputs, insert the comment and
   tags in one data-modifying CTE, and return the tags read back from the database.
+- **Composer state can lag a fast Add → Post sequence.** Symptom: the selected stat chip appears,
+  but a faceoff comment reaches the API with an empty `statTags` array → Cause: the submit callback
+  can close over the previous Preact render while the tag `setState` is still batched → Fix: mirror
+  the authoritative selected-tag array in a ref updated synchronously by add/remove/clear actions,
+  and build the POST payload from that ref.
 - **Drizzle correlated-subquery trap:** a `sql` correlated subquery in the SELECT list
   renders `${matches.id}` **unqualified** as `"id"`, which shadows to `comments.id` inside
   the subquery → `operator does not exist: text = integer`. Use a `LEFT JOIN` + `GROUP BY`
@@ -382,6 +387,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   include list → Fix: override `exclude` in the nested config, confirm the files with `--listFiles`,
   and keep `cloudflare:test`'s `ProvidedEnv` narrowed to bindings actually supplied by
   `wrangler.test.jsonc`.
+- **Current Miniflare releases can retain a vulnerable exact Sharp pin.** Symptom: `npm audit`
+  still reports the Cloudflare adapter, Wrangler, Miniflare, and Worker test pool after every direct
+  dependency is current → Cause: they share Miniflare's exact `sharp@0.34.5`, so one transitive
+  advisory fans out as several findings → Fix: keep the root `sharp` override on the patched 0.35
+  line, document it in `STACK.md`, and require Worker tests plus preview/production builds before
+  updating or removing it.
 - **Tailwind v4:** custom colours via `@theme` in `src/styles/global.css`; `bg-lime/5` and
   arbitrary `text-[11px]` work, but **`h-13` does NOT exist** (standard scale only). Player
   accent colours must be vivid / mid-luminance so they read as both fills and on-dark text.
@@ -429,6 +440,11 @@ Keep this list current. Each entry = symptom → cause → fix.
   browser TTL on the stored response → Fix: wrap cache hits and reassert the route's
   `Cache-Control` (`max-age=15, s-maxage=30`) before returning them; regression-test the observed
   four-hour header so live tallies cannot remain stale in a browser.
+- **A mutable ranking cannot come from the static catalog.** Symptom: a profile vote succeeds and
+  `entities.votes` advances, but `/rankings/<arena>` continues to show zero votes → Cause: the page
+  was prerendered with `getStaticRankings`, whose tallies are intentionally zeroed for build-time
+  shells → Fix: keep the rankings route on the Worker, query `getRankings`, and return
+  `Cache-Control: private, no-store` so the next navigation reflects the committed vote.
 - **A generic `{...match, ...update}` merge silently breaks the live clock.** Symptom: the
   clock jumps backwards after a refresh or reconnect → Cause: spreading the update replaces the
   clock *anchor* wholesale, which is exactly what `recalibrateLiveMatchClock` exists to

@@ -2,7 +2,28 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { flagEmoji } from '../lib/format';
 import { formatLiveMatchClockLabel, recalibrateLiveMatchClock, type LiveClockState } from '../lib/liveMatchClock';
 
-type HubFilter = 'upcoming' | 'live' | 'results';
+type HubFilter = 'completed' | 'upcoming' | 'live';
+
+const FILTERS: Array<{ value: HubFilter; label: string }> = [
+  { value: 'completed', label: 'Completed' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'live', label: 'Live' },
+];
+
+const EMPTY_STATE: Record<HubFilter, { title: string; description: string }> = {
+  completed: {
+    title: 'No completed matches yet',
+    description: 'Results will appear here after the final whistle.',
+  },
+  upcoming: {
+    title: 'No upcoming matches',
+    description: 'There are no scheduled matches waiting to kick off.',
+  },
+  live: {
+    title: 'Nothing live right now',
+    description: 'Live matches will appear here as soon as play begins.',
+  },
+};
 
 export interface WorldCupHubMatch {
   id: string;
@@ -83,7 +104,7 @@ function MatchRow({ match, now, featured = false }: { match: WorldCupHubMatch; n
 }
 
 export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[] }) {
-  const [filter, setFilter] = useState<HubFilter>('upcoming');
+  const [filter, setFilter] = useState<HubFilter>('completed');
   const [matches, setMatches] = useState(fixtures);
   const [now, setNow] = useState(Date.now());
 
@@ -124,7 +145,7 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
       : filter === 'live'
         ? match.status === 'live'
         : match.status === 'finished');
-    return filtered.sort((a, b) => filter === 'results'
+    return filtered.sort((a, b) => filter === 'completed'
       ? Date.parse(b.kickoff) - Date.parse(a.kickoff)
       : Date.parse(a.kickoff) - Date.parse(b.kickoff));
   }, [filter, matches]);
@@ -150,9 +171,9 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
         </div>
 
         <div class="mt-9 flex flex-wrap items-center gap-2">
-          {(['upcoming', 'live', 'results'] as HubFilter[]).map((value) => (
+          {FILTERS.map(({ value, label }) => (
             <button type="button" class={`chip${filter === value ? ' chip-active' : ''}`} onClick={() => setFilter(value)}>
-              {value}
+              {label}
             </button>
           ))}
           <span class="ml-auto font-mono text-[11px] uppercase tracking-widest text-mute">{shown.length} matches</span>
@@ -161,8 +182,8 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
         <div class="mt-4 flex flex-col gap-2.5">
           {shown.length > 0 ? shown.map((match) => <MatchRow key={match.id} match={match} now={now} />) : (
             <div class="bg-canvas-soft border border-hairline rounded-md px-6 py-12 text-center">
-              <p class="font-headline font-black uppercase text-2xl text-ink">Nothing live right now</p>
-              <p class="mt-2 font-sans text-body">The next match thread is already open above.</p>
+              <p class="font-headline font-black uppercase text-2xl text-ink">{EMPTY_STATE[filter].title}</p>
+              <p class="mt-2 font-sans text-body">{EMPTY_STATE[filter].description}</p>
             </div>
           )}
         </div>
