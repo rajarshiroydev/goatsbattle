@@ -2,13 +2,17 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getBattleSummaries } from '../../lib/queries';
 import { slugSchema } from '../../lib/apiValidation';
+import {
+  HOME_BATTLE_CACHE_CONTROL,
+  withHomeBattleCacheStatus,
+} from '../../lib/homeBattleCache';
 
 export const prerender = false;
 
 /** Matches the carousel's deck size — the homepage never asks for more. */
 const battlesSchema = z.array(slugSchema).min(1).max(8);
 
-const json = (data: unknown, status = 200, cacheControl = 'public, max-age=15, s-maxage=30') =>
+const json = (data: unknown, status = 200, cacheControl = HOME_BATTLE_CACHE_CONTROL) =>
   new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -38,16 +42,6 @@ function cacheKey(url: URL, slugs: string[]): Request {
   return new Request(canonical, { method: 'GET' });
 }
 
-function withCacheStatus(response: Response, status: 'HIT' | 'MISS'): Response {
-  const headers = new Headers(response.headers);
-  headers.set('X-GOATSBattle-Cache', status);
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
 export const GET: APIRoute = async ({ url }) => {
   const parsed = battlesSchema.safeParse(url.searchParams.getAll('battle'));
   if (!parsed.success) return json(
@@ -66,7 +60,7 @@ export const GET: APIRoute = async ({ url }) => {
   } catch (err) {
     console.error('home-battles cache read failed:', err);
   }
-  if (cached) return withCacheStatus(cached, 'HIT');
+  if (cached) return withHomeBattleCacheStatus(cached, 'HIT');
 
   // Non-critical decoration: a transient neon-http hiccup must leave the
   // already-rendered static deck standing rather than 500 the fetch.
@@ -85,7 +79,7 @@ export const GET: APIRoute = async ({ url }) => {
         console.error('home-battles cache write failed:', err);
       }
     }
-    return withCacheStatus(response, 'MISS');
+    return withHomeBattleCacheStatus(response, 'MISS');
   } catch (err) {
     console.error('home-battles query failed:', err);
     return json({ error: 'battle tallies temporarily unavailable' }, 503, 'no-store');

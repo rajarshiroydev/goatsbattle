@@ -130,8 +130,22 @@ test('rejects malformed and oversized successful provider responses', async () =
 test('aborts a stalled provider request at the configured deadline', async () => {
   const simulator = new TheStatsApiSimulator();
   simulator.queueFault(statsApiSimulatorPaths.match, { kind: 'hang' });
-  await assert.rejects(
-    fetchStatsApiMatch(SIMULATED_MATCH_ID, options(simulator, { requestTimeoutMs: 10 })),
-    (error: unknown) => error instanceof Error && error.name === 'TimeoutError',
-  );
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
+  const watchdogFailure = new Promise<never>((_resolve, reject) => {
+    // AbortSignal.timeout() is unref'd in Node, so the hanging mock alone does
+    // not keep CI's event loop alive long enough for the abort event to fire.
+    watchdog = setTimeout(() => reject(new Error('provider timeout test watchdog expired')), 1_000);
+  });
+
+  try {
+    await assert.rejects(
+      Promise.race([
+        fetchStatsApiMatch(SIMULATED_MATCH_ID, options(simulator, { requestTimeoutMs: 10 })),
+        watchdogFailure,
+      ]),
+      (error: unknown) => error instanceof Error && error.name === 'TimeoutError',
+    );
+  } finally {
+    clearTimeout(watchdog);
+  }
 });
