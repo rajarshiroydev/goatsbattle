@@ -127,6 +127,12 @@ Keep this list current. Each entry = symptom → cause → fix.
 - **`tsc` writes diagnostics to STDOUT, not stderr.** When wiring typecheck into any
   hook/CI, capture `2>&1` — checking only stderr makes real type errors look like "no
   output" (this silently broke a Stop hook that appeared to pass but was failing).
+- **`AbortSignal.timeout()` does not keep Node's test event loop alive.** Symptom: a test of a
+  deliberately hanging fetch is cancelled in fast CI with "Promise resolution is still pending
+  but the event loop has already resolved," even though it passes locally → Cause: Node's timeout
+  signal uses an unref'd timer, and unrelated local handles can accidentally mask that fact → Fix:
+  race the hanging request against a longer referenced test watchdog, clear the watchdog in
+  `finally`, and still require the request itself to reject with `TimeoutError`.
 - **Deploy flow is manual and approval-gated.** localhost (`astro dev`) reflects live edits;
   the preview Worker (`npm run worker:deploy:preview`) and prod (`worker:deploy:production`)
   are separate manual `wrangler deploy` snapshots — nothing auto-deploys from git. A
