@@ -93,7 +93,7 @@ npm run astro -- dev logs
 npm run astro -- dev stop
 ```
 
-Run the main validation suite before submitting changes:
+Run the main local validation suite before submitting changes:
 
 ```sh
 npm run typecheck
@@ -102,7 +102,9 @@ npm run test:feature:stats-api
 npm run test:worker
 ```
 
-Server-only secrets are read from the Cloudflare Workers runtime in deployed environments. During local development, the serve-only Vite shim maps those values from `.env`. Public build-time configuration uses static `PUBLIC_*` variables. Release and deployment instructions live in [docs/RELEASES.md](docs/RELEASES.md).
+Release candidates additionally run `npm run worker:verify-build:production`, `npm run worker:dry-run`, and the deployed preview/browser gate described in [docs/FEATURE-TESTING.md](docs/FEATURE-TESTING.md). The exact promotion sequence lives in [docs/RELEASES.md](docs/RELEASES.md).
+
+Server-only secrets are read from the Cloudflare Workers runtime in deployed environments. During local development, the serve-only Vite shim maps those values from `.env`. Public build-time configuration uses static `PUBLIC_*` variables.
 
 ## How judges can test it
 

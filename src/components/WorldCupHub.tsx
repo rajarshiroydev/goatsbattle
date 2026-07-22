@@ -172,7 +172,7 @@ export default function WorldCupHub({ fixtures }: { fixtures: WorldCupHubMatch[]
 
         <div class="mt-9 flex flex-wrap items-center gap-2">
           {FILTERS.map(({ value, label }) => (
-            <button type="button" class={`chip${filter === value ? ' chip-active' : ''}`} onClick={() => setFilter(value)}>
+            <button key={value} type="button" class={`chip${filter === value ? ' chip-active' : ''}`} onClick={() => setFilter(value)}>
               {label}
             </button>
           ))}

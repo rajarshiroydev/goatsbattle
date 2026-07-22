@@ -24,7 +24,7 @@ change. Versions are the `package.json` ranges at time of writing; check `packag
 - **Zod** ^4 — API input validation (`src/lib/apiValidation.ts`).
 
 ## Hosting, build & deploy
-- **Cloudflare Workers** via `@astrojs/cloudflare` ^14.1.4 + **wrangler** ^4.113. Config in
+- **Cloudflare Workers** via `@astrojs/cloudflare` ^14.1.4 + **wrangler** ^4.113.0. Config in
   `wrangler.jsonc` (env-flattened redirected config at build via `CLOUDFLARE_ENV`).
 - **Cloudflare Durable Objects** — per-match live ingestion/WebSocket coordination plus a
   per-provider request broker; SQLite-backed alarms and hibernating WebSockets are tested in
