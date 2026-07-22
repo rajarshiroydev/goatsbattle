@@ -417,6 +417,12 @@ Keep this list current. Each entry = symptom → cause → fix.
   failure into a successful empty array that cannot be distinguished from real data → Fix: keep
   query failures as non-cacheable 5xx responses, retry the shared request with bounded backoff,
   and set `pending = null` before rethrowing the final rejection so a later caller can retry.
+- **A Workers Cache API hit can carry the zone's Browser Cache TTL.** Symptom: the first
+  `/api/home-battles` response advertises the intended short browser TTL, but a same-colo cache
+  hit returns `max-age=14400` → Cause: `caches.default.match()` can surface Cloudflare's zone-level
+  browser TTL on the stored response → Fix: wrap cache hits and reassert the route's
+  `Cache-Control` (`max-age=15, s-maxage=30`) before returning them; regression-test the observed
+  four-hour header so live tallies cannot remain stale in a browser.
 - **A generic `{...match, ...update}` merge silently breaks the live clock.** Symptom: the
   clock jumps backwards after a refresh or reconnect → Cause: spreading the update replaces the
   clock *anchor* wholesale, which is exactly what `recalibrateLiveMatchClock` exists to
